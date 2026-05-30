@@ -1,17 +1,25 @@
 # Concept Specifications
 
-The following sections describe all the concept specifications included for this application.
+The following are all the concept specifications included in this application.
 
-```markdown
-TODO: REMOVE this code block, then link to all your concept specifications (excluding Requesting). For example:
+[@Requesting](/src/concepts/Requesting/README.md)
 
-[@LikertSurvey](../concepts/LikertSurvey/LikertSurvey.md)
+[@Authenticating](../concepts/Authenticating/Authenticating.md)
 
 [@Sessioning](../concepts/Sessioning/Sessioning.md)
 
-You may also choose to link to concept source files as well, such as:
+[@Profiling](../concepts/Profiling/Profiling.md)
 
-[@LikertSurvey](/src/concepts/LikertSurvey/LikertSurveyConcept.ts)
+[@Posting](../concepts/Posting/Posting.md)
 
-Make sure to keep this file updated to have an updated view of all your concepts.
-```
+[@Conversing](../concepts/Conversing/Conversing.md)
+
+[@Reacting](../concepts/Reacting/Reacting.md)
+
+[@Tagging](../concepts/Tagging/Tagging.md)
+
+[@Tracking](../concepts/Tracking/Tracking.md)
+
+[@Linking](../concepts/Linking/Linking.md)
+
+[@Formatting](../concepts/Formatting/Formatting.md)
