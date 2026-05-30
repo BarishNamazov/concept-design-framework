@@ -227,10 +227,14 @@ interface PassthroughRoute {
  * via the inclusions/exclusions in `passthrough.ts`.
  *
  * @param concepts The complete instantiated concepts import from "@concepts"
+ * @param options Optional overrides. `port` lets callers (e.g. tests) bind a
+ *   specific or ephemeral port (`0` picks a free one); when omitted the `PORT`
+ *   environment variable (default 8000) is used, preserving existing behavior.
  * @returns The `Bun.serve` server instance.
  */
 export function startRequestingServer(
   concepts: Record<string, any>,
+  options: { port?: number } = {},
 ) {
   const { Requesting, client, db, Engine, ...instances } = concepts;
   if (!(Requesting instanceof RequestingConcept)) {
@@ -358,7 +362,7 @@ export function startRequestingServer(
   );
 
   return Bun.serve({
-    port: PORT,
+    port: options.port ?? PORT,
     async fetch(req: Request): Promise<Response> {
       // Answer CORS preflight requests without touching any handler.
       if (req.method === "OPTIONS") {

@@ -27,7 +27,25 @@ export interface TestApp {
   stop: () => Promise<void>;
 }
 
+/**
+ * A real HTTP server fronting the shared app via the `Requesting` concept, for
+ * tests that need to exercise the API over the wire (e.g. the client SDK).
+ */
+export interface TestServer {
+  /** Base URL including the `/api` prefix, e.g. `http://localhost:1234/api`. */
+  baseUrl: string;
+  /** The ephemeral port the server bound to. */
+  port: number;
+  /**
+   * Stops the HTTP server only. It deliberately leaves the shared in-memory
+   * Mongo (owned by {@link setupApp}) untouched, since that singleton's Mongo
+   * client can be closed exactly once per process.
+   */
+  stop: () => void;
+}
+
 let shared: Promise<TestApp> | undefined;
+let sharedServer: Promise<TestServer> | undefined;
 
 /**
  * Returns a process-wide singleton app. The generated barrels are module
@@ -71,4 +89,34 @@ async function boot(): Promise<TestApp> {
   };
 
   return { send, concepts: concepts as Record<string, any>, reset, stop };
+}
+
+/**
+ * Starts (once per process) a real `Requesting` HTTP server in front of the
+ * shared {@link setupApp} instance and returns its base URL. Bound to an
+ * ephemeral port (`0`) so it never clashes with a developer's running app.
+ *
+ * Tests should stop the returned server in `afterAll` but must **not** stop the
+ * shared app here — `setupApp().stop()` owns the single Mongo-client teardown
+ * for the whole process.
+ */
+export function startTestServer(): Promise<TestServer> {
+  return (sharedServer ??= bootServer());
+}
+
+async function bootServer(): Promise<TestServer> {
+  const app = await setupApp();
+  const { startRequestingServer } = await import(
+    "@concepts/Requesting/RequestingConcept.ts"
+  );
+  const server = startRequestingServer(app.concepts, { port: 0 });
+  const port = server.port ?? 0;
+  return {
+    baseUrl: `http://localhost:${port}/api`,
+    port,
+    stop: () => {
+      sharedServer = undefined;
+      server.stop();
+    },
+  };
 }

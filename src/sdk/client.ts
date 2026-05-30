@@ -1,0 +1,185 @@
+/**
+ * # Type-safe client (Eden Treaty style)
+ *
+ * {@link createClient} returns a Proxy-based client whose **types are fully
+ * inferred from {@link ApiContract}**. Two equivalent calling styles are
+ * supported, both terminating in a single `POST {baseUrl}{path}` request:
+ *
+ * ```ts
+ * const api = createClient({ baseUrl: "http://localhost:8000/api" });
+ *
+ * // grouped — property access mirrors the path segments
+ * await api.auth.login({ username, password });
+ * await api.threads.create({ session, content });
+ *
+ * // indexed — the full path as a single key
+ * await api["/auth/login"]({ username, password });
+ * ```
+ *
+ * ## Error handling
+ *
+ * Every method resolves to `Result<P>` — the endpoint's success payload **or**
+ * an `{ error }` envelope — and **never throws**. Backend-shaped errors (invalid
+ * session, not found, ...) arrive as `{ error }` unchanged; transport failures
+ * (network down, non-JSON body, non-2xx without an error body) are normalized
+ * into the same `{ error }` shape. Callers discriminate with `"error" in result`.
+ */
+import type { ApiContract, ApiPath, Input, Result } from "./contract.ts";
+
+/** A header bag, or a (possibly async) function producing one per request. */
+export type HeadersOption =
+  | Record<string, string>
+  | (() => Record<string, string> | Promise<Record<string, string>>);
+
+/** Options for {@link createClient}. All fields are optional. */
+export interface ClientOptions {
+  /**
+   * Base URL every request is prefixed with, including the `/api` segment.
+   * Defaults to `http://localhost:8000/api`.
+   */
+  baseUrl?: string;
+  /**
+   * `fetch` implementation to use. Defaults to the global `fetch`. Useful for
+   * injecting a mock or a server-side polyfill.
+   */
+  fetch?: typeof fetch;
+  /**
+   * Extra headers merged into every request (after `Content-Type`). Provide a
+   * function to compute them per call, e.g. to attach a rotating auth token.
+   */
+  headers?: HeadersOption;
+}
+
+/** A terminal endpoint method: takes the typed input, resolves to `Result<P>`. */
+export type Endpoint<P extends ApiPath> = (
+  input: Input<P>,
+) => Promise<Result<P>>;
+
+// Path-string surgery used to build the grouped view from the flat contract.
+type Group<P extends string> = P extends `/${infer G}/${string}` ? G : never;
+type Method<P extends string> = P extends `/${string}/${infer M}` ? M : never;
+
+/** The indexed surface: `client["/auth/login"](input)`. */
+export type IndexedClient = { [P in ApiPath]: Endpoint<P> };
+
+/** The grouped surface: `client.auth.login(input)`. */
+export type GroupedClient = {
+  [G in Group<ApiPath & string>]: {
+    [P in ApiPath as Group<P & string> extends G ? Method<P & string> : never]:
+      Endpoint<P>;
+  };
+};
+
+/**
+ * The full client type. Both calling styles coexist because the contract paths
+ * (`/group/method`) cleanly split into a flat index and a two-level grouping.
+ */
+export type Client = IndexedClient & GroupedClient;
+
+const DEFAULT_BASE_URL = "http://localhost:8000/api";
+
+/**
+ * Builds the request path from accumulated proxy segments. A single segment
+ * that already looks like a full path (`/auth/login`, used by the indexed
+ * style) is taken verbatim; otherwise segments are joined (`["auth","login"]`
+ * → `/auth/login`, the grouped style).
+ */
+function buildPath(segments: string[]): string {
+  if (segments.length === 1 && segments[0].startsWith("/")) return segments[0];
+  return "/" + segments.join("/");
+}
+
+/**
+ * Performs the actual POST and normalizes the outcome into a `Result`-shaped
+ * value. Never throws: transport/parse failures become `{ error }`.
+ */
+async function request(
+  fetchImpl: typeof fetch,
+  baseUrl: string,
+  headersOption: HeadersOption | undefined,
+  path: string,
+  body: unknown,
+): Promise<unknown> {
+  let extraHeaders: Record<string, string> = {};
+  try {
+    extraHeaders = typeof headersOption === "function"
+      ? await headersOption()
+      : headersOption ?? {};
+  } catch (e) {
+    return { error: `Failed to resolve headers: ${describe(e)}` };
+  }
+
+  let response: Response;
+  try {
+    response = await fetchImpl(baseUrl + path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...extraHeaders },
+      body: JSON.stringify(body ?? {}),
+    });
+  } catch (e) {
+    return { error: `Network request to ${path} failed: ${describe(e)}` };
+  }
+
+  const text = await response.text().catch(() => "");
+  let data: unknown;
+  try {
+    data = text === "" ? {} : JSON.parse(text);
+  } catch {
+    return {
+      error: `Invalid JSON response from ${path} (status ${response.status}).`,
+    };
+  }
+
+  // Pass the body through when it is already a usable object (success payload
+  // or the backend's own `{ error }` envelope). Only synthesize an error when a
+  // non-2xx response carried nothing actionable.
+  if (
+    !response.ok &&
+    (typeof data !== "object" || data === null || !("error" in data))
+  ) {
+    return { error: `Request to ${path} failed with status ${response.status}.` };
+  }
+  return data;
+}
+
+/** Renders an unknown thrown value as a short string for error envelopes. */
+function describe(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
+/**
+ * Creates a recursive, callable Proxy that accumulates path segments on
+ * property access and issues the request when finally invoked. The target is a
+ * function so the proxy is itself callable (supporting the terminal call) while
+ * still trapping `get` for further segment accumulation.
+ */
+function makeProxy(
+  segments: string[],
+  call: (path: string, body: unknown) => Promise<unknown>,
+): unknown {
+  const fn = (body: unknown) => call(buildPath(segments), body);
+  return new Proxy(fn, {
+    get(_target, prop) {
+      // Symbols and promise-detection keys must not extend the path, otherwise
+      // an intermediate proxy could be mistaken for a thenable and awaited.
+      if (typeof prop !== "string" || prop === "then") return undefined;
+      return makeProxy([...segments, prop], call);
+    },
+    apply(_target, _thisArg, args) {
+      return call(buildPath(segments), args[0]);
+    },
+  });
+}
+
+/**
+ * Creates a typed API client. The returned value supports both the grouped
+ * (`client.auth.login(...)`) and indexed (`client["/auth/login"](...)`) styles,
+ * each fully inferred from {@link ApiContract}.
+ */
+export function createClient(options: ClientOptions = {}): Client {
+  const baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "");
+  const fetchImpl = options.fetch ?? globalThis.fetch;
+  const call = (path: string, body: unknown) =>
+    request(fetchImpl, baseUrl, options.headers, path, body);
+  return makeProxy([], call) as Client;
+}
