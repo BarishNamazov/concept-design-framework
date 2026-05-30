@@ -249,6 +249,19 @@ export const PostGetResponse: Sync = (
   then: actions([Requesting.respond, { request, post: result }]),
 });
 
+export const PostGetNotFound: Sync = ({ request, post, exists }) => ({
+  when: actions([
+    Requesting.request,
+    { path: "/posts/get", post },
+    { request },
+  ]),
+  where: async (frames) => {
+    frames = await frames.query(Posting._exists, { post }, { exists });
+    return frames.filter(($) => $[exists] === false);
+  },
+  then: actions([Requesting.respond, { request, error: "Post not found." }]),
+});
+
 // --- posts/edit (author-only) ---
 
 export const PostEditRequest: Sync = (
