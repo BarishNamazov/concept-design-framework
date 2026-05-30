@@ -118,12 +118,13 @@ export const ReactionForTargetResponse: Sync = (
     { request },
   ]),
   where: async (frames) => {
+    const [base] = frames;
     frames = await frames.query(
       Reacting._getReactionsForTarget,
       { target },
       { reaction, user, kind },
     );
-    return frames.collectAs([reaction, user, kind], reactions);
+    return frames.aggregate(base, [reaction, user, kind], reactions);
   },
   then: actions([Requesting.respond, { request, reactions }]),
 });

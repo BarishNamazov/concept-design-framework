@@ -21,9 +21,10 @@ export const UnreadListResponse: Sync = (
     { request },
   ]),
   where: async (frames) => {
+    const [base] = frames;
     frames = await frames.query(Sessioning._getUser, { session }, { user });
     frames = await frames.query(Tracking._getUnread, { user, scope }, { item });
-    return frames.collectAs([item], items);
+    return frames.aggregate(base, [item], items);
   },
   then: actions([Requesting.respond, { request, items }]),
 });

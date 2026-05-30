@@ -19,8 +19,9 @@ export const LinkBacklinksResponse: Sync = (
     { request },
   ]),
   where: async (frames) => {
+    const [base] = frames;
     frames = await frames.query(Linking._getBacklinks, { target }, { source });
-    return frames.collectAs([source], sources);
+    return frames.aggregate(base, [source], sources);
   },
   then: actions([Requesting.respond, { request, sources }]),
 });
@@ -36,12 +37,13 @@ export const LinkForwardResponse: Sync = (
     { request },
   ]),
   where: async (frames) => {
+    const [base] = frames;
     frames = await frames.query(
       Linking._getForwardLinks,
       { source },
       { target },
     );
-    return frames.collectAs([target], targets);
+    return frames.aggregate(base, [target], targets);
   },
   then: actions([Requesting.respond, { request, targets }]),
 });

@@ -348,4 +348,27 @@ export class Frames<TFrame extends Frame = Frame> extends Array<TFrame> {
 
     return result;
   }
+
+  /**
+   * Like {@link collectAs}, but guarantees exactly one output frame even when
+   * `this` is empty — the common cause of a synchronization silently failing to
+   * fire (see `design/memories/sync-learnings.md`, "Zero Matches").
+   *
+   * A list endpoint typically starts from a single request frame, fans out via
+   * `.query` (which drops the frame when a query returns nothing), then collects
+   * the results back into one list. If the query yields zero rows the request
+   * frame is lost and no response is ever sent. `aggregate` restores it: pass the
+   * originating `base` frame (captured before the queries) and, when there is
+   * nothing to collect, it emits `base` with `as` bound to an empty array.
+   *
+   * @param base    bindings that must survive into the `then` clause (e.g. `request`).
+   * @param collect symbols to gather into the list.
+   * @param as      symbol the collected list is bound to.
+   */
+  aggregate(base: Frame, collect: symbol[], as: symbol): Frames {
+    if (this.length === 0) {
+      return new Frames({ ...base, [as]: [] } as Frame);
+    }
+    return this.collectAs(collect, as);
+  }
 }

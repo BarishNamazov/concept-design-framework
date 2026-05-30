@@ -197,6 +197,7 @@ export const ThreadGetResponse: Sync = (
     { request },
   ]),
   where: async (frames) => {
+    const [base] = frames;
     frames = await frames.query(
       Conversing._getThread,
       { conversation },
@@ -208,7 +209,8 @@ export const ThreadGetResponse: Sync = (
       { target: item },
       { rendered },
     );
-    frames = frames.collectAs(
+    frames = frames.aggregate(
+      base,
       [node, item, parent, depth, post, rendered],
       thread,
     );
@@ -456,8 +458,9 @@ export const PostsByAuthorResponse: Sync = (
     { request },
   ]),
   where: async (frames) => {
+    const [base] = frames;
     frames = await frames.query(Posting._getByAuthor, { author }, { post });
-    return frames.collectAs([post], posts);
+    return frames.aggregate(base, [post], posts);
   },
   then: actions([Requesting.respond, { request, posts }]),
 });

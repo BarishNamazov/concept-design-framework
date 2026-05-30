@@ -165,8 +165,9 @@ export const TagTargetsResponse: Sync = (
     { request },
   ]),
   where: async (frames) => {
+    const [base] = frames;
     frames = await frames.query(Tagging._getTargets, { tag }, { target });
-    return frames.collectAs([target], targets);
+    return frames.aggregate(base, [target], targets);
   },
   then: actions([Requesting.respond, { request, targets }]),
 });
@@ -182,8 +183,9 @@ export const TagForTargetResponse: Sync = (
     { request },
   ]),
   where: async (frames) => {
+    const [base] = frames;
     frames = await frames.query(Tagging._getTags, { target }, { tag, name });
-    return frames.collectAs([tag, name], tags);
+    return frames.aggregate(base, [tag, name], tags);
   },
   then: actions([Requesting.respond, { request, tags }]),
 });
