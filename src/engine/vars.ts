@@ -1,18 +1,23 @@
+/**
+ * The {@link $vars} proxy: the source of logic variables for sync functions.
+ *
+ * Reading any string property returns a brand-new `Symbol` named after that
+ * property, so destructuring binds each name to a unique logic variable:
+ *
+ * ```ts
+ * const { user, post } = $vars; // two distinct symbols, described "user"/"post"
+ * ```
+ *
+ * Symbols give every variable a stable identity that doubles as a frame key,
+ * while their `.description` keeps logs and `collectAs` output human-readable.
+ */
 import type { Vars } from "./types.ts";
 
-// Special object that returns new Symbols when accessed
 export const $vars = new Proxy({} as Vars, {
-  get(_, prop) {
+  get(_target, prop) {
     if (typeof prop === "string") {
-      // Return a symbol constructed with the property name
       return Symbol(prop);
     }
     return undefined;
   },
 }) as Vars;
-
-// Destructuring binds new symbols with property names
-if (import.meta.main) {
-  const { user, post } = $vars;
-  console.log(user, post);
-}

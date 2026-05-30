@@ -4,13 +4,26 @@
   Licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International.
   See https://creativecommons.org/licenses/by-nc-sa/4.0/
 */
-export type Mapping = Record<string, unknown>;
-export type Frame = Record<symbol, unknown>;
+/**
+ * {@link Frames} — the working set of a synchronization.
+ *
+ * A *frame* is one row of variable bindings (keyed by `symbol`). A `Frames`
+ * value is an ordered bag of such rows and behaves like a relational
+ * intermediate result: `when` matching produces it, `where` transforms it, and
+ * `then` consumes it.
+ *
+ * `Frames` extends `Array` and is wrapped in a `Proxy` so that every standard
+ * array method which returns a new array (`map`, `filter`, `flatMap`, `slice`,
+ * `concat`, `reverse`, `sort`, `splice`, …) transparently returns a `Frames`
+ * again, keeping the fluent API closed over the type. The query helpers
+ * (`query` / `queryAsync`) are excluded from this auto-wrapping because they
+ * already construct and return `Frames` themselves (possibly inside a Promise).
+ */
+import type { Frame, Mapping } from "./types.ts";
 
-export type ActionFunction<TInput = Mapping, TOutput = Mapping> = (
-  input: TInput,
-) => TOutput;
+export type { Frame, Mapping } from "./types.ts";
 
+/** Infers the new frame keys contributed by a query's `output` mapping. */
 type ExtractSymbolMappings<TOutputMapping, TFunctionOutput> = {
   [
     K in keyof TOutputMapping as TOutputMapping[K] extends symbol
@@ -95,37 +108,81 @@ export interface Frames<TFrame extends Frame = Frame> {
   splice(start: number, deleteCount: number, ...items: TFrame[]): this;
 }
 
+/** Methods that own their return value and must NOT be auto-rewrapped. */
+const UNWRAPPED_METHODS = new Set<PropertyKey>(["query", "queryAsync"]);
+
 export class Frames<TFrame extends Frame = Frame> extends Array<TFrame> {
   constructor(...frames: TFrame[]) {
     super(...frames);
-    // Return a proxy that only handles method interception
+    // Re-wrap array-returning methods so the fluent API stays a `Frames`.
     return new Proxy(this, {
       get(target, prop, receiver) {
         const value = Reflect.get(target, prop, receiver);
-
-        // Only intercept function calls that might return arrays
-        if (
-          typeof value === "function" &&
-          prop !== "query" &&
-          prop !== "queryAsync"
-        ) {
-          return function (this: Frames<TFrame>, ...args: unknown[]) {
-            const result = value.apply(this, args);
-
-            // If method returns an array, wrap it
-            if (
-              Array.isArray(result) && !(result instanceof Frames)
-            ) {
-              return new Frames(...result);
-            }
-
-            return result;
-          };
+        if (typeof value !== "function" || UNWRAPPED_METHODS.has(prop)) {
+          return value;
         }
-
-        return value;
+        return function (this: Frames<TFrame>, ...args: unknown[]) {
+          const result = value.apply(this, args);
+          if (Array.isArray(result) && !(result instanceof Frames)) {
+            return new Frames(...result);
+          }
+          return result;
+        };
       },
     });
+  }
+
+  /**
+   * Resolve a query's `input` mapping against a single frame.
+   *
+   * Symbol values are looked up in the frame (and must be bound — an unbound
+   * symbol is a programming error); literal values pass through unchanged.
+   */
+  private static bindInput(frame: Frame, input: Mapping): Mapping {
+    const bound: Mapping = {};
+    for (const [key, binding] of Object.entries(input)) {
+      if (typeof binding === "symbol") {
+        const value = frame[binding];
+        if (value === undefined) {
+          throw new Error(
+            `Binding: ${String(binding)} not found in frame: ${String(frame)}`,
+          );
+        }
+        bound[key] = value;
+      } else {
+        bound[key] = binding;
+      }
+    }
+    return bound;
+  }
+
+  /**
+   * Expand one source frame by a query's result rows into the accumulator.
+   *
+   * Each row yields a fresh frame extending `frame` with the `output` symbol
+   * bindings. A query that returns no rows contributes nothing — the source
+   * frame is dropped, giving inner-join / fan-out semantics.
+   */
+  private static expandOutputs(
+    into: Frames,
+    frame: Frame,
+    rows: unknown[],
+    output: Record<string, symbol>,
+  ): void {
+    for (const row of rows) {
+      const newFrame: Record<symbol, unknown> = { ...frame };
+      for (const [outputKey, symbolKey] of Object.entries(output)) {
+        if (
+          typeof symbolKey === "symbol" &&
+          row &&
+          typeof row === "object" &&
+          outputKey in row
+        ) {
+          newFrame[symbolKey] = (row as Record<string, unknown>)[outputKey];
+        }
+      }
+      into.push(newFrame as Frame);
+    }
   }
 
   // Overloads: sync and async query function variants
@@ -156,6 +213,14 @@ export class Frames<TFrame extends Frame = Frame> extends Array<TFrame> {
     input: TInputMapping,
     output: TOutputMapping,
   ): Promise<Frames<TNewFrame>>;
+  /**
+   * Fan each frame out over the rows returned by `f`.
+   *
+   * Works with both synchronous (`unknown[]`) and asynchronous
+   * (`Promise<unknown[]>`) query functions, returning `Frames` or
+   * `Promise<Frames>` to match. Frames whose query yields zero rows are dropped
+   * (intentional inner-join semantics).
+   */
   query(
     f: (...args: never[]) => unknown[] | Promise<unknown[]>,
     input: Record<string, unknown>,
@@ -164,58 +229,15 @@ export class Frames<TFrame extends Frame = Frame> extends Array<TFrame> {
     const result = new Frames();
     const promises: Promise<void>[] = [];
 
-    const processOutputs = (
-      frame: Frame,
-      functionOutputArray: unknown[],
-    ) => {
-      for (const functionOutput of functionOutputArray) {
-        const newFrame = { ...frame };
-        for (const [outputKey, symbolKey] of Object.entries(output)) {
-          if (
-            typeof symbolKey === "symbol" &&
-            functionOutput &&
-            typeof functionOutput === "object" &&
-            outputKey in functionOutput
-          ) {
-            (newFrame as Record<symbol, unknown>)[symbolKey] =
-              (functionOutput as Record<string, unknown>)[
-                outputKey
-              ];
-          }
-        }
-        result.push(newFrame as unknown as Frame);
-      }
-    };
-
     for (const frame of this) {
-      const entries: [string, unknown][] = [];
-      for (const [key, binding] of Object.entries(input)) {
-        let value: unknown = binding;
-        if (typeof binding === "symbol") {
-          const bound = (frame as Record<symbol, unknown>)[binding];
-          if (bound === undefined) {
-            throw new Error(
-              `Binding: ${String(binding)} not found in frame: ${frame}`,
-            );
-          }
-          value = bound;
-        }
-        entries.push([key, value]);
-      }
-      const boundInput = Object.fromEntries(entries);
-
-      const maybeArray = f(boundInput as never);
-      if (
-        typeof (maybeArray as Promise<unknown[]>).then === "function"
-      ) {
-        // async path
-        const p = (maybeArray as Promise<unknown[]>).then((arr) => {
-          processOutputs(frame, arr);
-        });
-        promises.push(p);
+      const boundInput = Frames.bindInput(frame, input);
+      const rows = f(boundInput as never);
+      if (rows instanceof Promise) {
+        promises.push(
+          rows.then((arr) => Frames.expandOutputs(result, frame, arr, output)),
+        );
       } else {
-        // sync path
-        processOutputs(frame, maybeArray as unknown[]);
+        Frames.expandOutputs(result, frame, rows, output);
       }
     }
 
@@ -225,6 +247,10 @@ export class Frames<TFrame extends Frame = Frame> extends Array<TFrame> {
     return result;
   }
 
+  /**
+   * Always-async variant of {@link query}, for query functions that return a
+   * Promise. Semantics per frame are identical to {@link query}.
+   */
   async queryAsync<
     TFunction extends (...args: never[]) => Promise<unknown[]>,
     TInputMapping extends Record<string, unknown>,
@@ -240,112 +266,63 @@ export class Frames<TFrame extends Frame = Frame> extends Array<TFrame> {
     output: TOutputMapping,
   ): Promise<Frames<TNewFrame>> {
     const result = new Frames<TNewFrame>();
-
     for (const frame of this) {
-      const entries: [string, unknown][] = [];
-      // Lookup any unbound variables
-      for (const [key, binding] of Object.entries(input)) {
-        let value: unknown = binding;
-        if (typeof binding === "symbol") {
-          const bound = frame[binding];
-          if (bound === undefined) {
-            throw new Error(
-              `Binding: ${String(binding)} not found in frame: ${frame}`,
-            );
-          }
-          value = bound;
-        }
-        entries.push([key, value]);
-      }
-      const boundInput = Object.fromEntries(entries);
-
-      // Execute the function - expect array of bindings (async)
-      const functionOutputArray = await f(
-        boundInput as Parameters<TFunction>[0],
-      );
-
-      for (const functionOutput of functionOutputArray) {
-        // Create new frame with output bindings
-        const newFrame = { ...frame };
-        for (const [outputKey, symbolKey] of Object.entries(output)) {
-          if (
-            typeof symbolKey === "symbol" &&
-            functionOutput &&
-            typeof functionOutput === "object" &&
-            outputKey in functionOutput
-          ) {
-            (newFrame as Record<symbol, unknown>)[symbolKey] =
-              (functionOutput as Record<string, unknown>)[
-                outputKey
-              ];
-          }
-        }
-
-        result.push(newFrame as unknown as TNewFrame);
-      }
+      const boundInput = Frames.bindInput(frame, input);
+      const rows = await f(boundInput as Parameters<TFunction>[0]);
+      Frames.expandOutputs(result as Frames, frame, rows, output);
     }
     return result;
   }
-  collectAs<
-    TAsSymbol extends symbol,
-  >(
+
+  /**
+   * Group frames by their non-collected symbol keys, gathering the `collect`
+   * symbols of each group into an array bound to `as`.
+   *
+   * Within a group, each collected symbol is keyed by its `.description` in the
+   * produced records, so downstream code reads them by name.
+   */
+  collectAs<TAsSymbol extends symbol>(
     collect: symbol[],
     as: TAsSymbol,
   ): Frames {
-    // Create a map to group frames by non-collected keys
     const groups = new Map<
       string,
       { groupFrame: Frame; collected: Record<string, unknown>[] }
     >();
 
     for (const frame of this) {
-      // Separate collected and non-collected keys
       const groupKeys: Frame = {};
       const collectedRecord: Record<string, unknown> = {};
 
-      // Use getOwnPropertySymbols to iterate over symbol keys
-      const symbols = Object.getOwnPropertySymbols(frame);
-
-      for (const symbolKey of symbols) {
+      for (const symbolKey of Object.getOwnPropertySymbols(frame)) {
         const value = (frame as Record<symbol, unknown>)[symbolKey];
-
         if (collect.includes(symbolKey)) {
-          // Convert symbol to string for collected keys
           const symbolName = symbolKey.description || String(symbolKey);
           collectedRecord[symbolName] = value;
         } else {
-          // Keep as symbol for group keys
           groupKeys[symbolKey] = value;
         }
       }
 
-      // Create a stable key for grouping
+      // Stable, order-independent key over the group's surviving bindings.
       const groupKey = JSON.stringify(
         Object.getOwnPropertySymbols(groupKeys)
           .sort((a, b) => String(a).localeCompare(String(b)))
           .map((sym) => [String(sym), groupKeys[sym]]),
       );
 
-      if (!groups.has(groupKey)) {
-        groups.set(groupKey, {
-          groupFrame: groupKeys,
-          collected: [],
-        });
+      let group = groups.get(groupKey);
+      if (group === undefined) {
+        group = { groupFrame: groupKeys, collected: [] };
+        groups.set(groupKey, group);
       }
-
-      groups.get(groupKey)!.collected.push(collectedRecord);
+      group.collected.push(collectedRecord);
     }
 
-    // Build result frames
     const result = new Frames();
     for (const { groupFrame, collected } of groups.values()) {
-      const newFrame = {
-        ...groupFrame,
-        [as]: collected,
-      } as Frame;
-      result.push(newFrame);
+      result.push({ ...groupFrame, [as]: collected } as Frame);
     }
-
     return result;
   }
 

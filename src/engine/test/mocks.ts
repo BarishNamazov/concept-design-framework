@@ -54,6 +54,24 @@ export class ListConcept {
   }
 }
 
+// Concept whose action emits *mutually exclusive* output shapes: either an
+// `error` field or a `question` field, never both. Used to verify that a `when`
+// output pattern keyed on a field the record lacks rejects the match.
+export class GateConcept {
+  public seen: string[] = [];
+  check({ value }: { value: number }): { error: string } | { question: string } {
+    if (value < 0) return { error: `negative:${value}` };
+    return { question: `value:${value}` };
+  }
+  record({ msg }: { msg: string }) {
+    this.seen.push(msg);
+    return { msg };
+  }
+  _getSeen(_: Empty): { msg: string }[] {
+    return this.seen.map((m) => ({ msg: m }));
+  }
+}
+
 // Concept to echo or record action orders for flow validation
 export class RecorderConcept {
   public order: string[] = [];
