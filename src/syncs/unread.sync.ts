@@ -9,6 +9,39 @@
  */
 import { actions, type Sync } from "@engine";
 import { Requesting, Sessioning, Tracking } from "@concepts";
+import type { TrackingConcept } from "@concepts";
+import type {
+  ActionOk,
+  EndpointInputs,
+  InputShape,
+  QueryRow,
+} from "./contract.ts";
+
+export const endpoints = {
+  "/unread/list": { input: ["session", "scope"] },
+  "/unread/count": { input: ["session", "scope"] },
+  "/unread/markSeen": { input: ["session", "item"] },
+  "/unread/markAllSeen": { input: ["session", "scope"] },
+} as const satisfies EndpointInputs;
+
+export type Endpoints = {
+  "/unread/list": {
+    input: InputShape<(typeof endpoints)["/unread/list"]["input"]>;
+    output: { items: QueryRow<TrackingConcept, "_getUnread">[] };
+  };
+  "/unread/count": {
+    input: InputShape<(typeof endpoints)["/unread/count"]["input"]>;
+    output: QueryRow<TrackingConcept, "_getUnreadCount">;
+  };
+  "/unread/markSeen": {
+    input: InputShape<(typeof endpoints)["/unread/markSeen"]["input"]>;
+    output: ActionOk<TrackingConcept, "markSeen">;
+  };
+  "/unread/markAllSeen": {
+    input: InputShape<(typeof endpoints)["/unread/markAllSeen"]["input"]>;
+    output: ActionOk<TrackingConcept, "markAllSeen">;
+  };
+};
 
 // --- list ---
 

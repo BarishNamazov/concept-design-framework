@@ -2,8 +2,13 @@
  * # Type-safe client (Eden Treaty style)
  *
  * {@link createClient} returns a Proxy-based client whose **types are fully
- * inferred from {@link ApiContract}**. Two equivalent calling styles are
- * supported, both terminating in a single `POST {baseUrl}{path}` request:
+ * inferred from a contract type parameter** — the aggregated `ApiContract` that
+ * `bun run build` assembles from the syncs. This module is entirely generic and
+ * app-agnostic: it is never edited when endpoints are added or changed. The
+ * concrete binding to the app's contract happens in `index.ts`.
+ *
+ * Two equivalent calling styles are supported, both terminating in a single
+ * `POST {baseUrl}{path}` request:
  *
  * ```ts
  * const api = createClient({ baseUrl: "http://localhost:8000/api" });
@@ -18,13 +23,22 @@
  *
  * ## Error handling
  *
- * Every method resolves to `Result<P>` — the endpoint's success payload **or**
- * an `{ error }` envelope — and **never throws**. Backend-shaped errors (invalid
- * session, not found, ...) arrive as `{ error }` unchanged; transport failures
- * (network down, non-JSON body, non-2xx without an error body) are normalized
- * into the same `{ error }` shape. Callers discriminate with `"error" in result`.
+ * Every method resolves to the endpoint's success payload **or** an `{ error }`
+ * envelope, and **never throws**. Backend-shaped errors (invalid session, not
+ * found, ...) arrive as `{ error }` unchanged; transport failures (network down,
+ * non-JSON body, non-2xx without an error body) are normalized into the same
+ * `{ error }` shape. Callers discriminate with `"error" in result`.
  */
-import type { ApiContract, ApiPath, Input, Result } from "./contract.ts";
+
+/** The error envelope every endpoint may return instead of its success payload. */
+export type ApiError = { error: string };
+
+/**
+ * The structural shape any contract type must satisfy: a record mapping each
+ * path to its `{ input; output }` pair. {@link createClient} is generic over a
+ * concrete contract assignable to this.
+ */
+export type ContractShape = Record<string, { input: unknown; output: unknown }>;
 
 /** A header bag, or a (possibly async) function producing one per request. */
 export type HeadersOption =
@@ -50,31 +64,39 @@ export interface ClientOptions {
   headers?: HeadersOption;
 }
 
-/** A terminal endpoint method: takes the typed input, resolves to `Result<P>`. */
-export type Endpoint<P extends ApiPath> = (
-  input: Input<P>,
-) => Promise<Result<P>>;
+/**
+ * A terminal endpoint method: takes the path's typed input and resolves to its
+ * success payload or an {@link ApiError}.
+ */
+export type Endpoint<C extends ContractShape, P extends keyof C> = (
+  input: C[P]["input"],
+) => Promise<C[P]["output"] | ApiError>;
 
 // Path-string surgery used to build the grouped view from the flat contract.
 type Group<P extends string> = P extends `/${infer G}/${string}` ? G : never;
 type Method<P extends string> = P extends `/${string}/${infer M}` ? M : never;
 
 /** The indexed surface: `client["/auth/login"](input)`. */
-export type IndexedClient = { [P in ApiPath]: Endpoint<P> };
+export type IndexedClient<C extends ContractShape> = {
+  [P in keyof C & string]: Endpoint<C, P>;
+};
 
 /** The grouped surface: `client.auth.login(input)`. */
-export type GroupedClient = {
-  [G in Group<ApiPath & string>]: {
-    [P in ApiPath as Group<P & string> extends G ? Method<P & string> : never]:
-      Endpoint<P>;
+export type GroupedClient<C extends ContractShape> = {
+  [G in Group<keyof C & string>]: {
+    [P in keyof C & string as Group<P> extends G ? Method<P> : never]:
+      Endpoint<C, P>;
   };
 };
 
 /**
- * The full client type. Both calling styles coexist because the contract paths
- * (`/group/method`) cleanly split into a flat index and a two-level grouping.
+ * The full client type for a contract `C`. Both calling styles coexist because
+ * the contract paths (`/group/method`) cleanly split into a flat index and a
+ * two-level grouping.
  */
-export type Client = IndexedClient & GroupedClient;
+export type Client<C extends ContractShape> =
+  & IndexedClient<C>
+  & GroupedClient<C>;
 
 const DEFAULT_BASE_URL = "http://localhost:8000/api";
 
@@ -172,14 +194,20 @@ function makeProxy(
 }
 
 /**
- * Creates a typed API client. The returned value supports both the grouped
- * (`client.auth.login(...)`) and indexed (`client["/auth/login"](...)`) styles,
- * each fully inferred from {@link ApiContract}.
+ * Creates a typed API client for a contract `C`. The returned value supports
+ * both the grouped (`client.auth.login(...)`) and indexed
+ * (`client["/auth/login"](...)`) styles, each fully inferred from `C`.
+ *
+ * Callers normally use the app-bound `createClient` re-exported from the SDK
+ * barrel, which fixes `C` to the aggregated `ApiContract`.
  */
-export function createClient(options: ClientOptions = {}): Client {
+export function createClient<C extends ContractShape>(
+  options: ClientOptions = {},
+): Client<C> {
   const baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "");
   const fetchImpl = options.fetch ?? globalThis.fetch;
   const call = (path: string, body: unknown) =>
     request(fetchImpl, baseUrl, options.headers, path, body);
-  return makeProxy([], call) as Client;
+  return makeProxy([], call) as Client<C>;
 }
+

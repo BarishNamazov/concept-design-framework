@@ -2,18 +2,29 @@
 
 A **fully type-safe** client for the forum backend, in the
 [Elysia Eden Treaty](https://elysiajs.com/eden/treaty/overview.html) style: a
-Proxy-based client where property access builds the request path and the
-terminal call performs a `POST`. Every input and output is inferred from a
-single API contract that is itself **derived from the real backend concepts**,
-so the SDK breaks at compile time if a backend response shape changes.
+static, generic Proxy-based client where property access builds the request path
+and the terminal call performs a `POST`. Every input and output is inferred from
+a single `ApiContract` that is **auto-generated from the synchronizations** and
+itself **derived from the real backend concepts**, so the SDK breaks at compile
+time if a backend response shape changes.
 
 ```
 src/sdk/
-├── contract.ts   # ApiContract: path -> { input; output }, derived from @concepts
-├── client.ts     # createClient(): the Eden-Treaty-style typed Proxy
-├── index.ts      # barrel re-exporting the public surface
+├── client.ts     # createClient(): the static, generic Eden-Treaty-style Proxy
+├── contract.ts   # ApiContract = the aggregated AppContract (re-exposed) + views
+├── index.ts      # barrel: binds createClient() to ApiContract, re-exports types
 └── README.md     # you are here
+
+src/syncs/
+├── <feature>.sync.ts    # syncs + co-located `endpoints` manifest & `Endpoints` type
+├── contract.ts          # shared spec helpers (ActionOk / QueryRow / Prettify / ...)
+└── contract.generated.ts # AppContract + endpointManifest, built by `bun run build`
 ```
+
+The contract is **not** hand-maintained in one file. Each `*.sync.ts` feature
+file co-locates its endpoint specs next to the syncs that implement them, and
+`bun run build` aggregates every feature's `Endpoints` into one `AppContract`.
+See [`../../docs/SDK_AUTOGEN.md`](../../docs/SDK_AUTOGEN.md) for the full design.
 
 ## Install / import
 
@@ -86,32 +97,57 @@ function unwrap<T>(r: T | { error: string }): T {
 
 ## How the types stay bound to the backend
 
-`contract.ts` does not hand-write response shapes. Instead it derives them from
-the concept methods each synchronization actually calls. For example
-`/posts/get` is the `Posting._getPost` record plus `Formatting._getRendered`:
+The contract does not hand-write response shapes. Each feature file's `Endpoints`
+type derives them from the concept methods its syncs actually call, and the
+input field names come from a co-located runtime `endpoints` manifest. For
+example `/posts/get` (in `src/syncs/threads.sync.ts`) is the `Posting._getPost`
+record plus `Formatting._getRendered`:
 
 ```ts
 import type { PostingConcept, FormattingConcept } from "@concepts";
+import type { QueryRow, Prettify } from "./contract.ts";
 
-type PostRecord = Awaited<ReturnType<PostingConcept["_getPost"]>>[number]["post"];
-type Rendered = Awaited<ReturnType<FormattingConcept["_getRendered"]>>[number];
+type PostRecord = QueryRow<PostingConcept, "_getPost">["post"];
+type RenderedRow = QueryRow<FormattingConcept, "_getRendered">;
 
-// contract entry: { post: PostRecord & Rendered }
+// Endpoints entry: { input: ...; output: { post: Prettify<PostRecord & RenderedRow> } }
 ```
+
+`bun run build` aggregates every feature's `Endpoints` into the generated
+`src/syncs/contract.generated.ts` (`AppContract`), which `contract.ts` re-exposes
+as `ApiContract` — imported **as a type only**, so the SDK has no runtime
+dependency on the backend.
 
 Ids use the branded `ID` type from `@utils/types.ts` on output (preserving the
 backend's guarantees), while inputs accept plain `string` for ergonomics. If a
-concept's result shape changes, `contract.ts` — and therefore every call site —
-fails to type-check. That is the point: there is one source of truth.
+concept's result shape changes, the specs — and therefore every call site —
+fail to type-check. That is the point: there is one source of truth, and it lives
+with the syncs.
+
+A runtime consistency test (`src/syncs/endpoints.consistency.test.ts`) further
+enforces that every declared endpoint path corresponds to a responding sync (and
+vice-versa) and that the declared input field names match the real
+`Requesting.request` patterns — so the specs cannot silently drift from the
+syncs.
+
+## Adding an endpoint
+
+Write the syncs for the new `path` in a `*.sync.ts` feature file, add the path to
+that file's `endpoints` manifest (with its input field names) and an `Endpoints`
+entry (with its concept-derived output), then run `bun run build`. The new path
+is automatically part of `ApiContract` and `createClient()` — no central file is
+edited. See [`../../docs/SDK_AUTOGEN.md`](../../docs/SDK_AUTOGEN.md).
 
 ## Public exports
 
 From `./sdk`:
 
-- `createClient(options?)` → the typed client.
-- Types: `Client`, `ClientOptions`, `Endpoint`, `HeadersOption`,
-  `ApiContract`, `ApiPath`, `Input<P>`, `Output<P>`, `Result<P>`, `ApiError`,
-  `ID`, and the derived `PostView` / `ThreadNode` view shapes.
+- `createClient(options?)` → the typed client, bound to `ApiContract`.
+- Types: `Client<C>`, `ClientOptions`, `Endpoint<C, P>`, `ContractShape`,
+  `HeadersOption`, `ApiContract`, `ApiPath`, `Input<P>`, `Output<P>`,
+  `Result<P>`, `ApiError`, `ID`, and the derived `PostView` / `ThreadNode` view
+  shapes. The client types are generic over the contract; `createClient()` fixes
+  them to `ApiContract`, so callers never pass a type argument.
 
 ## Tests
 

@@ -10,6 +10,44 @@
  */
 import { actions, type Sync } from "@engine";
 import { Requesting, Sessioning, Tagging } from "@concepts";
+import type { TaggingConcept } from "@concepts";
+import type {
+  ActionOk,
+  EndpointInputs,
+  InputShape,
+  QueryRow,
+} from "./contract.ts";
+
+export const endpoints = {
+  "/tags/create": { input: ["session", "name"] },
+  "/tags/add": { input: ["session", "target", "tag"] },
+  "/tags/remove": { input: ["session", "target", "tag"] },
+  "/tags/targets": { input: ["tag"] },
+  "/tags/forTarget": { input: ["target"] },
+} as const satisfies EndpointInputs;
+
+export type Endpoints = {
+  "/tags/create": {
+    input: InputShape<(typeof endpoints)["/tags/create"]["input"]>;
+    output: ActionOk<TaggingConcept, "createTag">;
+  };
+  "/tags/add": {
+    input: InputShape<(typeof endpoints)["/tags/add"]["input"]>;
+    output: ActionOk<TaggingConcept, "addTag">;
+  };
+  "/tags/remove": {
+    input: InputShape<(typeof endpoints)["/tags/remove"]["input"]>;
+    output: ActionOk<TaggingConcept, "removeTag">;
+  };
+  "/tags/targets": {
+    input: InputShape<(typeof endpoints)["/tags/targets"]["input"]>;
+    output: { targets: QueryRow<TaggingConcept, "_getTargets">[] };
+  };
+  "/tags/forTarget": {
+    input: InputShape<(typeof endpoints)["/tags/forTarget"]["input"]>;
+    output: { tags: QueryRow<TaggingConcept, "_getTags">[] };
+  };
+};
 
 // --- create ---
 

@@ -22,6 +22,100 @@ import {
   Tagging,
   Tracking,
 } from "@concepts";
+import type {
+  ConversingConcept,
+  FormattingConcept,
+  PostingConcept,
+} from "@concepts";
+import type {
+  ActionOk,
+  EndpointInputs,
+  InputShape,
+  Prettify,
+  QueryRow,
+} from "./contract.ts";
+
+// --- Derived view shapes assembled by the read endpoints below ---
+
+/** The post record `{ author, content, createdAt, editedAt }` from Posting. */
+type PostRecord = QueryRow<PostingConcept, "_getPost">["post"];
+
+/** A rendered-html row `{ rendered }` from Formatting. */
+type RenderedRow = QueryRow<FormattingConcept, "_getRendered">;
+
+/**
+ * One enriched thread node, exactly as assembled by the `/threads/get` sync: the
+ * Conversing node fields plus the post record and its rendered html.
+ */
+type ThreadNode = Prettify<
+  & QueryRow<ConversingConcept, "_getThread">
+  & { post: PostRecord }
+  & RenderedRow
+>;
+
+/** A single post view (`/posts/get`): the post record merged with rendered html. */
+type PostView = Prettify<PostRecord & RenderedRow>;
+
+/**
+ * One entry of the `/threads/list` feed: a conversation root (Conversing's
+ * `_getConversations`) enriched with the root post's record.
+ */
+type ConversationSummary = Prettify<
+  & QueryRow<ConversingConcept, "_getConversations">
+  & { post: PostRecord }
+>;
+
+export const endpoints = {
+  "/threads/create": { input: ["session", "content"] },
+  "/threads/reply": { input: ["session", "parent", "content"] },
+  "/threads/get": { input: ["conversation"] },
+  "/threads/list": { input: [] },
+  "/posts/get": { input: ["post"] },
+  "/posts/edit": { input: ["session", "post", "content"] },
+  "/posts/delete": { input: ["session", "post"] },
+  "/posts/byAuthor": { input: ["author"] },
+} as const satisfies EndpointInputs;
+
+export type Endpoints = {
+  "/threads/create": {
+    input: InputShape<(typeof endpoints)["/threads/create"]["input"]>;
+    output: Prettify<
+      & ActionOk<PostingConcept, "create">
+      & ActionOk<ConversingConcept, "start">
+    >;
+  };
+  "/threads/reply": {
+    input: InputShape<(typeof endpoints)["/threads/reply"]["input"]>;
+    output: Prettify<
+      & ActionOk<PostingConcept, "create">
+      & ActionOk<ConversingConcept, "reply">
+    >;
+  };
+  "/threads/get": {
+    input: InputShape<(typeof endpoints)["/threads/get"]["input"]>;
+    output: { thread: ThreadNode[] };
+  };
+  "/threads/list": {
+    input: InputShape<(typeof endpoints)["/threads/list"]["input"]>;
+    output: { conversations: ConversationSummary[] };
+  };
+  "/posts/get": {
+    input: InputShape<(typeof endpoints)["/posts/get"]["input"]>;
+    output: { post: PostView };
+  };
+  "/posts/edit": {
+    input: InputShape<(typeof endpoints)["/posts/edit"]["input"]>;
+    output: ActionOk<PostingConcept, "edit">;
+  };
+  "/posts/delete": {
+    input: InputShape<(typeof endpoints)["/posts/delete"]["input"]>;
+    output: ActionOk<PostingConcept, "delete">;
+  };
+  "/posts/byAuthor": {
+    input: InputShape<(typeof endpoints)["/posts/byAuthor"]["input"]>;
+    output: { posts: QueryRow<PostingConcept, "_getByAuthor">[] };
+  };
+};
 
 /** Parses `[[<id>]]` references out of post markdown into an array of ids. */
 function parseLinkTargets(content: string): string[] {

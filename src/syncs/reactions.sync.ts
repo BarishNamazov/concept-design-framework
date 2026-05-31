@@ -8,6 +8,36 @@
  */
 import { actions, type Sync } from "@engine";
 import { Reacting, Requesting, Sessioning } from "@concepts";
+import type { ReactingConcept } from "@concepts";
+import type {
+  ActionOk,
+  EndpointInputs,
+  InputShape,
+  QueryRow,
+} from "./contract.ts";
+
+export const endpoints = {
+  "/reactions/add": { input: ["session", "target", "kind"] },
+  "/reactions/remove": { input: ["session", "target", "kind"] },
+  "/reactions/forTarget": { input: ["target"] },
+} as const satisfies EndpointInputs;
+
+export type Endpoints = {
+  "/reactions/add": {
+    input: InputShape<(typeof endpoints)["/reactions/add"]["input"]>;
+    output: ActionOk<ReactingConcept, "react">;
+  };
+  "/reactions/remove": {
+    input: InputShape<(typeof endpoints)["/reactions/remove"]["input"]>;
+    output: { ok: true };
+  };
+  "/reactions/forTarget": {
+    input: InputShape<(typeof endpoints)["/reactions/forTarget"]["input"]>;
+    output: {
+      reactions: QueryRow<ReactingConcept, "_getReactionsForTarget">[];
+    };
+  };
+};
 
 // --- add ---
 

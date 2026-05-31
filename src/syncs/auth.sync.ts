@@ -10,6 +10,61 @@
  */
 import { actions, type Sync } from "@engine";
 import { Authenticating, Profiling, Requesting, Sessioning } from "@concepts";
+import type {
+  AuthenticatingConcept,
+  ProfilingConcept,
+  SessioningConcept,
+} from "@concepts";
+import type {
+  ActionOk,
+  EndpointInputs,
+  InputShape,
+  Prettify,
+  QueryRow,
+} from "./contract.ts";
+
+/**
+ * Endpoint specs for this feature, co-located with the syncs above. Input field
+ * names are listed here (the single runtime source); the `Endpoints` type below
+ * derives each `input` from this manifest and each `output` from the concepts.
+ */
+export const endpoints = {
+  "/auth/register": { input: ["username", "password", "displayName"] },
+  "/auth/login": { input: ["username", "password"] },
+  "/auth/logout": { input: ["session"] },
+  "/auth/me": { input: ["session"] },
+  "/auth/changePassword": { input: ["session", "oldPassword", "newPassword"] },
+} as const satisfies EndpointInputs;
+
+export type Endpoints = {
+  "/auth/register": {
+    input: InputShape<(typeof endpoints)["/auth/register"]["input"]>;
+    output: ActionOk<AuthenticatingConcept, "register">;
+  };
+  "/auth/login": {
+    input: InputShape<(typeof endpoints)["/auth/login"]["input"]>;
+    output: Prettify<
+      & ActionOk<SessioningConcept, "start">
+      & ActionOk<AuthenticatingConcept, "authenticate">
+    >;
+  };
+  "/auth/logout": {
+    input: InputShape<(typeof endpoints)["/auth/logout"]["input"]>;
+    output: { ok: true };
+  };
+  "/auth/me": {
+    input: InputShape<(typeof endpoints)["/auth/me"]["input"]>;
+    output: Prettify<
+      & QueryRow<SessioningConcept, "_getUser">
+      & QueryRow<AuthenticatingConcept, "_getById">
+      & QueryRow<ProfilingConcept, "_getProfile">
+    >;
+  };
+  "/auth/changePassword": {
+    input: InputShape<(typeof endpoints)["/auth/changePassword"]["input"]>;
+    output: ActionOk<AuthenticatingConcept, "changePassword">;
+  };
+};
 
 // --- register: create credentials, then a profile, then respond ---
 

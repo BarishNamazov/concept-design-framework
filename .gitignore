@@ -8,3 +8,4 @@ node_modules
 src/concepts/concepts.ts
 src/concepts/test_concepts.ts
 src/syncs/syncs.ts
+src/syncs/contract.generated.ts

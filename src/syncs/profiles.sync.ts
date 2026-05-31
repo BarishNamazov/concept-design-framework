@@ -9,6 +9,39 @@
  */
 import { actions, type Sync } from "@engine";
 import { Profiling, Requesting, Sessioning } from "@concepts";
+import type { ProfilingConcept } from "@concepts";
+import type {
+  ActionOk,
+  EndpointInputs,
+  InputShape,
+  QueryRow,
+} from "./contract.ts";
+
+export const endpoints = {
+  "/profiles/get": { input: ["user"] },
+  "/profiles/setDisplayName": { input: ["session", "displayName"] },
+  "/profiles/setBio": { input: ["session", "bio"] },
+  "/profiles/setAvatar": { input: ["session", "avatar"] },
+} as const satisfies EndpointInputs;
+
+export type Endpoints = {
+  "/profiles/get": {
+    input: InputShape<(typeof endpoints)["/profiles/get"]["input"]>;
+    output: QueryRow<ProfilingConcept, "_getProfile">;
+  };
+  "/profiles/setDisplayName": {
+    input: InputShape<(typeof endpoints)["/profiles/setDisplayName"]["input"]>;
+    output: ActionOk<ProfilingConcept, "setDisplayName">;
+  };
+  "/profiles/setBio": {
+    input: InputShape<(typeof endpoints)["/profiles/setBio"]["input"]>;
+    output: ActionOk<ProfilingConcept, "setBio">;
+  };
+  "/profiles/setAvatar": {
+    input: InputShape<(typeof endpoints)["/profiles/setAvatar"]["input"]>;
+    output: ActionOk<ProfilingConcept, "setAvatar">;
+  };
+};
 
 // --- get: public lookup of a user's profile ---
 

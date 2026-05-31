@@ -7,6 +7,24 @@
  */
 import { actions, type Sync } from "@engine";
 import { Linking, Requesting } from "@concepts";
+import type { LinkingConcept } from "@concepts";
+import type { EndpointInputs, InputShape, QueryRow } from "./contract.ts";
+
+export const endpoints = {
+  "/links/backlinks": { input: ["target"] },
+  "/links/forward": { input: ["source"] },
+} as const satisfies EndpointInputs;
+
+export type Endpoints = {
+  "/links/backlinks": {
+    input: InputShape<(typeof endpoints)["/links/backlinks"]["input"]>;
+    output: { sources: QueryRow<LinkingConcept, "_getBacklinks">[] };
+  };
+  "/links/forward": {
+    input: InputShape<(typeof endpoints)["/links/forward"]["input"]>;
+    output: { targets: QueryRow<LinkingConcept, "_getForwardLinks">[] };
+  };
+};
 
 // --- backlinks: public ---
 
