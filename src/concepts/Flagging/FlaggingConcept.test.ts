@@ -99,9 +99,15 @@ describe("Flagging", () => {
     ok(await Flagging.flag({ reporter: user("u1"), target: hot, reason: "a" }));
     ok(await Flagging.flag({ reporter: user("u2"), target: hot, reason: "b" }));
     ok(await Flagging.flag({ reporter: user("u3"), target: hot, reason: "c" }));
-    ok(await Flagging.flag({ reporter: user("u1"), target: warm, reason: "d" }));
-    ok(await Flagging.flag({ reporter: user("u2"), target: warm, reason: "e" }));
-    ok(await Flagging.flag({ reporter: user("u1"), target: cold, reason: "f" }));
+    ok(
+      await Flagging.flag({ reporter: user("u1"), target: warm, reason: "d" }),
+    );
+    ok(
+      await Flagging.flag({ reporter: user("u2"), target: warm, reason: "e" }),
+    );
+    ok(
+      await Flagging.flag({ reporter: user("u1"), target: cold, reason: "f" }),
+    );
     expect(await Flagging._getOpenTargets()).toEqual([
       { target: hot, count: 3 },
       { target: warm, count: 2 },

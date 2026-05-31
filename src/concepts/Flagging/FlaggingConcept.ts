@@ -139,11 +139,7 @@ export default class FlaggingConcept {
    * **effects** returns every Flag on the given `target`, each with its flag id,
    * reporter, reason, status and createdAt
    */
-  async _getFlags({
-    target,
-  }: {
-    target: Target;
-  }): Promise<
+  async _getFlags({ target }: { target: Target }): Promise<
     {
       flag: Flag;
       reporter: User;

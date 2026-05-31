@@ -150,11 +150,7 @@ export default class NotifyingConcept {
    * newest-first, each with its notification id, kind, subject, link, createdAt
    * and read flag
    */
-  async _getInbox({
-    recipient,
-  }: {
-    recipient: User;
-  }): Promise<
+  async _getInbox({ recipient }: { recipient: User }): Promise<
     {
       notification: Notification;
       kind: string;
@@ -207,11 +203,7 @@ export default class NotifyingConcept {
    * newest-first, each with its notification id, kind, subject, link and
    * createdAt
    */
-  async _getUnread({
-    recipient,
-  }: {
-    recipient: User;
-  }): Promise<
+  async _getUnread({ recipient }: { recipient: User }): Promise<
     {
       notification: Notification;
       kind: string;
