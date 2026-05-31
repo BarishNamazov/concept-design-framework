@@ -50,7 +50,11 @@ The application is described under `design/`:
 - `design/application/` — the overview, and links to all concepts and synchronizations.
 - `design/concepts/` — one specification per concept.
 - `design/background/` — reference material on concept design, implementation, and testing.
-- `docs/` — design records and data documentation for the implemented features.
+- `docs/` — design records and developer documentation for the implemented features:
+  - [docs/ENGINE.md](docs/ENGINE.md) — the concept + synchronization engine.
+  - [docs/REQUESTING.md](docs/REQUESTING.md) — the Bun.serve Requesting server.
+  - [docs/SDK_OVERVIEW.md](docs/SDK_OVERVIEW.md) — how the SDK ties to the engine, server, and example client.
+  - [docs/API_AND_SDK.md](docs/API_AND_SDK.md), [docs/CONCEPTS.md](docs/CONCEPTS.md), [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md), [docs/SDK_AUTOGEN.md](docs/SDK_AUTOGEN.md).
 
 To add a feature:
 
