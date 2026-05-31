@@ -1,121 +1,132 @@
-/**
- * Spec ⇄ sync consistency test.
- *
- * The SDK contract is aggregated from the per-feature endpoint specs co-located
- * in the `*.sync.ts` files (their `endpoints` manifest and `Endpoints` type).
- * This test enforces that those declared specs cannot silently drift from the
- * synchronizations that actually implement them.
- *
- * It introspects every registered sync by invoking it with the engine's `$vars`
- * proxy and inspecting the resulting `when` / `then` patterns. Comparing pattern
- * actions by reference against `Requesting.request` / `Requesting.respond`, it
- * derives, straight from the real syncs:
- *   - the set of paths that actually respond (the real endpoints), and
- *   - the input field names each path's `Requesting.request` patterns bind,
- * then checks them against the generated `endpointManifest`.
- *
- * Because the engine is dynamically typed (logic variables are `symbol`s, action
- * inputs are `Record<string, unknown>`), this link cannot be expressed purely at
- * the type level without re-typing the engine; the runtime check gives the same
- * anti-drift guarantee at build time. See `docs/SDK_AUTOGEN.md`.
- */
 import { beforeAll, expect, test } from "bun:test";
 import { setupApp, type TestApp } from "@utils/app_testing.ts";
 import { $vars } from "../engine/vars.ts";
-import type { ActionPattern, SyncFunction } from "../engine/types.ts";
-import type { AppContract } from "./contract.generated.ts";
-
-type ManifestType = typeof import("./contract.generated.ts")["endpointManifest"];
+import type { ActionPattern, Sync } from "@engine";
+import type { EmptyInput } from "@concepts/Requesting/api.ts";
+import type { ID } from "@utils/types.ts";
+import type { ForumApi } from "./app.ts";
 
 let app: TestApp;
-let syncs: Record<string, SyncFunction>;
-let endpointManifest: ManifestType;
+let api: typeof import("./app.ts")["api"];
 let requestAction: unknown;
 let respondAction: unknown;
 
 beforeAll(async () => {
   app = await setupApp();
+  ({ api } = await import("./app.ts"));
   const Requesting = app.concepts.Requesting as Record<string, unknown>;
   requestAction = Requesting.request;
   respondAction = Requesting.respond;
-  syncs = (await import("@syncs")).default as Record<string, SyncFunction>;
-  // Imported dynamically (after `setupApp` set the DB env) because the generated
-  // barrel pulls in the `*.sync.ts` files, which import the `@concepts` singletons.
-  endpointManifest = (await import("./contract.generated.ts")).endpointManifest;
 });
 
-// This suite deliberately does not stop the shared app: the in-memory Mongo
-// singleton is owned by the integration suite's single-shot teardown (see
-// `app_testing.ts`), and closing it here would break other test files sharing
-// the process.
-
-interface Introspection {
-  /** Paths whose syncs answer with `Requesting.respond` — the real endpoints. */
-  respondPaths: Set<string>;
-  /** Per path, the union of input field names bound by its request patterns. */
-  inputFields: Map<string, Set<string>>;
+interface EndpointRuntime {
+  path: string;
+  syncs: Record<string, Sync>;
 }
 
-/** Derive the real endpoint surface by inspecting every sync's when/then. */
-function introspectSyncs(): Introspection {
-  const respondPaths = new Set<string>();
-  const inputFields = new Map<string, Set<string>>();
+function collectEndpoints(value: unknown): EndpointRuntime[] {
+  if (isEndpoint(value)) return [value];
+  if (value === null || typeof value !== "object") return [];
+  return Object.values(value).flatMap(collectEndpoints);
+}
 
-  for (const fn of Object.values(syncs)) {
-    const decl = fn($vars);
-    const when = decl.when as ActionPattern[];
-    const then = decl.then as ActionPattern[];
+function isEndpoint(value: unknown): value is EndpointRuntime {
+  return value !== null && typeof value === "object" &&
+    "path" in value && "syncs" in value;
+}
 
-    let path: string | undefined;
-    const fields = new Set<string>();
-    for (const pattern of when) {
-      if (pattern.action !== requestAction) continue;
-      const p = pattern.input.path;
-      if (typeof p !== "string") continue;
-      path = p;
-      for (const key of Object.keys(pattern.input)) {
-        if (key !== "path") fields.add(key);
+test("every typed endpoint is backed by coherent Requesting syncs", () => {
+  const endpoints = collectEndpoints(api);
+  expect(endpoints.length).toBeGreaterThan(0);
+
+  for (const endpoint of endpoints) {
+    let responds = false;
+    const seenPaths = new Set<string>();
+
+    for (const sync of Object.values(endpoint.syncs)) {
+      const declaration = sync($vars);
+      for (const pattern of declaration.when as ActionPattern[]) {
+        if (pattern.action !== requestAction) continue;
+        if (typeof pattern.input.path === "string") {
+          seenPaths.add(pattern.input.path);
+        }
       }
+      responds ||= (declaration.then as ActionPattern[]).some(
+        (pattern) => pattern.action === respondAction,
+      );
     }
-    if (path === undefined) continue;
 
-    const existing = inputFields.get(path) ?? new Set<string>();
-    for (const f of fields) existing.add(f);
-    inputFields.set(path, existing);
-
-    if (then.some((pattern) => pattern.action === respondAction)) {
-      respondPaths.add(path);
-    }
-  }
-
-  return { respondPaths, inputFields };
-}
-
-const sorted = (xs: Iterable<string>): string[] => [...xs].sort();
-
-test("every declared endpoint path corresponds to a responding sync and vice-versa", () => {
-  const { respondPaths } = introspectSyncs();
-  const declaredPaths = Object.keys(endpointManifest);
-  expect(sorted(respondPaths)).toEqual(sorted(declaredPaths));
-});
-
-test("declared input field names match the Requesting.request patterns", () => {
-  const { inputFields } = introspectSyncs();
-  for (const [path, spec] of Object.entries(endpointManifest)) {
-    const declared = sorted(spec.input as readonly string[]);
-    const real = sorted(inputFields.get(path) ?? new Set<string>());
-    expect({ path, fields: real }).toEqual({ path, fields: declared });
+    expect([...seenPaths].sort()).toEqual([endpoint.path]);
+    expect(responds).toBe(true);
   }
 });
 
-// Compile-time assertion: the generated type and the runtime manifest agree on
-// the set of paths. Fails the build if they ever diverge.
 type Equal<A, B> =
   (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true
     : false;
 type Expect<T extends true> = T;
-type _PathsAgree = Expect<
-  Equal<keyof AppContract, keyof typeof endpointManifest>
+
+type ExpectedPaths =
+  | "/auth/register"
+  | "/auth/login"
+  | "/auth/logout"
+  | "/auth/me"
+  | "/auth/changePassword"
+  | "/profiles/get"
+  | "/profiles/setDisplayName"
+  | "/profiles/setBio"
+  | "/profiles/setAvatar"
+  | "/threads/create"
+  | "/threads/reply"
+  | "/threads/get"
+  | "/threads/list"
+  | "/posts/get"
+  | "/posts/edit"
+  | "/posts/delete"
+  | "/posts/byAuthor"
+  | "/reactions/add"
+  | "/reactions/remove"
+  | "/reactions/forTarget"
+  | "/tags/create"
+  | "/tags/add"
+  | "/tags/remove"
+  | "/tags/targets"
+  | "/tags/forTarget"
+  | "/unread/list"
+  | "/unread/count"
+  | "/unread/markSeen"
+  | "/unread/markAllSeen"
+  | "/links/backlinks"
+  | "/links/forward";
+
+type _PathSet = Expect<Equal<keyof ForumApi, ExpectedPaths>>;
+type _LoginInput = Expect<
+  Equal<
+    ForumApi["/auth/login"]["input"],
+    { username: string; password: string }
+  >
 >;
-const _pathsAgree: _PathsAgree = true;
-void _pathsAgree;
+type _RegisterInput = Expect<
+  Equal<
+    ForumApi["/auth/register"]["input"],
+    { username: string; password: string; displayName: string }
+  >
+>;
+type _ThreadListInput = Expect<
+  Equal<ForumApi["/threads/list"]["input"], EmptyInput>
+>;
+type _ThreadCreateOutput = Expect<
+  Equal<
+    ForumApi["/threads/create"]["output"],
+    { post: ID; conversation: ID; node: ID }
+  >
+>;
+
+const _typeChecks: [
+  _PathSet,
+  _LoginInput,
+  _RegisterInput,
+  _ThreadListInput,
+  _ThreadCreateOutput,
+] = [true, true, true, true, true];
+void _typeChecks;

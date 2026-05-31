@@ -6,147 +6,111 @@
  *   POST /reactions/remove    { session, target, kind } -> { ok }
  *   POST /reactions/forTarget { target }                -> { reactions }
  */
-import { actions, type Sync } from "@engine";
-import { Reacting, Requesting, Sessioning } from "@concepts";
+import { Reacting, Sessioning } from "@concepts";
 import type { ReactingConcept } from "@concepts";
-import type {
-  ActionOk,
-  EndpointInputs,
-  InputShape,
-  QueryRow,
-} from "./contract.ts";
+import {
+  defineFeature,
+  requestingEndpoint,
+  type ActionOk,
+  type QueryRow,
+} from "@concepts/Requesting/api.ts";
 
-export const endpoints = {
-  "/reactions/add": { input: ["session", "target", "kind"] },
-  "/reactions/remove": { input: ["session", "target", "kind"] },
-  "/reactions/forTarget": { input: ["target"] },
-} as const satisfies EndpointInputs;
+const add = requestingEndpoint("/reactions/add");
+const remove = requestingEndpoint("/reactions/remove");
+const forTarget = requestingEndpoint("/reactions/forTarget");
 
-export type Endpoints = {
-  "/reactions/add": {
-    input: InputShape<(typeof endpoints)["/reactions/add"]["input"]>;
-    output: ActionOk<ReactingConcept, "react">;
-  };
-  "/reactions/remove": {
-    input: InputShape<(typeof endpoints)["/reactions/remove"]["input"]>;
-    output: { ok: true };
-  };
-  "/reactions/forTarget": {
-    input: InputShape<(typeof endpoints)["/reactions/forTarget"]["input"]>;
-    output: {
-      reactions: QueryRow<ReactingConcept, "_getReactionsForTarget">[];
-    };
-  };
+type ReactionAddOutput = ActionOk<ReactingConcept, "react">;
+type ReactionRemoveOutput = { ok: true };
+type ReactionsForTargetOutput = {
+  reactions: QueryRow<ReactingConcept, "_getReactionsForTarget">[];
 };
 
 // --- add ---
 
-export const ReactionAddRequest: Sync = (
+export const ReactionAddRequest = add.sync((
   { request, session, target, kind, user },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/reactions/add", session, target, kind },
-    { request },
-  ]),
+  when: add.actions(add.request({ session, target, kind }, { request })),
   where: async (frames) =>
     await frames.query(Sessioning._getUser, { session }, { user }),
-  then: actions([Reacting.react, { user, target, kind }]),
-});
+  then: add.actions([Reacting.react, { user, target, kind }]),
+}));
 
-export const ReactionAddResponse: Sync = ({ request, reaction }) => ({
-  when: actions(
-    [Requesting.request, { path: "/reactions/add" }, { request }],
+export const ReactionAddResponse = add.sync(({ request, reaction }) => ({
+  when: add.actions(
+    add.request({}, { request }),
     [Reacting.react, {}, { reaction }],
   ),
-  then: actions([Requesting.respond, { request, reaction }]),
-});
+  then: add.actions(add.respond<ReactionAddOutput>({ request, reaction })),
+}));
 
-export const ReactionAddError: Sync = ({ request, error }) => ({
-  when: actions(
-    [Requesting.request, { path: "/reactions/add" }, { request }],
+export const ReactionAddError = add.sync(({ request, error }) => ({
+  when: add.actions(
+    add.request({}, { request }),
     [Reacting.react, {}, { error }],
   ),
-  then: actions([Requesting.respond, { request, error }]),
-});
+  then: add.actions(add.error({ request, error })),
+}));
 
-export const ReactionAddInvalidSession: Sync = (
+export const ReactionAddInvalidSession = add.sync((
   { request, session, active },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/reactions/add", session },
-    { request },
-  ]),
+  when: add.actions(add.request({ session }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._isActive, { session }, { active });
     return frames.filter(($) => $[active] === false);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Invalid or expired session." },
-  ]),
-});
+  then: add.actions(add.error({ request, error: "Invalid or expired session." })),
+}));
 
 // --- remove ---
 
-export const ReactionRemoveRequest: Sync = (
+export const ReactionRemoveRequest = remove.sync((
   { request, session, target, kind, user },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/reactions/remove", session, target, kind },
-    { request },
-  ]),
+  when: remove.actions(remove.request({ session, target, kind }, { request })),
   where: async (frames) =>
     await frames.query(Sessioning._getUser, { session }, { user }),
-  then: actions([Reacting.unreact, { user, target, kind }]),
-});
+  then: remove.actions([Reacting.unreact, { user, target, kind }]),
+}));
 
-export const ReactionRemoveResponse: Sync = ({ request, reaction }) => ({
-  when: actions(
-    [Requesting.request, { path: "/reactions/remove" }, { request }],
+export const ReactionRemoveResponse = remove.sync(({ request, reaction }) => ({
+  when: remove.actions(
+    remove.request({}, { request }),
     [Reacting.unreact, {}, { reaction }],
   ),
-  then: actions([Requesting.respond, { request, ok: true }]),
-});
+  then: remove.actions(
+    remove.respond<ReactionRemoveOutput>({ request, ok: true }),
+  ),
+}));
 
-export const ReactionRemoveError: Sync = ({ request, error }) => ({
-  when: actions(
-    [Requesting.request, { path: "/reactions/remove" }, { request }],
+export const ReactionRemoveError = remove.sync(({ request, error }) => ({
+  when: remove.actions(
+    remove.request({}, { request }),
     [Reacting.unreact, {}, { error }],
   ),
-  then: actions([Requesting.respond, { request, error }]),
-});
+  then: remove.actions(remove.error({ request, error })),
+}));
 
-export const ReactionRemoveInvalidSession: Sync = (
+export const ReactionRemoveInvalidSession = remove.sync((
   { request, session, active },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/reactions/remove", session },
-    { request },
-  ]),
+  when: remove.actions(remove.request({ session }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._isActive, { session }, { active });
     return frames.filter(($) => $[active] === false);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Invalid or expired session." },
-  ]),
-});
+  then: remove.actions(
+    remove.error({ request, error: "Invalid or expired session." }),
+  ),
+}));
 
 // --- forTarget: public ---
 
-export const ReactionForTargetResponse: Sync = (
+export const ReactionForTargetResponse = forTarget.sync((
   { request, target, reaction, user, kind, reactions },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/reactions/forTarget", target },
-    { request },
-  ]),
+  when: forTarget.actions(forTarget.request({ target }, { request })),
   where: async (frames) => {
     const [base] = frames;
     frames = await frames.query(
@@ -156,5 +120,23 @@ export const ReactionForTargetResponse: Sync = (
     );
     return frames.aggregate(base, [reaction, user, kind], reactions);
   },
-  then: actions([Requesting.respond, { request, reactions }]),
+  then: forTarget.actions(
+    forTarget.respond<ReactionsForTargetOutput>({ request, reactions }),
+  ),
+}));
+
+export const reactionsApi = defineFeature({
+  add: add.define({
+    ReactionAddRequest,
+    ReactionAddResponse,
+    ReactionAddError,
+    ReactionAddInvalidSession,
+  }),
+  remove: remove.define({
+    ReactionRemoveRequest,
+    ReactionRemoveResponse,
+    ReactionRemoveError,
+    ReactionRemoveInvalidSession,
+  }),
+  forTarget: forTarget.define({ ReactionForTargetResponse }),
 });

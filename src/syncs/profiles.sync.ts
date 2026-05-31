@@ -7,170 +7,151 @@
  *   POST /profiles/setBio         { session, bio }         -> { user }
  *   POST /profiles/setAvatar      { session, avatar }      -> { user }
  */
-import { actions, type Sync } from "@engine";
-import { Profiling, Requesting, Sessioning } from "@concepts";
+import { Profiling, Sessioning } from "@concepts";
 import type { ProfilingConcept } from "@concepts";
-import type {
-  ActionOk,
-  EndpointInputs,
-  InputShape,
-  QueryRow,
-} from "./contract.ts";
+import {
+  defineFeature,
+  requestingEndpoint,
+  type ActionOk,
+  type QueryRow,
+} from "@concepts/Requesting/api.ts";
 
-export const endpoints = {
-  "/profiles/get": { input: ["user"] },
-  "/profiles/setDisplayName": { input: ["session", "displayName"] },
-  "/profiles/setBio": { input: ["session", "bio"] },
-  "/profiles/setAvatar": { input: ["session", "avatar"] },
-} as const satisfies EndpointInputs;
+const getProfile = requestingEndpoint("/profiles/get");
+const setDisplayName = requestingEndpoint("/profiles/setDisplayName");
+const setBio = requestingEndpoint("/profiles/setBio");
+const setAvatar = requestingEndpoint("/profiles/setAvatar");
 
-export type Endpoints = {
-  "/profiles/get": {
-    input: InputShape<(typeof endpoints)["/profiles/get"]["input"]>;
-    output: QueryRow<ProfilingConcept, "_getProfile">;
-  };
-  "/profiles/setDisplayName": {
-    input: InputShape<(typeof endpoints)["/profiles/setDisplayName"]["input"]>;
-    output: ActionOk<ProfilingConcept, "setDisplayName">;
-  };
-  "/profiles/setBio": {
-    input: InputShape<(typeof endpoints)["/profiles/setBio"]["input"]>;
-    output: ActionOk<ProfilingConcept, "setBio">;
-  };
-  "/profiles/setAvatar": {
-    input: InputShape<(typeof endpoints)["/profiles/setAvatar"]["input"]>;
-    output: ActionOk<ProfilingConcept, "setAvatar">;
-  };
-};
+type ProfileGetOutput = QueryRow<ProfilingConcept, "_getProfile">;
+type SetDisplayNameOutput = ActionOk<ProfilingConcept, "setDisplayName">;
+type SetBioOutput = ActionOk<ProfilingConcept, "setBio">;
+type SetAvatarOutput = ActionOk<ProfilingConcept, "setAvatar">;
 
 // --- get: public lookup of a user's profile ---
 
-export const ProfileGetResponse: Sync = ({ request, user, profile }) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/profiles/get", user },
-    { request },
-  ]),
+export const ProfileGetResponse = getProfile.sync(({ request, user, profile }) => ({
+  when: getProfile.actions(getProfile.request({ user }, { request })),
   where: async (frames) =>
     await frames.query(Profiling._getProfile, { user }, { profile }),
-  then: actions([Requesting.respond, { request, profile }]),
-});
+  then: getProfile.actions(
+    getProfile.respond<ProfileGetOutput>({ request, profile }),
+  ),
+}));
 
 // --- setDisplayName ---
 
-export const SetDisplayNameResponse: Sync = (
+export const SetDisplayNameResponse = setDisplayName.sync((
   { request, session, displayName, user },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/profiles/setDisplayName", session, displayName },
-    { request },
-  ]),
+  when: setDisplayName.actions(
+    setDisplayName.request({ session, displayName }, { request }),
+  ),
   where: async (frames) =>
     await frames.query(Sessioning._getUser, { session }, { user }),
-  then: actions([Profiling.setDisplayName, { user, displayName }]),
-});
+  then: setDisplayName.actions([Profiling.setDisplayName, { user, displayName }]),
+}));
 
-export const SetDisplayNameRespond: Sync = ({ request, user }) => ({
-  when: actions(
-    [Requesting.request, { path: "/profiles/setDisplayName" }, { request }],
+export const SetDisplayNameRespond = setDisplayName.sync(({ request, user }) => ({
+  when: setDisplayName.actions(
+    setDisplayName.request({}, { request }),
     [Profiling.setDisplayName, {}, { user }],
   ),
-  then: actions([Requesting.respond, { request, user }]),
-});
+  then: setDisplayName.actions(
+    setDisplayName.respond<SetDisplayNameOutput>({ request, user }),
+  ),
+}));
 
-export const SetDisplayNameInvalidSession: Sync = (
+export const SetDisplayNameInvalidSession = setDisplayName.sync((
   { request, session, active },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/profiles/setDisplayName", session },
-    { request },
-  ]),
+  when: setDisplayName.actions(
+    setDisplayName.request({ session }, { request }),
+  ),
   where: async (frames) => {
     frames = await frames.query(Sessioning._isActive, { session }, { active });
     return frames.filter(($) => $[active] === false);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Invalid or expired session." },
-  ]),
-});
+  then: setDisplayName.actions(
+    setDisplayName.error({ request, error: "Invalid or expired session." }),
+  ),
+}));
 
 // --- setBio ---
 
-export const SetBioResponse: Sync = ({ request, session, bio, user }) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/profiles/setBio", session, bio },
-    { request },
-  ]),
+export const SetBioResponse = setBio.sync(({ request, session, bio, user }) => ({
+  when: setBio.actions(setBio.request({ session, bio }, { request })),
   where: async (frames) =>
     await frames.query(Sessioning._getUser, { session }, { user }),
-  then: actions([Profiling.setBio, { user, bio }]),
-});
+  then: setBio.actions([Profiling.setBio, { user, bio }]),
+}));
 
-export const SetBioRespond: Sync = ({ request, user }) => ({
-  when: actions(
-    [Requesting.request, { path: "/profiles/setBio" }, { request }],
+export const SetBioRespond = setBio.sync(({ request, user }) => ({
+  when: setBio.actions(
+    setBio.request({}, { request }),
     [Profiling.setBio, {}, { user }],
   ),
-  then: actions([Requesting.respond, { request, user }]),
-});
+  then: setBio.actions(setBio.respond<SetBioOutput>({ request, user })),
+}));
 
-export const SetBioInvalidSession: Sync = ({ request, session, active }) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/profiles/setBio", session },
-    { request },
-  ]),
+export const SetBioInvalidSession = setBio.sync(({ request, session, active }) => ({
+  when: setBio.actions(setBio.request({ session }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._isActive, { session }, { active });
     return frames.filter(($) => $[active] === false);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Invalid or expired session." },
-  ]),
-});
+  then: setBio.actions(
+    setBio.error({ request, error: "Invalid or expired session." }),
+  ),
+}));
 
 // --- setAvatar ---
 
-export const SetAvatarResponse: Sync = (
+export const SetAvatarResponse = setAvatar.sync((
   { request, session, avatar, user },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/profiles/setAvatar", session, avatar },
-    { request },
-  ]),
+  when: setAvatar.actions(
+    setAvatar.request({ session, avatar }, { request }),
+  ),
   where: async (frames) =>
     await frames.query(Sessioning._getUser, { session }, { user }),
-  then: actions([Profiling.setAvatar, { user, avatar }]),
-});
+  then: setAvatar.actions([Profiling.setAvatar, { user, avatar }]),
+}));
 
-export const SetAvatarRespond: Sync = ({ request, user }) => ({
-  when: actions(
-    [Requesting.request, { path: "/profiles/setAvatar" }, { request }],
+export const SetAvatarRespond = setAvatar.sync(({ request, user }) => ({
+  when: setAvatar.actions(
+    setAvatar.request({}, { request }),
     [Profiling.setAvatar, {}, { user }],
   ),
-  then: actions([Requesting.respond, { request, user }]),
-});
+  then: setAvatar.actions(setAvatar.respond<SetAvatarOutput>({ request, user })),
+}));
 
-export const SetAvatarInvalidSession: Sync = (
+export const SetAvatarInvalidSession = setAvatar.sync((
   { request, session, active },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/profiles/setAvatar", session },
-    { request },
-  ]),
+  when: setAvatar.actions(setAvatar.request({ session }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._isActive, { session }, { active });
     return frames.filter(($) => $[active] === false);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Invalid or expired session." },
-  ]),
+  then: setAvatar.actions(
+    setAvatar.error({ request, error: "Invalid or expired session." }),
+  ),
+}));
+
+export const profilesApi = defineFeature({
+  get: getProfile.define({ ProfileGetResponse }),
+  setDisplayName: setDisplayName.define({
+    SetDisplayNameResponse,
+    SetDisplayNameRespond,
+    SetDisplayNameInvalidSession,
+  }),
+  setBio: setBio.define({
+    SetBioResponse,
+    SetBioRespond,
+    SetBioInvalidSession,
+  }),
+  setAvatar: setAvatar.define({
+    SetAvatarResponse,
+    SetAvatarRespond,
+    SetAvatarInvalidSession,
+  }),
 });

@@ -8,246 +8,230 @@
  *   POST /auth/me        { session }                         -> { user, username, profile }
  *   POST /auth/changePassword { session, oldPassword, newPassword } -> { user }
  */
-import { actions, type Sync } from "@engine";
-import { Authenticating, Profiling, Requesting, Sessioning } from "@concepts";
+import { Authenticating, Profiling, Sessioning } from "@concepts";
 import type {
   AuthenticatingConcept,
   ProfilingConcept,
   SessioningConcept,
 } from "@concepts";
-import type {
-  ActionOk,
-  EndpointInputs,
-  InputShape,
-  Prettify,
-  QueryRow,
-} from "./contract.ts";
+import {
+  defineFeature,
+  requestingEndpoint,
+  type ActionOk,
+  type Prettify,
+  type QueryRow,
+} from "@concepts/Requesting/api.ts";
 
-/**
- * Endpoint specs for this feature, co-located with the syncs above. Input field
- * names are listed here (the single runtime source); the `Endpoints` type below
- * derives each `input` from this manifest and each `output` from the concepts.
- */
-export const endpoints = {
-  "/auth/register": { input: ["username", "password", "displayName"] },
-  "/auth/login": { input: ["username", "password"] },
-  "/auth/logout": { input: ["session"] },
-  "/auth/me": { input: ["session"] },
-  "/auth/changePassword": { input: ["session", "oldPassword", "newPassword"] },
-} as const satisfies EndpointInputs;
+const register = requestingEndpoint("/auth/register");
+const login = requestingEndpoint("/auth/login");
+const logout = requestingEndpoint("/auth/logout");
+const me = requestingEndpoint("/auth/me");
+const changePassword = requestingEndpoint("/auth/changePassword");
 
-export type Endpoints = {
-  "/auth/register": {
-    input: InputShape<(typeof endpoints)["/auth/register"]["input"]>;
-    output: ActionOk<AuthenticatingConcept, "register">;
-  };
-  "/auth/login": {
-    input: InputShape<(typeof endpoints)["/auth/login"]["input"]>;
-    output: Prettify<
-      & ActionOk<SessioningConcept, "start">
-      & ActionOk<AuthenticatingConcept, "authenticate">
-    >;
-  };
-  "/auth/logout": {
-    input: InputShape<(typeof endpoints)["/auth/logout"]["input"]>;
-    output: { ok: true };
-  };
-  "/auth/me": {
-    input: InputShape<(typeof endpoints)["/auth/me"]["input"]>;
-    output: Prettify<
-      & QueryRow<SessioningConcept, "_getUser">
-      & QueryRow<AuthenticatingConcept, "_getById">
-      & QueryRow<ProfilingConcept, "_getProfile">
-    >;
-  };
-  "/auth/changePassword": {
-    input: InputShape<(typeof endpoints)["/auth/changePassword"]["input"]>;
-    output: ActionOk<AuthenticatingConcept, "changePassword">;
-  };
-};
+type RegisterOutput = ActionOk<AuthenticatingConcept, "register">;
+type LoginOutput = Prettify<
+  & ActionOk<SessioningConcept, "start">
+  & ActionOk<AuthenticatingConcept, "authenticate">
+>;
+type LogoutOutput = { ok: true };
+type MeOutput = Prettify<
+  & QueryRow<SessioningConcept, "_getUser">
+  & QueryRow<AuthenticatingConcept, "_getById">
+  & QueryRow<ProfilingConcept, "_getProfile">
+>;
+type ChangePasswordOutput = ActionOk<
+  AuthenticatingConcept,
+  "changePassword"
+>;
 
 // --- register: create credentials, then a profile, then respond ---
 
-export const RegisterRequest: Sync = ({ request, username, password }) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/auth/register", username, password },
-    { request },
-  ]),
-  then: actions([Authenticating.register, { username, password }]),
-});
+export const RegisterRequest = register.sync(({ request, username, password }) => ({
+  when: register.actions(
+    register.request({ username, password }, { request }),
+  ),
+  then: register.actions([Authenticating.register, { username, password }]),
+}));
 
-export const RegisterCreatesProfile: Sync = (
+export const RegisterCreatesProfile = register.sync((
   { request, displayName, user },
 ) => ({
-  when: actions(
-    [Requesting.request, { path: "/auth/register", displayName }, { request }],
+  when: register.actions(
+    register.request({ displayName }, { request }),
     [Authenticating.register, {}, { user }],
   ),
-  then: actions([Profiling.createProfile, { user, displayName }]),
-});
+  then: register.actions([Profiling.createProfile, { user, displayName }]),
+}));
 
-export const RegisterResponse: Sync = ({ request, user }) => ({
-  when: actions(
-    [Requesting.request, { path: "/auth/register" }, { request }],
+export const RegisterResponse = register.sync(({ request, user }) => ({
+  when: register.actions(
+    register.request({}, { request }),
     [Authenticating.register, {}, { user }],
   ),
-  then: actions([Requesting.respond, { request, user }]),
-});
+  then: register.actions(register.respond<RegisterOutput>({ request, user })),
+}));
 
-export const RegisterError: Sync = ({ request, error }) => ({
-  when: actions(
-    [Requesting.request, { path: "/auth/register" }, { request }],
+export const RegisterError = register.sync(({ request, error }) => ({
+  when: register.actions(
+    register.request({}, { request }),
     [Authenticating.register, {}, { error }],
   ),
-  then: actions([Requesting.respond, { request, error }]),
-});
+  then: register.actions(register.error({ request, error })),
+}));
 
 // --- login: authenticate, then open a session ---
 
-export const LoginRequest: Sync = ({ request, username, password }) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/auth/login", username, password },
-    { request },
-  ]),
-  then: actions([Authenticating.authenticate, { username, password }]),
-});
+export const LoginRequest = login.sync(({ request, username, password }) => ({
+  when: login.actions(login.request({ username, password }, { request })),
+  then: login.actions([Authenticating.authenticate, { username, password }]),
+}));
 
-export const LoginStartsSession: Sync = ({ request, user }) => ({
-  when: actions(
-    [Requesting.request, { path: "/auth/login" }, { request }],
+export const LoginStartsSession = login.sync(({ request, user }) => ({
+  when: login.actions(
+    login.request({}, { request }),
     [Authenticating.authenticate, {}, { user }],
   ),
-  then: actions([Sessioning.start, { user }]),
-});
+  then: login.actions([Sessioning.start, { user }]),
+}));
 
-export const LoginResponse: Sync = ({ request, user, session }) => ({
-  when: actions(
-    [Requesting.request, { path: "/auth/login" }, { request }],
+export const LoginResponse = login.sync(({ request, user, session }) => ({
+  when: login.actions(
+    login.request({}, { request }),
     [Authenticating.authenticate, {}, { user }],
     [Sessioning.start, {}, { session }],
   ),
-  then: actions([Requesting.respond, { request, session, user }]),
-});
+  then: login.actions(login.respond<LoginOutput>({ request, session, user })),
+}));
 
-export const LoginError: Sync = ({ request, error }) => ({
-  when: actions(
-    [Requesting.request, { path: "/auth/login" }, { request }],
+export const LoginError = login.sync(({ request, error }) => ({
+  when: login.actions(
+    login.request({}, { request }),
     [Authenticating.authenticate, {}, { error }],
   ),
-  then: actions([Requesting.respond, { request, error }]),
-});
+  then: login.actions(login.error({ request, error })),
+}));
 
 // --- logout: end the session ---
 
-export const LogoutRequest: Sync = ({ request, session }) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/auth/logout", session },
-    { request },
-  ]),
-  then: actions([Sessioning.end, { session }]),
-});
+export const LogoutRequest = logout.sync(({ request, session }) => ({
+  when: logout.actions(logout.request({ session }, { request })),
+  then: logout.actions([Sessioning.end, { session }]),
+}));
 
-export const LogoutResponse: Sync = ({ request, session }) => ({
-  when: actions(
-    [Requesting.request, { path: "/auth/logout" }, { request }],
+export const LogoutResponse = logout.sync(({ request, session }) => ({
+  when: logout.actions(
+    logout.request({}, { request }),
     [Sessioning.end, {}, { session }],
   ),
-  then: actions([Requesting.respond, { request, ok: true }]),
-});
+  then: logout.actions(logout.respond<LogoutOutput>({ request, ok: true })),
+}));
 
-export const LogoutError: Sync = ({ request, error }) => ({
-  when: actions(
-    [Requesting.request, { path: "/auth/logout" }, { request }],
+export const LogoutError = logout.sync(({ request, error }) => ({
+  when: logout.actions(
+    logout.request({}, { request }),
     [Sessioning.end, {}, { error }],
   ),
-  then: actions([Requesting.respond, { request, error }]),
-});
+  then: logout.actions(logout.error({ request, error })),
+}));
 
 // --- me: resolve the session to the current user and profile ---
 
-export const MeResponse: Sync = (
+export const MeResponse = me.sync((
   { request, session, user, username, profile },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/auth/me", session },
-    { request },
-  ]),
+  when: me.actions(me.request({ session }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._getUser, { session }, { user });
     frames = await frames.query(Authenticating._getById, { user }, { username });
     return await frames.query(Profiling._getProfile, { user }, { profile });
   },
-  then: actions([Requesting.respond, { request, user, username, profile }]),
-});
+  then: me.actions(me.respond<MeOutput>({ request, user, username, profile })),
+}));
 
-export const MeInvalidSession: Sync = ({ request, session, active }) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/auth/me", session },
-    { request },
-  ]),
+export const MeInvalidSession = me.sync(({ request, session, active }) => ({
+  when: me.actions(me.request({ session }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._isActive, { session }, { active });
     return frames.filter(($) => $[active] === false);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Invalid or expired session." },
-  ]),
-});
+  then: me.actions(
+    me.error({ request, error: "Invalid or expired session." }),
+  ),
+}));
 
 // --- changePassword: resolve session, change credentials (auth-only) ---
 
-export const ChangePasswordRequest: Sync = (
+export const ChangePasswordRequest = changePassword.sync((
   { request, session, oldPassword, newPassword, user },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/auth/changePassword", session, oldPassword, newPassword },
-    { request },
-  ]),
+  when: changePassword.actions(
+    changePassword.request({ session, oldPassword, newPassword }, { request }),
+  ),
   where: async (frames) =>
     await frames.query(Sessioning._getUser, { session }, { user }),
-  then: actions([
+  then: changePassword.actions([
     Authenticating.changePassword,
     { user, oldPassword, newPassword },
   ]),
-});
+}));
 
-export const ChangePasswordResponse: Sync = ({ request, user }) => ({
-  when: actions(
-    [Requesting.request, { path: "/auth/changePassword" }, { request }],
+export const ChangePasswordResponse = changePassword.sync(({ request, user }) => ({
+  when: changePassword.actions(
+    changePassword.request({}, { request }),
     [Authenticating.changePassword, {}, { user }],
   ),
-  then: actions([Requesting.respond, { request, user }]),
-});
+  then: changePassword.actions(
+    changePassword.respond<ChangePasswordOutput>({ request, user }),
+  ),
+}));
 
-export const ChangePasswordError: Sync = ({ request, error }) => ({
-  when: actions(
-    [Requesting.request, { path: "/auth/changePassword" }, { request }],
+export const ChangePasswordError = changePassword.sync(({ request, error }) => ({
+  when: changePassword.actions(
+    changePassword.request({}, { request }),
     [Authenticating.changePassword, {}, { error }],
   ),
-  then: actions([Requesting.respond, { request, error }]),
-});
+  then: changePassword.actions(changePassword.error({ request, error })),
+}));
 
-export const ChangePasswordInvalidSession: Sync = (
+export const ChangePasswordInvalidSession = changePassword.sync((
   { request, session, active },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/auth/changePassword", session },
-    { request },
-  ]),
+  when: changePassword.actions(changePassword.request({ session }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._isActive, { session }, { active });
     return frames.filter(($) => $[active] === false);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Invalid or expired session." },
-  ]),
+  then: changePassword.actions(
+    changePassword.error({ request, error: "Invalid or expired session." }),
+  ),
+}));
+
+export const authApi = defineFeature({
+  register: register.define({
+    RegisterRequest,
+    RegisterCreatesProfile,
+    RegisterResponse,
+    RegisterError,
+  }),
+  login: login.define({
+    LoginRequest,
+    LoginStartsSession,
+    LoginResponse,
+    LoginError,
+  }),
+  logout: logout.define({
+    LogoutRequest,
+    LogoutResponse,
+    LogoutError,
+  }),
+  me: me.define({
+    MeResponse,
+    MeInvalidSession,
+  }),
+  changePassword: changePassword.define({
+    ChangePasswordRequest,
+    ChangePasswordResponse,
+    ChangePasswordError,
+    ChangePasswordInvalidSession,
+  }),
 });

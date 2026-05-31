@@ -8,222 +8,192 @@
  *   POST /tags/targets   { tag }                   -> { targets }
  *   POST /tags/forTarget { target }                -> { tags }
  */
-import { actions, type Sync } from "@engine";
-import { Requesting, Sessioning, Tagging } from "@concepts";
+import { Sessioning, Tagging } from "@concepts";
 import type { TaggingConcept } from "@concepts";
-import type {
-  ActionOk,
-  EndpointInputs,
-  InputShape,
-  QueryRow,
-} from "./contract.ts";
+import {
+  defineFeature,
+  requestingEndpoint,
+  type ActionOk,
+  type QueryRow,
+} from "@concepts/Requesting/api.ts";
 
-export const endpoints = {
-  "/tags/create": { input: ["session", "name"] },
-  "/tags/add": { input: ["session", "target", "tag"] },
-  "/tags/remove": { input: ["session", "target", "tag"] },
-  "/tags/targets": { input: ["tag"] },
-  "/tags/forTarget": { input: ["target"] },
-} as const satisfies EndpointInputs;
+const create = requestingEndpoint("/tags/create");
+const add = requestingEndpoint("/tags/add");
+const remove = requestingEndpoint("/tags/remove");
+const tagTargets = requestingEndpoint("/tags/targets");
+const forTarget = requestingEndpoint("/tags/forTarget");
 
-export type Endpoints = {
-  "/tags/create": {
-    input: InputShape<(typeof endpoints)["/tags/create"]["input"]>;
-    output: ActionOk<TaggingConcept, "createTag">;
-  };
-  "/tags/add": {
-    input: InputShape<(typeof endpoints)["/tags/add"]["input"]>;
-    output: ActionOk<TaggingConcept, "addTag">;
-  };
-  "/tags/remove": {
-    input: InputShape<(typeof endpoints)["/tags/remove"]["input"]>;
-    output: ActionOk<TaggingConcept, "removeTag">;
-  };
-  "/tags/targets": {
-    input: InputShape<(typeof endpoints)["/tags/targets"]["input"]>;
-    output: { targets: QueryRow<TaggingConcept, "_getTargets">[] };
-  };
-  "/tags/forTarget": {
-    input: InputShape<(typeof endpoints)["/tags/forTarget"]["input"]>;
-    output: { tags: QueryRow<TaggingConcept, "_getTags">[] };
-  };
-};
+type TagCreateOutput = ActionOk<TaggingConcept, "createTag">;
+type TagAddOutput = ActionOk<TaggingConcept, "addTag">;
+type TagRemoveOutput = ActionOk<TaggingConcept, "removeTag">;
+type TagTargetsOutput = { targets: QueryRow<TaggingConcept, "_getTargets">[] };
+type TagForTargetOutput = { tags: QueryRow<TaggingConcept, "_getTags">[] };
 
 // --- create ---
 
-export const TagCreateRequest: Sync = ({ request, session, name, user }) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/tags/create", session, name },
-    { request },
-  ]),
+export const TagCreateRequest = create.sync(({ request, session, name, user }) => ({
+  when: create.actions(create.request({ session, name }, { request })),
   where: async (frames) =>
     await frames.query(Sessioning._getUser, { session }, { user }),
-  then: actions([Tagging.createTag, { name }]),
-});
+  then: create.actions([Tagging.createTag, { name }]),
+}));
 
-export const TagCreateResponse: Sync = ({ request, tag }) => ({
-  when: actions(
-    [Requesting.request, { path: "/tags/create" }, { request }],
+export const TagCreateResponse = create.sync(({ request, tag }) => ({
+  when: create.actions(
+    create.request({}, { request }),
     [Tagging.createTag, {}, { tag }],
   ),
-  then: actions([Requesting.respond, { request, tag }]),
-});
+  then: create.actions(create.respond<TagCreateOutput>({ request, tag })),
+}));
 
-export const TagCreateError: Sync = ({ request, error }) => ({
-  when: actions(
-    [Requesting.request, { path: "/tags/create" }, { request }],
+export const TagCreateError = create.sync(({ request, error }) => ({
+  when: create.actions(
+    create.request({}, { request }),
     [Tagging.createTag, {}, { error }],
   ),
-  then: actions([Requesting.respond, { request, error }]),
-});
+  then: create.actions(create.error({ request, error })),
+}));
 
-export const TagCreateInvalidSession: Sync = (
+export const TagCreateInvalidSession = create.sync((
   { request, session, active },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/tags/create", session },
-    { request },
-  ]),
+  when: create.actions(create.request({ session }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._isActive, { session }, { active });
     return frames.filter(($) => $[active] === false);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Invalid or expired session." },
-  ]),
-});
+  then: create.actions(
+    create.error({ request, error: "Invalid or expired session." }),
+  ),
+}));
 
 // --- add ---
 
-export const TagAddRequest: Sync = (
+export const TagAddRequest = add.sync((
   { request, session, target, tag, user },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/tags/add", session, target, tag },
-    { request },
-  ]),
+  when: add.actions(add.request({ session, target, tag }, { request })),
   where: async (frames) =>
     await frames.query(Sessioning._getUser, { session }, { user }),
-  then: actions([Tagging.addTag, { target, tag }]),
-});
+  then: add.actions([Tagging.addTag, { target, tag }]),
+}));
 
-export const TagAddResponse: Sync = ({ request, target }) => ({
-  when: actions(
-    [Requesting.request, { path: "/tags/add" }, { request }],
+export const TagAddResponse = add.sync(({ request, target }) => ({
+  when: add.actions(
+    add.request({}, { request }),
     [Tagging.addTag, {}, { target }],
   ),
-  then: actions([Requesting.respond, { request, target }]),
-});
+  then: add.actions(add.respond<TagAddOutput>({ request, target })),
+}));
 
-export const TagAddError: Sync = ({ request, error }) => ({
-  when: actions(
-    [Requesting.request, { path: "/tags/add" }, { request }],
+export const TagAddError = add.sync(({ request, error }) => ({
+  when: add.actions(
+    add.request({}, { request }),
     [Tagging.addTag, {}, { error }],
   ),
-  then: actions([Requesting.respond, { request, error }]),
-});
+  then: add.actions(add.error({ request, error })),
+}));
 
-export const TagAddInvalidSession: Sync = ({ request, session, active }) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/tags/add", session },
-    { request },
-  ]),
+export const TagAddInvalidSession = add.sync(({ request, session, active }) => ({
+  when: add.actions(add.request({ session }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._isActive, { session }, { active });
     return frames.filter(($) => $[active] === false);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Invalid or expired session." },
-  ]),
-});
+  then: add.actions(add.error({ request, error: "Invalid or expired session." })),
+}));
 
 // --- remove ---
 
-export const TagRemoveRequest: Sync = (
+export const TagRemoveRequest = remove.sync((
   { request, session, target, tag, user },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/tags/remove", session, target, tag },
-    { request },
-  ]),
+  when: remove.actions(remove.request({ session, target, tag }, { request })),
   where: async (frames) =>
     await frames.query(Sessioning._getUser, { session }, { user }),
-  then: actions([Tagging.removeTag, { target, tag }]),
-});
+  then: remove.actions([Tagging.removeTag, { target, tag }]),
+}));
 
-export const TagRemoveResponse: Sync = ({ request, target }) => ({
-  when: actions(
-    [Requesting.request, { path: "/tags/remove" }, { request }],
+export const TagRemoveResponse = remove.sync(({ request, target }) => ({
+  when: remove.actions(
+    remove.request({}, { request }),
     [Tagging.removeTag, {}, { target }],
   ),
-  then: actions([Requesting.respond, { request, target }]),
-});
+  then: remove.actions(remove.respond<TagRemoveOutput>({ request, target })),
+}));
 
-export const TagRemoveError: Sync = ({ request, error }) => ({
-  when: actions(
-    [Requesting.request, { path: "/tags/remove" }, { request }],
+export const TagRemoveError = remove.sync(({ request, error }) => ({
+  when: remove.actions(
+    remove.request({}, { request }),
     [Tagging.removeTag, {}, { error }],
   ),
-  then: actions([Requesting.respond, { request, error }]),
-});
+  then: remove.actions(remove.error({ request, error })),
+}));
 
-export const TagRemoveInvalidSession: Sync = (
+export const TagRemoveInvalidSession = remove.sync((
   { request, session, active },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/tags/remove", session },
-    { request },
-  ]),
+  when: remove.actions(remove.request({ session }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._isActive, { session }, { active });
     return frames.filter(($) => $[active] === false);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Invalid or expired session." },
-  ]),
-});
+  then: remove.actions(
+    remove.error({ request, error: "Invalid or expired session." }),
+  ),
+}));
 
 // --- targets: public ---
 
-export const TagTargetsResponse: Sync = (
+export const TagTargetsResponse = tagTargets.sync((
   { request, tag, target, targets },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/tags/targets", tag },
-    { request },
-  ]),
+  when: tagTargets.actions(tagTargets.request({ tag }, { request })),
   where: async (frames) => {
     const [base] = frames;
     frames = await frames.query(Tagging._getTargets, { tag }, { target });
     return frames.aggregate(base, [target], targets);
   },
-  then: actions([Requesting.respond, { request, targets }]),
-});
+  then: tagTargets.actions(
+    tagTargets.respond<TagTargetsOutput>({ request, targets }),
+  ),
+}));
 
 // --- forTarget: public ---
 
-export const TagForTargetResponse: Sync = (
+export const TagForTargetResponse = forTarget.sync((
   { request, target, tag, name, tags },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/tags/forTarget", target },
-    { request },
-  ]),
+  when: forTarget.actions(forTarget.request({ target }, { request })),
   where: async (frames) => {
     const [base] = frames;
     frames = await frames.query(Tagging._getTags, { target }, { tag, name });
     return frames.aggregate(base, [tag, name], tags);
   },
-  then: actions([Requesting.respond, { request, tags }]),
+  then: forTarget.actions(
+    forTarget.respond<TagForTargetOutput>({ request, tags }),
+  ),
+}));
+
+export const tagsApi = defineFeature({
+  create: create.define({
+    TagCreateRequest,
+    TagCreateResponse,
+    TagCreateError,
+    TagCreateInvalidSession,
+  }),
+  add: add.define({
+    TagAddRequest,
+    TagAddResponse,
+    TagAddError,
+    TagAddInvalidSession,
+  }),
+  remove: remove.define({
+    TagRemoveRequest,
+    TagRemoveResponse,
+    TagRemoveError,
+    TagRemoveInvalidSession,
+  }),
+  targets: tagTargets.define({ TagTargetsResponse }),
+  forTarget: forTarget.define({ TagForTargetResponse }),
 });

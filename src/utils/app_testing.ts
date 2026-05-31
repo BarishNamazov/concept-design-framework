@@ -1,17 +1,18 @@
 import { MongoMemoryServer } from "mongodb-memory-server";
+import net from "node:net";
 
 /**
  * Boots the full application — every concept and every synchronization — against
  * a disposable in-memory MongoDB, exactly as `main.ts` would against a real one.
  *
  * It injects the database connection through the environment **before** importing
- * the generated `@concepts`/`@syncs` barrels, so the production singletons (which
- * the synchronizations close over) are wired to the in-memory database. This is
- * what makes the real syncs observable in tests.
+ * the generated `@concepts` barrel and the typed `@syncs` app composition, so
+ * the production singletons (which the synchronizations close over) are wired to
+ * the in-memory database. This is what makes the real syncs observable in tests.
  *
- * Because the barrels are module singletons, all synchronization integration
- * tests must share a single `setupApp()` (one per test process). Run
- * `bun run build` first so the barrels exist.
+ * Because the concept barrel is a module singleton, all synchronization
+ * integration tests must share a single `setupApp()` (one per test process).
+ * Run `bun run build` first so the barrel exists.
  */
 export interface TestApp {
   /**
@@ -57,7 +58,10 @@ export function setupApp(): Promise<TestApp> {
 }
 
 async function boot(): Promise<TestApp> {
-  const server = await MongoMemoryServer.create();
+  const port = await freeLocalPort();
+  const server = await MongoMemoryServer.create({
+    instance: { ip: "127.0.0.1", port, portGeneration: false },
+  });
   process.env.MONGODB_URL = server.getUri();
   process.env.DB_NAME = "forum-test";
   process.env.REQUESTING_SAVE_RESPONSES = "false";
@@ -89,6 +93,22 @@ async function boot(): Promise<TestApp> {
   };
 
   return { send, concepts: concepts as Record<string, any>, reset, stop };
+}
+
+function freeLocalPort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.on("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (address === null || typeof address === "string") {
+        server.close(() => reject(new Error("Unable to reserve a test port.")));
+        return;
+      }
+      const { port } = address;
+      server.close(() => resolve(port));
+    });
+  });
 }
 
 /**

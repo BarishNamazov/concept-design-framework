@@ -2,8 +2,8 @@
  * End-to-end SDK tests.
  *
  * These exercise the real client against the *real* application over actual
- * HTTP. We reuse the shared in-memory app from `app_testing.ts` (so Mongo and
- * the `@concepts`/`@syncs` singletons boot exactly once) and start a second,
+ * HTTP. We reuse the shared in-memory app from `app_testing.ts` (so Mongo, the
+ * concept singletons, and the typed sync composition boot exactly once) and start a second,
  * SDK-facing entry point — the `Requesting` HTTP server — bound to an ephemeral
  * port via the optional `port` argument added to `startRequestingServer`.
  *
@@ -25,18 +25,21 @@ import type {
   PostView,
   Result,
   ThreadNode,
+} from "../syncs/app.ts";
+import type {
+  Client,
 } from "./index.ts";
 
 let app: TestApp;
 let server: TestServer;
-let api: ReturnType<typeof createClient>;
+let api: Client<ApiContract>;
 
 beforeEach(async () => {
   if (!app) {
     app = await setupApp();
     // A real HTTP server on an ephemeral port, fronting the shared app.
     server = await startTestServer();
-    api = createClient({ baseUrl: server.baseUrl });
+    api = createClient<ApiContract>({ baseUrl: server.baseUrl });
   }
   await app.reset();
 });

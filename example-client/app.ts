@@ -6,7 +6,7 @@
  * (and the imported SDK source) for the browser when `index.html` is served.
  */
 import { createClient } from "../src/sdk/index.ts";
-import type { Output } from "../src/sdk/index.ts";
+import type { ForumApi, Output } from "../src/syncs/app.ts";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -35,7 +35,9 @@ function log(label: string, value: unknown): void {
  * the demo can be re-pointed at a different backend without a reload.
  */
 function api() {
-  return createClient({ baseUrl: $<HTMLInputElement>("baseUrl").value.trim() });
+  return createClient<ForumApi>({
+    baseUrl: $<HTMLInputElement>("baseUrl").value.trim(),
+  });
 }
 
 const val = (id: string) => $<HTMLInputElement | HTMLTextAreaElement>(id).value;

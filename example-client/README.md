@@ -49,7 +49,7 @@ The backend needs MongoDB and an `.env` (see the [root README](../README.md)):
 ```bash
 # from the repo root
 cp .env.template .env      # set MONGODB_URL and DB_NAME
-bun run build              # generate the @concepts/@syncs/SDK barrels
+bun run build              # generate the concept barrels
 bun run start              # starts the API on http://localhost:8000  (POST /api/*)
 ```
 
@@ -84,9 +84,9 @@ port with `EXAMPLE_CLIENT_PORT=4000 bun run example-client`.
 `<script type="module" src="./app.ts">` entry **and the SDK TypeScript it
 imports** to browser JavaScript on the fly — no separate build step, no bundler
 config, no extra dependencies. Only the SDK's runtime (`client.ts`, a pure,
-app-agnostic `fetch` Proxy) is shipped to the browser; the contract is imported
-with `import type` and fully erased, so the backend is never pulled in at
-runtime — the SDK stays a pure client that is only *type*-bound to the concepts.
+app-agnostic `fetch` Proxy) is shipped to the browser. The forum contract
+(`ForumApi` from `src/syncs/app.ts`) is imported with `import type` and fully
+erased, so the backend is never pulled in at runtime.
 
 ## Type-checking
 

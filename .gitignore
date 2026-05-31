@@ -7,5 +7,3 @@ node_modules
 # Auto-generated barrel files (produced by `bun run build`)
 src/concepts/concepts.ts
 src/concepts/test_concepts.ts
-src/syncs/syncs.ts
-src/syncs/contract.generated.ts

@@ -20,7 +20,7 @@
       "@test-concepts": ["./src/concepts/test_concepts.ts"],
       "@concepts/*": ["./src/concepts/*"],
       "@utils/*": ["./src/utils/*"],
-      "@syncs": ["./src/syncs/syncs.ts"]
+      "@syncs": ["./src/syncs/app.ts"]
     }
   },
   "include": ["src"]

@@ -11,14 +11,12 @@
  *   POST /posts/delete   { session, post }              -> { post }
  *   POST /posts/byAuthor { author }                     -> { posts }
  */
-import { actions, type Sync } from "@engine";
 import {
   Conversing,
   Formatting,
   Linking,
   Posting,
   Reacting,
-  Requesting,
   Sessioning,
   Tagging,
   Tracking,
@@ -28,13 +26,22 @@ import type {
   FormattingConcept,
   PostingConcept,
 } from "@concepts";
-import type {
-  ActionOk,
-  EndpointInputs,
-  InputShape,
-  Prettify,
-  QueryRow,
-} from "./contract.ts";
+import {
+  defineFeature,
+  requestingEndpoint,
+  type ActionOk,
+  type Prettify,
+  type QueryRow,
+} from "@concepts/Requesting/api.ts";
+
+const threadCreate = requestingEndpoint("/threads/create");
+const threadReply = requestingEndpoint("/threads/reply");
+const threadGet = requestingEndpoint("/threads/get");
+const threadList = requestingEndpoint("/threads/list");
+const postGet = requestingEndpoint("/posts/get");
+const postEdit = requestingEndpoint("/posts/edit");
+const postDelete = requestingEndpoint("/posts/delete");
+const postsByAuthor = requestingEndpoint("/posts/byAuthor");
 
 // --- Derived view shapes assembled by the read endpoints below ---
 
@@ -66,56 +73,21 @@ type ConversationSummary = Prettify<
   & { post: PostRecord }
 >;
 
-export const endpoints = {
-  "/threads/create": { input: ["session", "content"] },
-  "/threads/reply": { input: ["session", "parent", "content"] },
-  "/threads/get": { input: ["conversation"] },
-  "/threads/list": { input: [] },
-  "/posts/get": { input: ["post"] },
-  "/posts/edit": { input: ["session", "post", "content"] },
-  "/posts/delete": { input: ["session", "post"] },
-  "/posts/byAuthor": { input: ["author"] },
-} as const satisfies EndpointInputs;
-
-export type Endpoints = {
-  "/threads/create": {
-    input: InputShape<(typeof endpoints)["/threads/create"]["input"]>;
-    output: Prettify<
-      & ActionOk<PostingConcept, "create">
-      & ActionOk<ConversingConcept, "start">
-    >;
-  };
-  "/threads/reply": {
-    input: InputShape<(typeof endpoints)["/threads/reply"]["input"]>;
-    output: Prettify<
-      & ActionOk<PostingConcept, "create">
-      & ActionOk<ConversingConcept, "reply">
-    >;
-  };
-  "/threads/get": {
-    input: InputShape<(typeof endpoints)["/threads/get"]["input"]>;
-    output: { thread: ThreadNode[] };
-  };
-  "/threads/list": {
-    input: InputShape<(typeof endpoints)["/threads/list"]["input"]>;
-    output: { conversations: ConversationSummary[] };
-  };
-  "/posts/get": {
-    input: InputShape<(typeof endpoints)["/posts/get"]["input"]>;
-    output: { post: PostView };
-  };
-  "/posts/edit": {
-    input: InputShape<(typeof endpoints)["/posts/edit"]["input"]>;
-    output: ActionOk<PostingConcept, "edit">;
-  };
-  "/posts/delete": {
-    input: InputShape<(typeof endpoints)["/posts/delete"]["input"]>;
-    output: ActionOk<PostingConcept, "delete">;
-  };
-  "/posts/byAuthor": {
-    input: InputShape<(typeof endpoints)["/posts/byAuthor"]["input"]>;
-    output: { posts: QueryRow<PostingConcept, "_getByAuthor">[] };
-  };
+type ThreadCreateOutput = Prettify<
+  & ActionOk<PostingConcept, "create">
+  & ActionOk<ConversingConcept, "start">
+>;
+type ThreadReplyOutput = Prettify<
+  & ActionOk<PostingConcept, "create">
+  & ActionOk<ConversingConcept, "reply">
+>;
+type ThreadGetOutput = { thread: ThreadNode[] };
+type ThreadListOutput = { conversations: ConversationSummary[] };
+type PostGetOutput = { post: PostView };
+type PostEditOutput = ActionOk<PostingConcept, "edit">;
+type PostDeleteOutput = ActionOk<PostingConcept, "delete">;
+type PostsByAuthorOutput = {
+  posts: QueryRow<PostingConcept, "_getByAuthor">[];
 };
 
 /** Parses `[[<id>]]` references out of post markdown into an array of ids. */
@@ -125,111 +97,118 @@ function parseLinkTargets(content: string): string[] {
 
 // --- threads/create ---
 
-export const ThreadCreateRequest: Sync = (
+export const ThreadCreateRequest = threadCreate.sync((
   { request, session, content, user },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/threads/create", session, content },
-    { request },
-  ]),
+  when: threadCreate.actions(
+    threadCreate.request({ session, content }, { request }),
+  ),
   where: async (frames) =>
     await frames.query(Sessioning._getUser, { session }, { user }),
-  then: actions([Posting.create, { author: user, content }]),
-});
+  then: threadCreate.actions([Posting.create, { author: user, content }]),
+}));
 
-export const ThreadCreateStartsConversation: Sync = ({ request, post }) => ({
-  when: actions(
-    [Requesting.request, { path: "/threads/create" }, { request }],
+export const ThreadCreateStartsConversation = threadCreate.sync(({ request, post }) => ({
+  when: threadCreate.actions(
+    threadCreate.request({}, { request }),
     [Posting.create, {}, { post }],
   ),
-  then: actions([Conversing.start, { item: post }]),
-});
+  then: threadCreate.actions([Conversing.start, { item: post }]),
+}));
 
-export const ThreadCreateSetsSource: Sync = ({ request, content, post }) => ({
-  when: actions(
-    [Requesting.request, { path: "/threads/create", content }, { request }],
+export const ThreadCreateSetsSource = threadCreate.sync(({ request, content, post }) => ({
+  when: threadCreate.actions(
+    threadCreate.request({ content }, { request }),
     [Posting.create, {}, { post }],
   ),
-  then: actions([Formatting.setSource, { target: post, source: content }]),
-});
+  then: threadCreate.actions([
+    Formatting.setSource,
+    { target: post, source: content },
+  ]),
+}));
 
-export const ThreadCreateRegistersUnread: Sync = (
+export const ThreadCreateRegistersUnread = threadCreate.sync((
   { request, post, conversation },
 ) => ({
-  when: actions(
-    [Requesting.request, { path: "/threads/create" }, { request }],
+  when: threadCreate.actions(
+    threadCreate.request({}, { request }),
     [Posting.create, {}, { post }],
     [Conversing.start, {}, { conversation }],
   ),
-  then: actions([Tracking.register, { item: post, scope: conversation }]),
-});
+  then: threadCreate.actions([
+    Tracking.register,
+    { item: post, scope: conversation },
+  ]),
+}));
 
-export const ThreadCreateResponse: Sync = (
+export const ThreadCreateResponse = threadCreate.sync((
   { request, post, conversation, node },
 ) => ({
-  when: actions(
-    [Requesting.request, { path: "/threads/create" }, { request }],
+  when: threadCreate.actions(
+    threadCreate.request({}, { request }),
     [Posting.create, {}, { post }],
     [Conversing.start, {}, { conversation, node }],
   ),
-  then: actions([Requesting.respond, { request, post, conversation, node }]),
-});
+  then: threadCreate.actions(
+    threadCreate.respond<ThreadCreateOutput>({
+      request,
+      post,
+      conversation,
+      node,
+    }),
+  ),
+}));
 
-export const ThreadCreateInvalidSession: Sync = (
+export const ThreadCreateInvalidSession = threadCreate.sync((
   { request, session, active },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/threads/create", session },
-    { request },
-  ]),
+  when: threadCreate.actions(threadCreate.request({ session }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._isActive, { session }, { active });
     return frames.filter(($) => $[active] === false);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Invalid or expired session." },
-  ]),
-});
+  then: threadCreate.actions(
+    threadCreate.error({ request, error: "Invalid or expired session." }),
+  ),
+}));
 
 // --- threads/reply ---
 
-export const ThreadReplyRequest: Sync = (
+export const ThreadReplyRequest = threadReply.sync((
   { request, session, content, user },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/threads/reply", session, content },
-    { request },
-  ]),
+  when: threadReply.actions(
+    threadReply.request({ session, content }, { request }),
+  ),
   where: async (frames) =>
     await frames.query(Sessioning._getUser, { session }, { user }),
-  then: actions([Posting.create, { author: user, content }]),
-});
+  then: threadReply.actions([Posting.create, { author: user, content }]),
+}));
 
-export const ThreadReplyAttaches: Sync = ({ request, parent, post }) => ({
-  when: actions(
-    [Requesting.request, { path: "/threads/reply", parent }, { request }],
+export const ThreadReplyAttaches = threadReply.sync(({ request, parent, post }) => ({
+  when: threadReply.actions(
+    threadReply.request({ parent }, { request }),
     [Posting.create, {}, { post }],
   ),
-  then: actions([Conversing.reply, { item: post, parent }]),
-});
+  then: threadReply.actions([Conversing.reply, { item: post, parent }]),
+}));
 
-export const ThreadReplySetsSource: Sync = ({ request, content, post }) => ({
-  when: actions(
-    [Requesting.request, { path: "/threads/reply", content }, { request }],
+export const ThreadReplySetsSource = threadReply.sync(({ request, content, post }) => ({
+  when: threadReply.actions(
+    threadReply.request({ content }, { request }),
     [Posting.create, {}, { post }],
   ),
-  then: actions([Formatting.setSource, { target: post, source: content }]),
-});
+  then: threadReply.actions([
+    Formatting.setSource,
+    { target: post, source: content },
+  ]),
+}));
 
-export const ThreadReplyRegistersUnread: Sync = (
+export const ThreadReplyRegistersUnread = threadReply.sync((
   { request, parent, post, conversation },
 ) => ({
-  when: actions(
-    [Requesting.request, { path: "/threads/reply", parent }, { request }],
+  when: threadReply.actions(
+    threadReply.request({ parent }, { request }),
     [Posting.create, {}, { post }],
   ),
   where: async (frames) =>
@@ -238,14 +217,17 @@ export const ThreadReplyRegistersUnread: Sync = (
       { node: parent },
       { conversation },
     ),
-  then: actions([Tracking.register, { item: post, scope: conversation }]),
-});
+  then: threadReply.actions([
+    Tracking.register,
+    { item: post, scope: conversation },
+  ]),
+}));
 
-export const ThreadReplyDerivesLinks: Sync = (
+export const ThreadReplyDerivesLinks = threadReply.sync((
   { request, content, post, targets },
 ) => ({
-  when: actions(
-    [Requesting.request, { path: "/threads/reply", content }, { request }],
+  when: threadReply.actions(
+    threadReply.request({ content }, { request }),
     [Posting.create, {}, { post }],
   ),
   where: async (frames) =>
@@ -253,46 +235,39 @@ export const ThreadReplyDerivesLinks: Sync = (
       ...$,
       [targets]: parseLinkTargets($[content] as string),
     })),
-  then: actions([Linking.setLinks, { source: post, targets }]),
-});
+  then: threadReply.actions([Linking.setLinks, { source: post, targets }]),
+}));
 
-export const ThreadReplyResponse: Sync = ({ request, post, node }) => ({
-  when: actions(
-    [Requesting.request, { path: "/threads/reply" }, { request }],
+export const ThreadReplyResponse = threadReply.sync(({ request, post, node }) => ({
+  when: threadReply.actions(
+    threadReply.request({}, { request }),
     [Posting.create, {}, { post }],
     [Conversing.reply, {}, { node }],
   ),
-  then: actions([Requesting.respond, { request, post, node }]),
-});
+  then: threadReply.actions(
+    threadReply.respond<ThreadReplyOutput>({ request, post, node }),
+  ),
+}));
 
-export const ThreadReplyInvalidSession: Sync = (
+export const ThreadReplyInvalidSession = threadReply.sync((
   { request, session, active },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/threads/reply", session },
-    { request },
-  ]),
+  when: threadReply.actions(threadReply.request({ session }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._isActive, { session }, { active });
     return frames.filter(($) => $[active] === false);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Invalid or expired session." },
-  ]),
-});
+  then: threadReply.actions(
+    threadReply.error({ request, error: "Invalid or expired session." }),
+  ),
+}));
 
 // --- threads/get: assemble an ordered, enriched thread view ---
 
-export const ThreadGetResponse: Sync = (
+export const ThreadGetResponse = threadGet.sync((
   { request, conversation, node, item, parent, depth, post, rendered, thread },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/threads/get", conversation },
-    { request },
-  ]),
+  when: threadGet.actions(threadGet.request({ conversation }, { request })),
   where: async (frames) => {
     const [base] = frames;
     frames = await frames.query(
@@ -320,19 +295,17 @@ export const ThreadGetResponse: Sync = (
       ),
     }));
   },
-  then: actions([Requesting.respond, { request, thread }]),
-});
+  then: threadGet.actions(
+    threadGet.respond<ThreadGetOutput>({ request, thread }),
+  ),
+}));
 
 // --- posts/get: combine post fields with its rendered html ---
 
-export const PostGetResponse: Sync = (
+export const PostGetResponse = postGet.sync((
   { request, post, postData, rendered, result },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/posts/get", post },
-    { request },
-  ]),
+  when: postGet.actions(postGet.request({ post }, { request })),
   where: async (frames) => {
     frames = await frames.query(Posting._getPost, { post }, { post: postData });
     frames = await frames.query(
@@ -345,53 +318,52 @@ export const PostGetResponse: Sync = (
       [result]: { ...($[postData] as object), rendered: $[rendered] },
     }));
   },
-  then: actions([Requesting.respond, { request, post: result }]),
-});
+  then: postGet.actions(
+    postGet.respond<PostGetOutput>({ request, post: result }),
+  ),
+}));
 
-export const PostGetNotFound: Sync = ({ request, post, exists }) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/posts/get", post },
-    { request },
-  ]),
+export const PostGetNotFound = postGet.sync(({ request, post, exists }) => ({
+  when: postGet.actions(postGet.request({ post }, { request })),
   where: async (frames) => {
     frames = await frames.query(Posting._exists, { post }, { exists });
     return frames.filter(($) => $[exists] === false);
   },
-  then: actions([Requesting.respond, { request, error: "Post not found." }]),
-});
+  then: postGet.actions(postGet.error({ request, error: "Post not found." })),
+}));
 
 // --- posts/edit (author-only) ---
 
-export const PostEditRequest: Sync = (
+export const PostEditRequest = postEdit.sync((
   { request, session, post, content, user, author },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/posts/edit", session, post, content },
-    { request },
-  ]),
+  when: postEdit.actions(
+    postEdit.request({ session, post, content }, { request }),
+  ),
   where: async (frames) => {
     frames = await frames.query(Sessioning._getUser, { session }, { user });
     frames = await frames.query(Posting._getAuthor, { post }, { author });
     return frames.filter(($) => $[author] === $[user]);
   },
-  then: actions([Posting.edit, { post, content }]),
-});
+  then: postEdit.actions([Posting.edit, { post, content }]),
+}));
 
-export const PostEditSetsSource: Sync = ({ request, content, post }) => ({
-  when: actions(
-    [Requesting.request, { path: "/posts/edit", content }, { request }],
+export const PostEditSetsSource = postEdit.sync(({ request, content, post }) => ({
+  when: postEdit.actions(
+    postEdit.request({ content }, { request }),
     [Posting.edit, {}, { post }],
   ),
-  then: actions([Formatting.setSource, { target: post, source: content }]),
-});
+  then: postEdit.actions([
+    Formatting.setSource,
+    { target: post, source: content },
+  ]),
+}));
 
-export const PostEditDerivesLinks: Sync = (
+export const PostEditDerivesLinks = postEdit.sync((
   { request, content, post, targets },
 ) => ({
-  when: actions(
-    [Requesting.request, { path: "/posts/edit", content }, { request }],
+  when: postEdit.actions(
+    postEdit.request({ content }, { request }),
     [Posting.edit, {}, { post }],
   ),
   where: async (frames) =>
@@ -399,64 +371,50 @@ export const PostEditDerivesLinks: Sync = (
       ...$,
       [targets]: parseLinkTargets($[content] as string),
     })),
-  then: actions([Linking.setLinks, { source: post, targets }]),
-});
+  then: postEdit.actions([Linking.setLinks, { source: post, targets }]),
+}));
 
-export const PostEditResponse: Sync = ({ request, post }) => ({
-  when: actions(
-    [Requesting.request, { path: "/posts/edit" }, { request }],
+export const PostEditResponse = postEdit.sync(({ request, post }) => ({
+  when: postEdit.actions(
+    postEdit.request({}, { request }),
     [Posting.edit, {}, { post }],
   ),
-  then: actions([Requesting.respond, { request, post }]),
-});
+  then: postEdit.actions(postEdit.respond<PostEditOutput>({ request, post })),
+}));
 
-export const PostEditNotAuthor: Sync = (
+export const PostEditNotAuthor = postEdit.sync((
   { request, session, post, user, author },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/posts/edit", session, post },
-    { request },
-  ]),
+  when: postEdit.actions(postEdit.request({ session, post }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._getUser, { session }, { user });
     frames = await frames.query(Posting._getAuthor, { post }, { author });
     return frames.filter(($) => $[author] !== $[user]);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Not authorized to edit this post." },
-  ]),
-});
+  then: postEdit.actions(
+    postEdit.error({ request, error: "Not authorized to edit this post." }),
+  ),
+}));
 
-export const PostEditInvalidSession: Sync = (
+export const PostEditInvalidSession = postEdit.sync((
   { request, session, active },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/posts/edit", session },
-    { request },
-  ]),
+  when: postEdit.actions(postEdit.request({ session }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._isActive, { session }, { active });
     return frames.filter(($) => $[active] === false);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Invalid or expired session." },
-  ]),
-});
+  then: postEdit.actions(
+    postEdit.error({ request, error: "Invalid or expired session." }),
+  ),
+}));
 
 // --- posts/delete (author-only, cascades) ---
 
-export const PostDeleteRequest: Sync = (
+export const PostDeleteRequest = postDelete.sync((
   { request, session, post, user, author, node, reply, replies },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/posts/delete", session, post },
-    { request },
-  ]),
+  when: postDelete.actions(postDelete.request({ session, post }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._getUser, { session }, { user });
     frames = await frames.query(Posting._getAuthor, { post }, { author });
@@ -472,17 +430,13 @@ export const PostDeleteRequest: Sync = (
     frames = frames.aggregate(authored, [reply], replies);
     return frames.filter(($) => ($[replies] as unknown[]).length === 0);
   },
-  then: actions([Posting.delete, { post }]),
-});
+  then: postDelete.actions([Posting.delete, { post }]),
+}));
 
-export const PostDeleteHasReplies: Sync = (
+export const PostDeleteHasReplies = postDelete.sync((
   { request, session, post, user, author, node, reply, replies },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/posts/delete", session, post },
-    { request },
-  ]),
+  when: postDelete.actions(postDelete.request({ session, post }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._getUser, { session }, { user });
     frames = await frames.query(Posting._getAuthor, { post }, { author });
@@ -498,117 +452,107 @@ export const PostDeleteHasReplies: Sync = (
     frames = frames.aggregate(authored, [reply], replies);
     return frames.filter(($) => ($[replies] as unknown[]).length > 0);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Cannot delete a post that has replies." },
-  ]),
-});
+  then: postDelete.actions(
+    postDelete.error({
+      request,
+      error: "Cannot delete a post that has replies.",
+    }),
+  ),
+}));
 
-export const PostDeleteClearsFormatting: Sync = ({ request, post }) => ({
-  when: actions(
-    [Requesting.request, { path: "/posts/delete" }, { request }],
+export const PostDeleteClearsFormatting = postDelete.sync(({ request, post }) => ({
+  when: postDelete.actions(
+    postDelete.request({}, { request }),
     [Posting.delete, {}, { post }],
   ),
-  then: actions([Formatting.clear, { target: post }]),
-});
+  then: postDelete.actions([Formatting.clear, { target: post }]),
+}));
 
-export const PostDeleteClearsReactions: Sync = ({ request, post }) => ({
-  when: actions(
-    [Requesting.request, { path: "/posts/delete" }, { request }],
+export const PostDeleteClearsReactions = postDelete.sync(({ request, post }) => ({
+  when: postDelete.actions(
+    postDelete.request({}, { request }),
     [Posting.delete, {}, { post }],
   ),
-  then: actions([Reacting.clearTarget, { target: post }]),
-});
+  then: postDelete.actions([Reacting.clearTarget, { target: post }]),
+}));
 
-export const PostDeleteClearsTags: Sync = ({ request, post }) => ({
-  when: actions(
-    [Requesting.request, { path: "/posts/delete" }, { request }],
+export const PostDeleteClearsTags = postDelete.sync(({ request, post }) => ({
+  when: postDelete.actions(
+    postDelete.request({}, { request }),
     [Posting.delete, {}, { post }],
   ),
-  then: actions([Tagging.clearTarget, { target: post }]),
-});
+  then: postDelete.actions([Tagging.clearTarget, { target: post }]),
+}));
 
-export const PostDeleteUnregisters: Sync = ({ request, post }) => ({
-  when: actions(
-    [Requesting.request, { path: "/posts/delete" }, { request }],
+export const PostDeleteUnregisters = postDelete.sync(({ request, post }) => ({
+  when: postDelete.actions(
+    postDelete.request({}, { request }),
     [Posting.delete, {}, { post }],
   ),
-  then: actions([Tracking.unregister, { item: post }]),
-});
+  then: postDelete.actions([Tracking.unregister, { item: post }]),
+}));
 
-export const PostDeleteClearsLinks: Sync = ({ request, post }) => ({
-  when: actions(
-    [Requesting.request, { path: "/posts/delete" }, { request }],
+export const PostDeleteClearsLinks = postDelete.sync(({ request, post }) => ({
+  when: postDelete.actions(
+    postDelete.request({}, { request }),
     [Posting.delete, {}, { post }],
   ),
-  then: actions([Linking.clearLinks, { source: post }]),
-});
+  then: postDelete.actions([Linking.clearLinks, { source: post }]),
+}));
 
-export const PostDeleteRemovesNode: Sync = ({ request, post, node }) => ({
-  when: actions(
-    [Requesting.request, { path: "/posts/delete" }, { request }],
+export const PostDeleteRemovesNode = postDelete.sync(({ request, post, node }) => ({
+  when: postDelete.actions(
+    postDelete.request({}, { request }),
     [Posting.delete, {}, { post }],
   ),
   where: async (frames) =>
     await frames.query(Conversing._getNodeByItem, { item: post }, { node }),
-  then: actions([Conversing.remove, { node }]),
-});
+  then: postDelete.actions([Conversing.remove, { node }]),
+}));
 
-export const PostDeleteResponse: Sync = ({ request, post }) => ({
-  when: actions(
-    [Requesting.request, { path: "/posts/delete" }, { request }],
+export const PostDeleteResponse = postDelete.sync(({ request, post }) => ({
+  when: postDelete.actions(
+    postDelete.request({}, { request }),
     [Posting.delete, {}, { post }],
   ),
-  then: actions([Requesting.respond, { request, post }]),
-});
+  then: postDelete.actions(
+    postDelete.respond<PostDeleteOutput>({ request, post }),
+  ),
+}));
 
-export const PostDeleteNotAuthor: Sync = (
+export const PostDeleteNotAuthor = postDelete.sync((
   { request, session, post, user, author },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/posts/delete", session, post },
-    { request },
-  ]),
+  when: postDelete.actions(postDelete.request({ session, post }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._getUser, { session }, { user });
     frames = await frames.query(Posting._getAuthor, { post }, { author });
     return frames.filter(($) => $[author] !== $[user]);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Not authorized to delete this post." },
-  ]),
-});
+  then: postDelete.actions(
+    postDelete.error({ request, error: "Not authorized to delete this post." }),
+  ),
+}));
 
-export const PostDeleteInvalidSession: Sync = (
+export const PostDeleteInvalidSession = postDelete.sync((
   { request, session, active },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/posts/delete", session },
-    { request },
-  ]),
+  when: postDelete.actions(postDelete.request({ session }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._isActive, { session }, { active });
     return frames.filter(($) => $[active] === false);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Invalid or expired session." },
-  ]),
-});
+  then: postDelete.actions(
+    postDelete.error({ request, error: "Invalid or expired session." }),
+  ),
+}));
 
 // --- threads/list: a newest-first feed of conversation roots ---
 
-export const ThreadListResponse: Sync = (
+export const ThreadListResponse = threadList.sync((
   { request, conversation, root, item, createdAt, post, conversations },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/threads/list" },
-    { request },
-  ]),
+  when: threadList.actions(threadList.request({}, { request })),
   where: async (frames) => {
     const [base] = frames;
     frames = await frames.query(
@@ -630,21 +574,72 @@ export const ThreadListResponse: Sync = (
       ),
     }));
   },
-  then: actions([Requesting.respond, { request, conversations }]),
-});
+  then: threadList.actions(
+    threadList.respond<ThreadListOutput>({ request, conversations }),
+  ),
+}));
 
-export const PostsByAuthorResponse: Sync = (
+export const PostsByAuthorResponse = postsByAuthor.sync((
   { request, author, post, posts },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/posts/byAuthor", author },
-    { request },
-  ]),
+  when: postsByAuthor.actions(postsByAuthor.request({ author }, { request })),
   where: async (frames) => {
     const [base] = frames;
     frames = await frames.query(Posting._getByAuthor, { author }, { post });
     return frames.aggregate(base, [post], posts);
   },
-  then: actions([Requesting.respond, { request, posts }]),
+  then: postsByAuthor.actions(
+    postsByAuthor.respond<PostsByAuthorOutput>({ request, posts }),
+  ),
+}));
+
+export const threadsApi = defineFeature({
+  create: threadCreate.define({
+    ThreadCreateRequest,
+    ThreadCreateStartsConversation,
+    ThreadCreateSetsSource,
+    ThreadCreateRegistersUnread,
+    ThreadCreateResponse,
+    ThreadCreateInvalidSession,
+  }),
+  reply: threadReply.define({
+    ThreadReplyRequest,
+    ThreadReplyAttaches,
+    ThreadReplySetsSource,
+    ThreadReplyRegistersUnread,
+    ThreadReplyDerivesLinks,
+    ThreadReplyResponse,
+    ThreadReplyInvalidSession,
+  }),
+  get: threadGet.define({ ThreadGetResponse }),
+  list: threadList.define({ ThreadListResponse }),
+});
+
+export const postsApi = defineFeature({
+  get: postGet.define({
+    PostGetResponse,
+    PostGetNotFound,
+  }),
+  edit: postEdit.define({
+    PostEditRequest,
+    PostEditSetsSource,
+    PostEditDerivesLinks,
+    PostEditResponse,
+    PostEditNotAuthor,
+    PostEditInvalidSession,
+  }),
+  delete: postDelete.define({
+    PostDeleteRequest,
+    PostDeleteHasReplies,
+    PostDeleteClearsFormatting,
+    PostDeleteClearsReactions,
+    PostDeleteClearsTags,
+    PostDeleteUnregisters,
+    PostDeleteClearsLinks,
+    PostDeleteRemovesNode,
+    PostDeleteResponse,
+    PostDeleteNotAuthor,
+    PostDeleteInvalidSession,
+  }),
+  byAuthor: postsByAuthor.define({ PostsByAuthorResponse }),
 });

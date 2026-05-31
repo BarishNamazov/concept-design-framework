@@ -5,55 +5,44 @@
  *   POST /links/backlinks { target } -> { sources }
  *   POST /links/forward   { source } -> { targets }
  */
-import { actions, type Sync } from "@engine";
-import { Linking, Requesting } from "@concepts";
+import { Linking } from "@concepts";
 import type { LinkingConcept } from "@concepts";
-import type { EndpointInputs, InputShape, QueryRow } from "./contract.ts";
+import {
+  defineFeature,
+  requestingEndpoint,
+  type QueryRow,
+} from "@concepts/Requesting/api.ts";
 
-export const endpoints = {
-  "/links/backlinks": { input: ["target"] },
-  "/links/forward": { input: ["source"] },
-} as const satisfies EndpointInputs;
+const backlinks = requestingEndpoint("/links/backlinks");
+const forward = requestingEndpoint("/links/forward");
 
-export type Endpoints = {
-  "/links/backlinks": {
-    input: InputShape<(typeof endpoints)["/links/backlinks"]["input"]>;
-    output: { sources: QueryRow<LinkingConcept, "_getBacklinks">[] };
-  };
-  "/links/forward": {
-    input: InputShape<(typeof endpoints)["/links/forward"]["input"]>;
-    output: { targets: QueryRow<LinkingConcept, "_getForwardLinks">[] };
-  };
+type BacklinksOutput = { sources: QueryRow<LinkingConcept, "_getBacklinks">[] };
+type ForwardOutput = {
+  targets: QueryRow<LinkingConcept, "_getForwardLinks">[];
 };
 
 // --- backlinks: public ---
 
-export const LinkBacklinksResponse: Sync = (
+export const LinkBacklinksResponse = backlinks.sync((
   { request, target, source, sources },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/links/backlinks", target },
-    { request },
-  ]),
+  when: backlinks.actions(backlinks.request({ target }, { request })),
   where: async (frames) => {
     const [base] = frames;
     frames = await frames.query(Linking._getBacklinks, { target }, { source });
     return frames.aggregate(base, [source], sources);
   },
-  then: actions([Requesting.respond, { request, sources }]),
-});
+  then: backlinks.actions(
+    backlinks.respond<BacklinksOutput>({ request, sources }),
+  ),
+}));
 
 // --- forward: public ---
 
-export const LinkForwardResponse: Sync = (
+export const LinkForwardResponse = forward.sync((
   { request, source, target, targets },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/links/forward", source },
-    { request },
-  ]),
+  when: forward.actions(forward.request({ source }, { request })),
   where: async (frames) => {
     const [base] = frames;
     frames = await frames.query(
@@ -63,5 +52,10 @@ export const LinkForwardResponse: Sync = (
     );
     return frames.aggregate(base, [target], targets);
   },
-  then: actions([Requesting.respond, { request, targets }]),
+  then: forward.actions(forward.respond<ForwardOutput>({ request, targets })),
+}));
+
+export const linksApi = defineFeature({
+  backlinks: backlinks.define({ LinkBacklinksResponse }),
+  forward: forward.define({ LinkForwardResponse }),
 });

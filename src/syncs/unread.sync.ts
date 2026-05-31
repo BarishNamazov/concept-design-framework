@@ -7,89 +7,59 @@
  *   POST /unread/markSeen    { session, item }  -> { item }
  *   POST /unread/markAllSeen { session, scope } -> { user }
  */
-import { actions, type Sync } from "@engine";
-import { Requesting, Sessioning, Tracking } from "@concepts";
+import { Sessioning, Tracking } from "@concepts";
 import type { TrackingConcept } from "@concepts";
-import type {
-  ActionOk,
-  EndpointInputs,
-  InputShape,
-  QueryRow,
-} from "./contract.ts";
+import {
+  defineFeature,
+  requestingEndpoint,
+  type ActionOk,
+  type QueryRow,
+} from "@concepts/Requesting/api.ts";
 
-export const endpoints = {
-  "/unread/list": { input: ["session", "scope"] },
-  "/unread/count": { input: ["session", "scope"] },
-  "/unread/markSeen": { input: ["session", "item"] },
-  "/unread/markAllSeen": { input: ["session", "scope"] },
-} as const satisfies EndpointInputs;
+const list = requestingEndpoint("/unread/list");
+const unreadCount = requestingEndpoint("/unread/count");
+const markSeen = requestingEndpoint("/unread/markSeen");
+const markAllSeen = requestingEndpoint("/unread/markAllSeen");
 
-export type Endpoints = {
-  "/unread/list": {
-    input: InputShape<(typeof endpoints)["/unread/list"]["input"]>;
-    output: { items: QueryRow<TrackingConcept, "_getUnread">[] };
-  };
-  "/unread/count": {
-    input: InputShape<(typeof endpoints)["/unread/count"]["input"]>;
-    output: QueryRow<TrackingConcept, "_getUnreadCount">;
-  };
-  "/unread/markSeen": {
-    input: InputShape<(typeof endpoints)["/unread/markSeen"]["input"]>;
-    output: ActionOk<TrackingConcept, "markSeen">;
-  };
-  "/unread/markAllSeen": {
-    input: InputShape<(typeof endpoints)["/unread/markAllSeen"]["input"]>;
-    output: ActionOk<TrackingConcept, "markAllSeen">;
-  };
-};
+type UnreadListOutput = { items: QueryRow<TrackingConcept, "_getUnread">[] };
+type UnreadCountOutput = QueryRow<TrackingConcept, "_getUnreadCount">;
+type MarkSeenOutput = ActionOk<TrackingConcept, "markSeen">;
+type MarkAllSeenOutput = ActionOk<TrackingConcept, "markAllSeen">;
 
 // --- list ---
 
-export const UnreadListResponse: Sync = (
+export const UnreadListResponse = list.sync((
   { request, session, scope, user, item, items },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/unread/list", session, scope },
-    { request },
-  ]),
+  when: list.actions(list.request({ session, scope }, { request })),
   where: async (frames) => {
     const [base] = frames;
     frames = await frames.query(Sessioning._getUser, { session }, { user });
     frames = await frames.query(Tracking._getUnread, { user, scope }, { item });
     return frames.aggregate(base, [item], items);
   },
-  then: actions([Requesting.respond, { request, items }]),
-});
+  then: list.actions(list.respond<UnreadListOutput>({ request, items })),
+}));
 
-export const UnreadListInvalidSession: Sync = (
+export const UnreadListInvalidSession = list.sync((
   { request, session, active },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/unread/list", session },
-    { request },
-  ]),
+  when: list.actions(list.request({ session }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._isActive, { session }, { active });
     return frames.filter(($) => $[active] === false);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Invalid or expired session." },
-  ]),
-});
+  then: list.actions(list.error({ request, error: "Invalid or expired session." })),
+}));
 
 // --- count ---
 
-export const UnreadCountResponse: Sync = (
+export const UnreadCountResponse = unreadCount.sync((
   { request, session, scope, user, count },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/unread/count", session, scope },
-    { request },
-  ]),
+  when: unreadCount.actions(
+    unreadCount.request({ session, scope }, { request }),
+  ),
   where: async (frames) => {
     frames = await frames.query(Sessioning._getUser, { session }, { user });
     return await frames.query(
@@ -98,113 +68,118 @@ export const UnreadCountResponse: Sync = (
       { count },
     );
   },
-  then: actions([Requesting.respond, { request, count }]),
-});
+  then: unreadCount.actions(
+    unreadCount.respond<UnreadCountOutput>({ request, count }),
+  ),
+}));
 
-export const UnreadCountInvalidSession: Sync = (
+export const UnreadCountInvalidSession = unreadCount.sync((
   { request, session, active },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/unread/count", session },
-    { request },
-  ]),
+  when: unreadCount.actions(unreadCount.request({ session }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._isActive, { session }, { active });
     return frames.filter(($) => $[active] === false);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Invalid or expired session." },
-  ]),
-});
+  then: unreadCount.actions(
+    unreadCount.error({ request, error: "Invalid or expired session." }),
+  ),
+}));
 
 // --- markSeen ---
 
-export const UnreadMarkSeenRequest: Sync = (
+export const UnreadMarkSeenRequest = markSeen.sync((
   { request, session, item, user },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/unread/markSeen", session, item },
-    { request },
-  ]),
+  when: markSeen.actions(markSeen.request({ session, item }, { request })),
   where: async (frames) =>
     await frames.query(Sessioning._getUser, { session }, { user }),
-  then: actions([Tracking.markSeen, { user, item }]),
-});
+  then: markSeen.actions([Tracking.markSeen, { user, item }]),
+}));
 
-export const UnreadMarkSeenResponse: Sync = ({ request, item }) => ({
-  when: actions(
-    [Requesting.request, { path: "/unread/markSeen" }, { request }],
+export const UnreadMarkSeenResponse = markSeen.sync(({ request, item }) => ({
+  when: markSeen.actions(
+    markSeen.request({}, { request }),
     [Tracking.markSeen, {}, { item }],
   ),
-  then: actions([Requesting.respond, { request, item }]),
-});
+  then: markSeen.actions(markSeen.respond<MarkSeenOutput>({ request, item })),
+}));
 
-export const UnreadMarkSeenError: Sync = ({ request, error }) => ({
-  when: actions(
-    [Requesting.request, { path: "/unread/markSeen" }, { request }],
+export const UnreadMarkSeenError = markSeen.sync(({ request, error }) => ({
+  when: markSeen.actions(
+    markSeen.request({}, { request }),
     [Tracking.markSeen, {}, { error }],
   ),
-  then: actions([Requesting.respond, { request, error }]),
-});
+  then: markSeen.actions(markSeen.error({ request, error })),
+}));
 
-export const UnreadMarkSeenInvalidSession: Sync = (
+export const UnreadMarkSeenInvalidSession = markSeen.sync((
   { request, session, active },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/unread/markSeen", session },
-    { request },
-  ]),
+  when: markSeen.actions(markSeen.request({ session }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._isActive, { session }, { active });
     return frames.filter(($) => $[active] === false);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Invalid or expired session." },
-  ]),
-});
+  then: markSeen.actions(
+    markSeen.error({ request, error: "Invalid or expired session." }),
+  ),
+}));
 
 // --- markAllSeen ---
 
-export const UnreadMarkAllSeenRequest: Sync = (
+export const UnreadMarkAllSeenRequest = markAllSeen.sync((
   { request, session, scope, user },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/unread/markAllSeen", session, scope },
-    { request },
-  ]),
+  when: markAllSeen.actions(
+    markAllSeen.request({ session, scope }, { request }),
+  ),
   where: async (frames) =>
     await frames.query(Sessioning._getUser, { session }, { user }),
-  then: actions([Tracking.markAllSeen, { user, scope }]),
-});
+  then: markAllSeen.actions([Tracking.markAllSeen, { user, scope }]),
+}));
 
-export const UnreadMarkAllSeenResponse: Sync = ({ request, user }) => ({
-  when: actions(
-    [Requesting.request, { path: "/unread/markAllSeen" }, { request }],
+export const UnreadMarkAllSeenResponse = markAllSeen.sync(({ request, user }) => ({
+  when: markAllSeen.actions(
+    markAllSeen.request({}, { request }),
     [Tracking.markAllSeen, {}, { user }],
   ),
-  then: actions([Requesting.respond, { request, user }]),
-});
+  then: markAllSeen.actions(
+    markAllSeen.respond<MarkAllSeenOutput>({ request, user }),
+  ),
+}));
 
-export const UnreadMarkAllSeenInvalidSession: Sync = (
+export const UnreadMarkAllSeenInvalidSession = markAllSeen.sync((
   { request, session, active },
 ) => ({
-  when: actions([
-    Requesting.request,
-    { path: "/unread/markAllSeen", session },
-    { request },
-  ]),
+  when: markAllSeen.actions(markAllSeen.request({ session }, { request })),
   where: async (frames) => {
     frames = await frames.query(Sessioning._isActive, { session }, { active });
     return frames.filter(($) => $[active] === false);
   },
-  then: actions([
-    Requesting.respond,
-    { request, error: "Invalid or expired session." },
-  ]),
+  then: markAllSeen.actions(
+    markAllSeen.error({ request, error: "Invalid or expired session." }),
+  ),
+}));
+
+export const unreadApi = defineFeature({
+  list: list.define({
+    UnreadListResponse,
+    UnreadListInvalidSession,
+  }),
+  count: unreadCount.define({
+    UnreadCountResponse,
+    UnreadCountInvalidSession,
+  }),
+  markSeen: markSeen.define({
+    UnreadMarkSeenRequest,
+    UnreadMarkSeenResponse,
+    UnreadMarkSeenError,
+    UnreadMarkSeenInvalidSession,
+  }),
+  markAllSeen: markAllSeen.define({
+    UnreadMarkAllSeenRequest,
+    UnreadMarkAllSeenResponse,
+    UnreadMarkAllSeenInvalidSession,
+  }),
 });

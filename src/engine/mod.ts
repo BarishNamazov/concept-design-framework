@@ -7,6 +7,8 @@
 export { actions, Logging, SyncConcept } from "./sync.ts";
 export { Frames } from "./frames.ts";
 export type {
+  ActionList,
+  ActionPattern,
   Empty,
   Frame,
   Mapping,

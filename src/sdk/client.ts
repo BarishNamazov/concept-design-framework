@@ -2,16 +2,18 @@
  * # Type-safe client (Eden Treaty style)
  *
  * {@link createClient} returns a Proxy-based client whose **types are fully
- * inferred from a contract type parameter** — the aggregated `ApiContract` that
- * `bun run build` assembles from the syncs. This module is entirely generic and
+ * inferred from a contract type parameter**. This module is entirely generic and
  * app-agnostic: it is never edited when endpoints are added or changed. The
- * concrete binding to the app's contract happens in `index.ts`.
+ * concrete binding to an app contract happens at the call site, e.g.
+ * `createClient<ForumApi>()`.
  *
  * Two equivalent calling styles are supported, both terminating in a single
  * `POST {baseUrl}{path}` request:
  *
  * ```ts
- * const api = createClient({ baseUrl: "http://localhost:8000/api" });
+ * const api = createClient<ForumApi>({
+ *   baseUrl: "http://localhost:8000/api",
+ * });
  *
  * // grouped — property access mirrors the path segments
  * await api.auth.login({ username, password });
@@ -198,8 +200,8 @@ function makeProxy(
  * both the grouped (`client.auth.login(...)`) and indexed
  * (`client["/auth/login"](...)`) styles, each fully inferred from `C`.
  *
- * Callers normally use the app-bound `createClient` re-exported from the SDK
- * barrel, which fixes `C` to the aggregated `ApiContract`.
+ * Callers pass their app contract type explicitly, e.g.
+ * `createClient<ForumApi>()`.
  */
 export function createClient<C extends ContractShape>(
   options: ClientOptions = {},
@@ -210,4 +212,3 @@ export function createClient<C extends ContractShape>(
     request(fetchImpl, baseUrl, options.headers, path, body);
   return makeProxy([], call) as Client<C>;
 }
-

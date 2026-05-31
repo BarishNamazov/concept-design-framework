@@ -12,14 +12,14 @@ This repository implements a **forum application** using [**concept design**](de
    - `MONGODB_URL`: the MongoDB connection string
    - `DB_NAME`: the database name
    - `PORT` (optional): the port the server binds to, default `8000`
-4. Generate the concept/sync barrel files: `bun run build`
+4. Generate the concept barrel files: `bun run build`
 5. Start the server: `bun run start`
 
 ## Scripts
 
 | Command | Description |
 | --- | --- |
-| `bun run build` | Scans `src/concepts` and `src/syncs` and regenerates the `@concepts`, `@test-concepts`, and `@syncs` barrel files. Run this after adding or renaming a concept or sync. |
+| `bun run build` | Scans `src/concepts` and regenerates the `@concepts` and `@test-concepts` barrel files. Run this after adding or renaming a concept. |
 | `bun run start` | Starts the application server (`src/main.ts`). |
 | `bun test` | Runs the test suite (engine + concept tests). |
 | `bun run typecheck` | Type-checks the project with `tsc --noEmit`. |
@@ -61,8 +61,11 @@ To add a feature:
 1. Specify the concept under `design/concepts/{Name}/{Name}.md`.
 2. Implement it at `src/concepts/{Name}/{Name}Concept.ts`, with a colocated `{Name}Concept.test.ts`.
 3. Wire it up with synchronizations under `src/syncs/`.
-4. Run `bun run build`, then `bun test`.
+4. Add the feature to `src/syncs/app.ts`, run `bun run build`, then `bun test`.
 
 ## Frontend SDK
 
-A fully type-safe client SDK lives under `src/sdk/`. It imports request/response types directly from the backend concepts and synchronizations, so a frontend gets end-to-end type safety against the API. See [src/sdk/README.md](src/sdk/README.md).
+A self-contained Requesting client SDK lives under `src/sdk/`. The forum API type
+is inferred from the typed sync composition in `src/syncs/app.ts` and passed to
+`createClient<ForumApi>()`, so a frontend gets end-to-end type safety without a
+generated SDK contract file. See [src/sdk/README.md](src/sdk/README.md).

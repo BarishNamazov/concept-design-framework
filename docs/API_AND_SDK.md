@@ -87,26 +87,28 @@ and returns an error response if the session is invalid.
 
 ## Type-safe SDK strategy
 
-The SDK lives under `src/sdk/`. Type safety is achieved by deriving endpoint
-input/output types from a single **typed API contract** (`src/sdk/contract.ts`)
-that the synchronizations are written to satisfy. The contract references concept
-method signatures from the backend where an endpoint is a thin wrapper, e.g.:
+The SDK runtime lives under `src/sdk/` and is generic. The forum API contract
+lives with the server composition in `src/syncs/app.ts`:
 
 ```ts
-import type { AuthenticatingConcept } from "@concepts";
-type RegisterOutput = Awaited<ReturnType<AuthenticatingConcept["register"]>>;
+export const api = defineApi({ auth, threads, posts });
+export type ForumApi = ContractOf<typeof api>;
 ```
 
-so the SDK's types stay bound to the real backend implementation. The contract is
-a single interface `ApiContract` mapping each `path` to `{ input; output }`. The
-SDK is a generic typed `fetch` wrapper:
+Each endpoint is declared through `requestingEndpoint(path)`, so the same syncs
+that implement `Requesting.request` / `Requesting.respond` also carry the input
+and output types. Success outputs are still derived from concept method
+signatures where possible (`ActionOk`, `QueryRow`, `Prettify`).
+
+The frontend binds the generic client to the server type:
 
 ```ts
-const api = createClient({ baseUrl: "http://localhost:8000/api" });
+import { createClient } from "../src/sdk/index.ts";
+import type { ForumApi } from "../src/syncs/app.ts";
+
+const api = createClient<ForumApi>({ baseUrl: "http://localhost:8000/api" });
 const { session } = await api["/auth/login"]({ username, password });
 ```
 
-with `input`/`output` fully inferred from `ApiContract`, plus ergonomic grouped
-helpers (`api.auth.login(...)`). The frontend imports `ApiContract` and the shared
-id/result types directly from this package, getting compile-time guarantees that
-its calls match the backend.
+There is no generated SDK contract file; `bun run typecheck` evaluates the
+contract directly from `src/syncs/app.ts`.
