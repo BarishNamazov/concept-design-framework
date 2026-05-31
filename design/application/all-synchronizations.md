@@ -13,5 +13,6 @@ The application syncs are implemented under `src/syncs/` and composed by
 | `unread.sync.ts` | unread list/count and mark-seen operations |
 | `links.sync.ts` | forward links and backlinks |
 
-The endpoint list and SDK contract are documented in
-[docs/API_AND_SDK.md](../../docs/API_AND_SDK.md).
+The endpoint list and SDK contract are documented in the
+[HTTP API](../../docs/ARCHITECTURE.md#http-api-and-endpoint-set) and
+[typed SDK](../../docs/ARCHITECTURE.md#the-typed-sdk) sections.

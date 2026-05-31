@@ -30,5 +30,5 @@ A typical thread-create flow is:
 4. Syncs start a `Conversing` conversation, render with `Formatting`, register
    unread state with `Tracking`, and respond through `Requesting.respond`.
 
-The current concept catalogue is [docs/CONCEPTS.md](../../docs/CONCEPTS.md), and
-the endpoint contract is [docs/API_AND_SDK.md](../../docs/API_AND_SDK.md).
+The current concept catalogue is the [concepts reference](../../docs/ARCHITECTURE.md#concepts-reference),
+and the endpoint contract is the [HTTP API](../../docs/ARCHITECTURE.md#http-api-and-endpoint-set).

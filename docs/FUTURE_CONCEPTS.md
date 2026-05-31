@@ -41,9 +41,8 @@ browse tags; per-conversation unread list, unread count, mark-seen, mark-all-see
 forward links and backlinks (auto-derived from `[[id]]` references in post content).
 
 **Authorization today** is intentionally minimal — only "valid session" and "author of
-the resource" (see `docs/DESIGN_DECISIONS.md` §"Out of scope"). There is **no notion of
-instructor / TA / student**, no notifications, and no moderation. Those are the biggest
-gaps for a *class* forum.
+the resource". There is **no notion of instructor / TA / student**, no notifications,
+and no moderation. Those are the biggest gaps for a *class* forum.
 
 ---
 
@@ -655,3 +654,4 @@ concept's worth of surface area for marginal class value — omit to stay lean.
 Each added concept must keep the same discipline already present in this codebase: no
 imports of other concepts, fully polymorphic type parameters, a single evaluable
 purpose, and all cross-concept wiring expressed in `src/syncs/*.sync.ts`.
+

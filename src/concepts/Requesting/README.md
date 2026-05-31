@@ -76,6 +76,6 @@ const createThread = requestingEndpoint("/threads/create")
 
 That builder emits normal engine action patterns for runtime behavior and also
 records endpoint input/output types for the SDK contract. See
-[`src/syncs/app.ts`](../../syncs/app.ts) and
-[`docs/API_AND_SDK.md`](../../../docs/API_AND_SDK.md) for the forum endpoint set.
+[`src/syncs/app.ts`](../../syncs/app.ts) and the
+[HTTP API](../../../docs/ARCHITECTURE.md#http-api-and-endpoint-set) for the forum endpoint set.
 

@@ -1,0 +1,4 @@
+[test]
+# Releases the process-global in-memory MongoDB shared by the integration suites
+# exactly once, after the whole run. See src/utils/test_preload.ts.
+preload = ["./src/utils/test_preload.ts"]

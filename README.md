@@ -49,15 +49,14 @@ The application is described under `design/`:
 
 - `design/application/` — the current app-level overview and sync catalogue.
 - `design/background/` — reference material on concept design, implementation, and testing.
-- `docs/` — design records and developer documentation for the implemented features:
-  - [docs/ENGINE.md](docs/ENGINE.md) — the concept + synchronization engine.
-  - [docs/REQUESTING.md](docs/REQUESTING.md) — the Bun.serve Requesting server.
-  - [docs/SDK_OVERVIEW.md](docs/SDK_OVERVIEW.md) — how the SDK ties to the engine, server, and example client.
-  - [docs/API_AND_SDK.md](docs/API_AND_SDK.md), [docs/CONCEPTS.md](docs/CONCEPTS.md), [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md), [docs/SDK_CONTRACT.md](docs/SDK_CONTRACT.md).
+- `docs/` — developer documentation for the implemented features, consolidated into three files:
+  - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — the engine, concept catalogue, Requesting server, HTTP API, and typed SDK.
+  - [docs/CODE_REVIEW.md](docs/CODE_REVIEW.md) — code-quality review, concept-design fidelity audit, and abstraction opportunities.
+  - [docs/FUTURE_CONCEPTS.md](docs/FUTURE_CONCEPTS.md) — gap analysis of missing/redundant concepts for a class forum.
 
 To add a feature:
 
-1. Specify the concept in the same style as [docs/CONCEPTS.md](docs/CONCEPTS.md).
+1. Specify the concept in the same style as the [concepts reference](docs/ARCHITECTURE.md#concepts-reference).
 2. Implement it at `src/concepts/{Name}/{Name}Concept.ts`, with a colocated `{Name}Concept.test.ts`.
 3. Wire it up with synchronizations under `src/syncs/`.
 4. Add the feature to `src/syncs/app.ts`, run `bun run build`, then `bun test`.

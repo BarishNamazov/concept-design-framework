@@ -49,6 +49,18 @@ let shared: Promise<TestApp> | undefined;
 let sharedServer: Promise<TestServer> | undefined;
 
 /**
+ * Process-global resources captured at boot so {@link teardownTestApp} can
+ * release them exactly once after the whole test run. The generated `@concepts`
+ * barrel binds its Mongo client once at module load (top-level await), so the
+ * client and its in-memory server must live for the entire process and never be
+ * torn down between suites — otherwise a later suite re-importing the cached
+ * barrel would reuse a closed client or hit a stopped server.
+ */
+let sharedClient: { close(): Promise<void> } | undefined;
+let sharedMongo: { stop(): Promise<unknown> } | undefined;
+let sharedHttp: { stop(): void } | undefined;
+
+/**
  * Returns a process-wide singleton app. The generated barrels are module
  * singletons, so every integration test in a process must share one instance;
  * isolate individual tests with `reset()` in a `beforeEach` hook.
@@ -73,6 +85,8 @@ async function boot(): Promise<TestApp> {
   concepts.Engine.register(syncs);
 
   const { Requesting, db, client } = concepts as any;
+  sharedClient = client;
+  sharedMongo = server;
 
   const send = async (path: string, body: Record<string, unknown> = {}) => {
     const { request } = await Requesting.request({ ...body, path });
@@ -87,9 +101,13 @@ async function boot(): Promise<TestApp> {
   };
 
   const stop = async () => {
-    shared = undefined;
-    await client.close();
-    await server.stop();
+    // Intentionally a no-op. The shared app is a single lifecycle for the whole
+    // test process: the generated `@concepts` barrel binds its Mongo client once
+    // at module load, so tearing the client/server down here would break any
+    // sibling suite that later re-imports the cached barrel (it would reuse a
+    // closed client or hit a stopped server). `teardownTestApp()` — registered
+    // as a top-level `afterAll` in the bun test preload — releases everything
+    // exactly once after the entire run.
   };
 
   return { send, concepts: concepts as Record<string, any>, reset, stop };
@@ -130,13 +148,30 @@ async function bootServer(): Promise<TestServer> {
     "@concepts/Requesting/RequestingConcept.ts"
   );
   const server = startRequestingServer(app.concepts, { port: 0 });
+  sharedHttp = server;
   const port = server.port ?? 0;
   return {
     baseUrl: `http://localhost:${port}/api`,
     port,
-    stop: () => {
-      sharedServer = undefined;
-      server.stop();
-    },
+    // No-op for the same reason as `TestApp.stop`: the HTTP server is a
+    // process-global singleton; `teardownTestApp()` stops it once after the run.
+    stop: () => {},
   };
+}
+
+/**
+ * Releases the process-global test resources exactly once. Registered as a
+ * top-level `afterAll` in the bun test preload (`src/utils/test_preload.ts`), so
+ * it runs a single time after the entire run regardless of how many suites
+ * booted the shared app. Safe to call when nothing was booted.
+ */
+export async function teardownTestApp(): Promise<void> {
+  sharedHttp?.stop();
+  await sharedClient?.close();
+  await sharedMongo?.stop();
+  shared = undefined;
+  sharedServer = undefined;
+  sharedClient = undefined;
+  sharedMongo = undefined;
+  sharedHttp = undefined;
 }
