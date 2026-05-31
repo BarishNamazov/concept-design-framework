@@ -5,11 +5,23 @@ import {
 } from "@concepts/Requesting/api.ts";
 import type { ID } from "@utils/types.ts";
 import { authApi } from "./auth.sync.ts";
+import { bookmarksApi } from "./bookmarks.sync.ts";
+import { categoriesApi } from "./categories.sync.ts";
+import { eventSyncs } from "./events.sync.ts";
+import { flagsApi } from "./flags.sync.ts";
 import { linksApi } from "./links.sync.ts";
+import { locksApi } from "./locks.sync.ts";
+import { notificationsApi } from "./notifications.sync.ts";
+import { pinsApi } from "./pins.sync.ts";
 import { profilesApi } from "./profiles.sync.ts";
 import { reactionsApi } from "./reactions.sync.ts";
+import { resolutionsApi } from "./resolutions.sync.ts";
+import { revisionsApi } from "./revisions.sync.ts";
+import { rolesApi } from "./roles.sync.ts";
+import { subscriptionsApi } from "./subscriptions.sync.ts";
 import { tagsApi } from "./tags.sync.ts";
 import { postsApi, threadsApi } from "./threads.sync.ts";
+import { trashApi } from "./trash.sync.ts";
 import { unreadApi } from "./unread.sync.ts";
 
 export const api = {
@@ -21,10 +33,22 @@ export const api = {
   threads: threadsApi,
   posts: postsApi,
   unread: unreadApi,
+  roles: rolesApi,
+  notifications: notificationsApi,
+  flags: flagsApi,
+  trash: trashApi,
+  categories: categoriesApi,
+  resolutions: resolutionsApi,
+  pins: pinsApi,
+  subscriptions: subscriptionsApi,
+  bookmarks: bookmarksApi,
+  locks: locksApi,
+  revisions: revisionsApi,
 };
 
 export const syncs = {
   ...syncMap(api),
+  ...eventSyncs,
 };
 
 export default syncs;

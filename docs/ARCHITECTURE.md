@@ -357,6 +357,17 @@ only through opaque branded `ID` strings.
 | `Tracking` | `[User, Item, Scope]` | Track seen/unseen state; unread is derived. | `register`, `unregister`, `markSeen`, `markUnseen`, `markAllSeen` | `_getUnread`, `_getUnreadCount`, `_getSeen`, `_isSeen`, `_getItemsInScope` | `Tracking.items`, `Tracking.seenMarks` |
 | `Linking` | `[Item]` | Maintain directed links and backlinks. | `link`, `unlink`, `setLinks`, `clearLinks` | `_getForwardLinks`, `_getBacklinks`, `_hasLink`, `_getOutgoingCount`, `_getBacklinkCount` | `Linking.links` |
 | `Formatting` | `[Target]` | Store sanitized HTML renderings of Markdown sources. | `setSource`, `clear` | `_getRendered`, `_getSource`, `_getDocument` | `Formatting.targets` |
+| `Roling` | `[User, Context]` | Map (user, context) to named roles carrying capabilities. | `defineRole`, `grant`, `revoke` | `_hasCapability`, `_getRoles`, `_getUsersWithRole`, `_getRoleByName`, `_getCapabilities` | `Roling.roles`, `Roling.grants` |
+| `Notifying` | `[User]` | Per-user inbox with read state. | `notify`, `markRead`, `markAllRead`, `dismiss` | `_getInbox`, `_getUnread`, `_getUnreadCount` | `Notifying.notifications` |
+| `Flagging` | `[User, Target]` | Crowd-sourced reports on targets with a status lifecycle. | `flag`, `resolve` | `_getOpenTargets`, `_getFlags`, `_hasFlagged` | `Flagging.flags` |
+| `Trashing` | `[Item]` | Soft-delete items with restore and permanent purge. | `trash`, `restore`, `purge` | `_isTrashed`, `_getTrashed` | `Trashing.trashed` |
+| `Categorizing` | `[Item, Category]` | Assign each item to at most one named category. | `createCategory`, `assign`, `unassign`, `deleteCategory` | `_getCategory`, `_getItems`, `_getCategoryByName`, `_getAllCategories` | `Categorizing.categories`, `Categorizing.assignments` |
+| `Resolving` | `[Question, Answer, User]` | Mark a question's accepted answer. | `accept`, `clear` | `_isResolved`, `_getAnswer`, `_getResolution` | `Resolving.resolutions` |
+| `Pinning` | `[Item, Scope]` | Pin items within a scope with a priority order. | `pin`, `unpin`, `setPriority` | `_getPinned`, `_isPinned` | `Pinning.pins` |
+| `Subscribing` | `[User, Target]` | Let users follow targets to receive updates. | `subscribe`, `unsubscribe` | `_getSubscribers`, `_getSubscriptions`, `_isSubscribed` | `Subscribing.subscriptions` |
+| `Bookmarking` | `[User, Item]` | Private per-user saved-item lists. | `save`, `unsave` | `_getSaved`, `_isSaved` | `Bookmarking.bookmarks` |
+| `Locking` | `[Target]` | Freeze a target against further contributions. | `lock`, `unlock` | `_isLocked`, `_getLocked` | `Locking.locked` |
+| `Revisioning` | `[Item]` | Retain numbered prior versions of an item's content. | `record` | `_getRevisions`, `_getRevision`, `_getLatest` | `Revisioning.revisions` |
 | `Requesting` | none | Reify HTTP requests as actions for syncs. | `request`, `respond` | `_awaitResponse` | `Requesting.requests` |
 
 ### Conventions
@@ -617,6 +628,95 @@ unprefixed `path` value.
 - `POST /links/backlinks` `{ target }` -> `{ sources }`
 - `POST /links/forward` `{ source }` -> `{ targets }`
 
+#### Roles
+
+- `POST /roles/define` `{ session, name, capabilities }` -> `{ role }`
+- `POST /roles/grant` `{ session, user, context, role }` -> `{ grant }`
+- `POST /roles/revoke` `{ session, user, context, role }` -> `{ grant }`
+- `POST /roles/forUser` `{ user, context }` -> `{ roles }`
+- `POST /roles/can` `{ user, context, capability }` -> `{ allowed }`
+
+#### Notifications
+
+- `POST /notifications/list` `{ session }` -> `{ notifications }`
+- `POST /notifications/unreadCount` `{ session }` -> `{ count }`
+- `POST /notifications/markRead` `{ session, notification }` -> `{ notification }`
+- `POST /notifications/markAllRead` `{ session }` -> `{ recipient }`
+- `POST /notifications/dismiss` `{ session, notification }` -> `{ notification }`
+
+#### Flags
+
+- `POST /flags/raise` `{ session, target, reason }` -> `{ flag }`
+- `POST /flags/resolve` `{ session, target, outcome }` -> `{ target }`
+  Requires the `moderate` capability in the `forum` context.
+- `POST /flags/open` `{ session }` -> `{ targets }`
+- `POST /flags/forTarget` `{ target }` -> `{ flags }`
+
+#### Trash
+
+- `POST /trash/trash` `{ session, item }` -> `{ item }`
+- `POST /trash/restore` `{ session, item }` -> `{ item }`
+- `POST /trash/purge` `{ session, item }` -> `{ item }`
+  Permanently deletes the post and cascades through formatting, reactions,
+  tags, tracking, links, and the conversation node.
+- `POST /trash/list` `{}` -> `{ trashed }`
+- `POST /trash/isTrashed` `{ item }` -> `{ trashed }`
+
+#### Categories
+
+- `POST /categories/create` `{ session, name, description }` -> `{ category }`
+- `POST /categories/delete` `{ session, category }` -> `{ category }`
+- `POST /categories/assign` `{ session, item, category }` -> `{ item }`
+- `POST /categories/unassign` `{ session, item }` -> `{ item }`
+- `POST /categories/list` `{}` -> `{ categories }`
+- `POST /categories/items` `{ category }` -> `{ items }`
+- `POST /categories/forItem` `{ item }` -> `{ category }`
+
+#### Resolutions
+
+- `POST /resolutions/accept` `{ session, question, answer }` -> `{ resolution }`
+  Question-author only.
+- `POST /resolutions/clear` `{ session, question }` -> `{ question }`
+- `POST /resolutions/get` `{ question }` -> `{ resolution }`
+- `POST /resolutions/isResolved` `{ question }` -> `{ resolved }`
+
+#### Pins
+
+- `POST /pins/pin` `{ session, item, scope, priority }` -> `{ pin }`
+  Requires the `pin` capability in the scope.
+- `POST /pins/unpin` `{ session, item, scope }` -> `{ pin }`
+- `POST /pins/setPriority` `{ session, item, scope, priority }` -> `{ pin }`
+- `POST /pins/forScope` `{ scope }` -> `{ pinned }`
+- `POST /pins/isPinned` `{ item, scope }` -> `{ pinned }`
+
+#### Subscriptions
+
+- `POST /subscriptions/subscribe` `{ session, target }` -> `{ subscription }`
+- `POST /subscriptions/unsubscribe` `{ session, target }` -> `{ subscription }`
+- `POST /subscriptions/mine` `{ session }` -> `{ subscriptions }`
+- `POST /subscriptions/subscribers` `{ target }` -> `{ subscribers }`
+- `POST /subscriptions/isSubscribed` `{ session, target }` -> `{ subscribed }`
+
+#### Bookmarks
+
+- `POST /bookmarks/save` `{ session, item }` -> `{ bookmark }`
+- `POST /bookmarks/unsave` `{ session, item }` -> `{ bookmark }`
+- `POST /bookmarks/list` `{ session }` -> `{ bookmarks }`
+- `POST /bookmarks/isSaved` `{ session, item }` -> `{ saved }`
+
+#### Locks
+
+- `POST /locks/lock` `{ session, target }` -> `{ target }`
+- `POST /locks/unlock` `{ session, target }` -> `{ target }`
+- `POST /locks/isLocked` `{ target }` -> `{ locked }`
+- `POST /locks/list` `{}` -> `{ locked }`
+
+#### Revisions
+
+- `POST /revisions/list` `{ item }` -> `{ revisions }`
+- `POST /revisions/get` `{ item, number }` -> `{ revision }`
+- `POST /revisions/latest` `{ item }` -> `{ revision }`
+
 ### Cross-Concept Synchronization Highlights
 
 - **Authorization:** protected endpoints resolve `session` through
@@ -632,6 +732,20 @@ unprefixed `path` value.
   `Tagging.clearTarget`, and `Linking.clearLinks`.
 - **List endpoints:** syncs use `Frames.aggregate(...)` so empty lists still
   produce a response instead of timing out.
+- **Notify on reply:** a new reply notifies the parent post's author and every
+  thread subscriber (`events.sync.ts`).
+- **Notify on mention:** `@username` handles in new post content are resolved
+  via `Authenticating._getByUsername` and notified.
+- **Accepted answers:** `Resolving.accept` notifies the answer's author.
+- **Revision history:** `Posting.create` / `Posting.edit` snapshot content into
+  `Revisioning.record`.
+- **Purge cascade:** `Trashing.purge` hard-deletes the post and clears its
+  formatting, reactions, tags, tracking, links, and conversation node.
+- **Lock enforcement:** `/threads/reply` is refused while the conversation is
+  locked (`Locking._isLocked`).
+- **Capability gates:** pinning requires the `pin` capability in the scope and
+  flag resolution requires the `moderate` capability, both via
+  `Roling._hasCapability`.
 
 ### SDK Contract
 

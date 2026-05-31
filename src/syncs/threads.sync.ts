@@ -15,6 +15,7 @@ import {
   Conversing,
   Formatting,
   Linking,
+  Locking,
   Posting,
   Reacting,
   Sessioning,
@@ -139,12 +140,30 @@ const threadCreate = defineEndpoint(
 const threadReply = defineEndpoint(
   "/threads/reply",
   ({ Sync, Actions, Request, Respond, Fail }) => ({
-    ThreadReplyRequest: Sync(({ session, content, user }) => ({
-      when: Actions(Request({ session, content })),
-      where: async (frames) =>
-        await frames.query(Sessioning._getUser, { session }, { user }),
-      then: Actions([Posting.create, { author: user, content }]),
-    })),
+    ThreadReplyRequest: Sync(
+      ({ session, content, parent, user, conversation, locked }) => ({
+        when: Actions(Request({ session, content, parent })),
+        where: async (frames) => {
+          frames = await frames.query(
+            Sessioning._getUser,
+            { session },
+            { user },
+          );
+          frames = await frames.query(
+            Conversing._getConversation,
+            { node: parent },
+            { conversation },
+          );
+          frames = await frames.query(
+            Locking._isLocked,
+            { target: conversation },
+            { locked },
+          );
+          return frames.filter(($) => $[locked] === false);
+        },
+        then: Actions([Posting.create, { author: user, content }]),
+      }),
+    ),
 
     ThreadReplyAttaches: Sync(({ parent, post }) => ({
       when: Actions(Request({ parent }), [Posting.create, {}, { post }]),
@@ -197,6 +216,31 @@ const threadReply = defineEndpoint(
       },
       then: Actions(Fail("Invalid or expired session.")),
     })),
+
+    ThreadReplyLocked: Sync(
+      ({ session, content, parent, user, conversation, locked }) => ({
+        when: Actions(Request({ session, content, parent })),
+        where: async (frames) => {
+          frames = await frames.query(
+            Sessioning._getUser,
+            { session },
+            { user },
+          );
+          frames = await frames.query(
+            Conversing._getConversation,
+            { node: parent },
+            { conversation },
+          );
+          frames = await frames.query(
+            Locking._isLocked,
+            { target: conversation },
+            { locked },
+          );
+          return frames.filter(($) => $[locked] === true);
+        },
+        then: Actions(Fail("This thread is locked.")),
+      }),
+    ),
   }),
 );
 
