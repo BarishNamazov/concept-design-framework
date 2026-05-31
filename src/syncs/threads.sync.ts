@@ -22,21 +22,11 @@ import {
   Tracking,
 } from "@concepts";
 import {
-  defineFeature,
-  requestingEndpoint,
+  defineEndpoint,
   type ActionOk,
   type Prettify,
   type QueryRow,
 } from "@concepts/Requesting/api.ts";
-
-const threadCreate = requestingEndpoint("/threads/create");
-const threadReply = requestingEndpoint("/threads/reply");
-const threadGet = requestingEndpoint("/threads/get");
-const threadList = requestingEndpoint("/threads/list");
-const postGet = requestingEndpoint("/posts/get");
-const postEdit = requestingEndpoint("/posts/edit");
-const postDelete = requestingEndpoint("/posts/delete");
-const postsByAuthor = requestingEndpoint("/posts/byAuthor");
 
 // --- Derived view shapes assembled by the read endpoints below ---
 
@@ -92,549 +82,495 @@ function parseLinkTargets(content: string): string[] {
 
 // --- threads/create ---
 
-export const ThreadCreateRequest = threadCreate.sync((
-  { request, session, content, user },
-) => ({
-  when: threadCreate.actions(
-    threadCreate.request({ session, content }, { request }),
-  ),
-  where: async (frames) =>
-    await frames.query(Sessioning._getUser, { session }, { user }),
-  then: threadCreate.actions([Posting.create, { author: user, content }]),
-}));
+const threadCreate = defineEndpoint("/threads/create", ({
+  Sync,
+  Actions,
+  Request,
+  Respond,
+  Fail,
+}) => ({
+  ThreadCreateRequest: Sync(({ session, content, user }) => ({
+    when: Actions(Request({ session, content })),
+    where: async (frames) =>
+      await frames.query(Sessioning._getUser, { session }, { user }),
+    then: Actions([Posting.create, { author: user, content }]),
+  })),
 
-export const ThreadCreateStartsConversation = threadCreate.sync(({ request, post }) => ({
-  when: threadCreate.actions(
-    threadCreate.request({}, { request }),
-    [Posting.create, {}, { post }],
-  ),
-  then: threadCreate.actions([Conversing.start, { item: post }]),
-}));
+  ThreadCreateStartsConversation: Sync(({ post }) => ({
+    when: Actions([Posting.create, {}, { post }]),
+    then: Actions([Conversing.start, { item: post }]),
+  })),
 
-export const ThreadCreateSetsSource = threadCreate.sync(({ request, content, post }) => ({
-  when: threadCreate.actions(
-    threadCreate.request({ content }, { request }),
-    [Posting.create, {}, { post }],
-  ),
-  then: threadCreate.actions([
-    Formatting.setSource,
-    { target: post, source: content },
-  ]),
-}));
+  ThreadCreateSetsSource: Sync(({ content, post }) => ({
+    when: Actions(
+      Request({ content }),
+      [Posting.create, {}, { post }],
+    ),
+    then: Actions([
+      Formatting.setSource,
+      { target: post, source: content },
+    ]),
+  })),
 
-export const ThreadCreateRegistersUnread = threadCreate.sync((
-  { request, post, conversation },
-) => ({
-  when: threadCreate.actions(
-    threadCreate.request({}, { request }),
-    [Posting.create, {}, { post }],
-    [Conversing.start, {}, { conversation }],
-  ),
-  then: threadCreate.actions([
-    Tracking.register,
-    { item: post, scope: conversation },
-  ]),
-}));
+  ThreadCreateRegistersUnread: Sync(({ post, conversation }) => ({
+    when: Actions(
+      [Posting.create, {}, { post }],
+      [Conversing.start, {}, { conversation }],
+    ),
+    then: Actions([
+      Tracking.register,
+      { item: post, scope: conversation },
+    ]),
+  })),
 
-export const ThreadCreateResponse = threadCreate.sync((
-  { request, post, conversation, node },
-) => ({
-  when: threadCreate.actions(
-    threadCreate.request({}, { request }),
-    [Posting.create, {}, { post }],
-    [Conversing.start, {}, { conversation, node }],
-  ),
-  then: threadCreate.actions(
-    threadCreate.respond<ThreadCreateOutput>({
-      request,
-      post,
-      conversation,
-      node,
-    }),
-  ),
-}));
+  ThreadCreateResponse: Sync(({ post, conversation, node }) => ({
+    when: Actions(
+      [Posting.create, {}, { post }],
+      [Conversing.start, {}, { conversation, node }],
+    ),
+    then: Actions(
+      Respond<ThreadCreateOutput>({
+        post,
+        conversation,
+        node,
+      }),
+    ),
+  })),
 
-export const ThreadCreateInvalidSession = threadCreate.sync((
-  { request, session, active },
-) => ({
-  when: threadCreate.actions(threadCreate.request({ session }, { request })),
-  where: async (frames) => {
-    frames = await frames.query(Sessioning._isActive, { session }, { active });
-    return frames.filter(($) => $[active] === false);
-  },
-  then: threadCreate.actions(
-    threadCreate.error({ request, error: "Invalid or expired session." }),
-  ),
+  ThreadCreateInvalidSession: Sync(({ session, active }) => ({
+    when: Actions(Request({ session })),
+    where: async (frames) => {
+      frames = await frames.query(
+        Sessioning._isActive,
+        { session },
+        { active },
+      );
+      return frames.filter(($) => $[active] === false);
+    },
+    then: Actions(Fail("Invalid or expired session.")),
+  })),
 }));
 
 // --- threads/reply ---
 
-export const ThreadReplyRequest = threadReply.sync((
-  { request, session, content, user },
-) => ({
-  when: threadReply.actions(
-    threadReply.request({ session, content }, { request }),
-  ),
-  where: async (frames) =>
-    await frames.query(Sessioning._getUser, { session }, { user }),
-  then: threadReply.actions([Posting.create, { author: user, content }]),
-}));
+const threadReply = defineEndpoint("/threads/reply", ({
+  Sync,
+  Actions,
+  Request,
+  Respond,
+  Fail,
+}) => ({
+  ThreadReplyRequest: Sync(({ session, content, user }) => ({
+    when: Actions(Request({ session, content })),
+    where: async (frames) =>
+      await frames.query(Sessioning._getUser, { session }, { user }),
+    then: Actions([Posting.create, { author: user, content }]),
+  })),
 
-export const ThreadReplyAttaches = threadReply.sync(({ request, parent, post }) => ({
-  when: threadReply.actions(
-    threadReply.request({ parent }, { request }),
-    [Posting.create, {}, { post }],
-  ),
-  then: threadReply.actions([Conversing.reply, { item: post, parent }]),
-}));
-
-export const ThreadReplySetsSource = threadReply.sync(({ request, content, post }) => ({
-  when: threadReply.actions(
-    threadReply.request({ content }, { request }),
-    [Posting.create, {}, { post }],
-  ),
-  then: threadReply.actions([
-    Formatting.setSource,
-    { target: post, source: content },
-  ]),
-}));
-
-export const ThreadReplyRegistersUnread = threadReply.sync((
-  { request, parent, post, conversation },
-) => ({
-  when: threadReply.actions(
-    threadReply.request({ parent }, { request }),
-    [Posting.create, {}, { post }],
-  ),
-  where: async (frames) =>
-    await frames.query(
-      Conversing._getConversation,
-      { node: parent },
-      { conversation },
+  ThreadReplyAttaches: Sync(({ parent, post }) => ({
+    when: Actions(
+      Request({ parent }),
+      [Posting.create, {}, { post }],
     ),
-  then: threadReply.actions([
-    Tracking.register,
-    { item: post, scope: conversation },
-  ]),
-}));
+    then: Actions([Conversing.reply, { item: post, parent }]),
+  })),
 
-export const ThreadReplyDerivesLinks = threadReply.sync((
-  { request, content, post, targets },
-) => ({
-  when: threadReply.actions(
-    threadReply.request({ content }, { request }),
-    [Posting.create, {}, { post }],
-  ),
-  where: async (frames) =>
-    frames.map(($) => ({
-      ...$,
-      [targets]: parseLinkTargets($[content] as string),
-    })),
-  then: threadReply.actions([Linking.setLinks, { source: post, targets }]),
-}));
+  ThreadReplySetsSource: Sync(({ content, post }) => ({
+    when: Actions(
+      Request({ content }),
+      [Posting.create, {}, { post }],
+    ),
+    then: Actions([
+      Formatting.setSource,
+      { target: post, source: content },
+    ]),
+  })),
 
-export const ThreadReplyResponse = threadReply.sync(({ request, post, node }) => ({
-  when: threadReply.actions(
-    threadReply.request({}, { request }),
-    [Posting.create, {}, { post }],
-    [Conversing.reply, {}, { node }],
-  ),
-  then: threadReply.actions(
-    threadReply.respond<ThreadReplyOutput>({ request, post, node }),
-  ),
-}));
+  ThreadReplyRegistersUnread: Sync(({ parent, post, conversation }) => ({
+    when: Actions(
+      Request({ parent }),
+      [Posting.create, {}, { post }],
+    ),
+    where: async (frames) =>
+      await frames.query(
+        Conversing._getConversation,
+        { node: parent },
+        { conversation },
+      ),
+    then: Actions([
+      Tracking.register,
+      { item: post, scope: conversation },
+    ]),
+  })),
 
-export const ThreadReplyInvalidSession = threadReply.sync((
-  { request, session, active },
-) => ({
-  when: threadReply.actions(threadReply.request({ session }, { request })),
-  where: async (frames) => {
-    frames = await frames.query(Sessioning._isActive, { session }, { active });
-    return frames.filter(($) => $[active] === false);
-  },
-  then: threadReply.actions(
-    threadReply.error({ request, error: "Invalid or expired session." }),
-  ),
+  ThreadReplyDerivesLinks: Sync(({ content, post, targets }) => ({
+    when: Actions(
+      Request({ content }),
+      [Posting.create, {}, { post }],
+    ),
+    where: async (frames) =>
+      frames.map(($) => ({
+        ...$,
+        [targets]: parseLinkTargets($[content] as string),
+      })),
+    then: Actions([Linking.setLinks, { source: post, targets }]),
+  })),
+
+  ThreadReplyResponse: Sync(({ post, node }) => ({
+    when: Actions(
+      [Posting.create, {}, { post }],
+      [Conversing.reply, {}, { node }],
+    ),
+    then: Actions(Respond<ThreadReplyOutput>({ post, node })),
+  })),
+
+  ThreadReplyInvalidSession: Sync(({ session, active }) => ({
+    when: Actions(Request({ session })),
+    where: async (frames) => {
+      frames = await frames.query(
+        Sessioning._isActive,
+        { session },
+        { active },
+      );
+      return frames.filter(($) => $[active] === false);
+    },
+    then: Actions(Fail("Invalid or expired session.")),
+  })),
 }));
 
 // --- threads/get: assemble an ordered, enriched thread view ---
 
-export const ThreadGetResponse = threadGet.sync((
-  { request, conversation, node, item, parent, depth, post, rendered, thread },
-) => ({
-  when: threadGet.actions(threadGet.request({ conversation }, { request })),
-  where: async (frames) => {
-    const [base] = frames;
-    frames = await frames.query(
-      Conversing._getThread,
-      { conversation },
-      { node, item, parent, depth },
-    );
-    frames = await frames.query(Posting._getPost, { post: item }, { post });
-    frames = await frames.query(
-      Formatting._getRendered,
-      { target: item },
-      { rendered },
-    );
-    frames = frames.aggregate(
-      base,
-      [node, item, parent, depth, post, rendered],
-      thread,
-    );
-    return frames.map(($) => ({
-      ...$,
-      [thread]: ($[thread] as { post: { createdAt: Date } }[]).slice().sort(
-        (a, b) =>
-          new Date(a.post.createdAt).getTime() -
-          new Date(b.post.createdAt).getTime(),
-      ),
-    }));
-  },
-  then: threadGet.actions(
-    threadGet.respond<ThreadGetOutput>({ request, thread }),
-  ),
+const threadGet = defineEndpoint("/threads/get", ({
+  Sync,
+  Actions,
+  Request,
+  Respond,
+}) => ({
+  ThreadGetResponse: Sync((
+    { conversation, node, item, parent, depth, post, rendered, thread },
+  ) => ({
+    when: Actions(Request({ conversation })),
+    where: async (frames) => {
+      const [base] = frames;
+      frames = await frames.query(
+        Conversing._getThread,
+        { conversation },
+        { node, item, parent, depth },
+      );
+      frames = await frames.query(Posting._getPost, { post: item }, { post });
+      frames = await frames.query(
+        Formatting._getRendered,
+        { target: item },
+        { rendered },
+      );
+      frames = frames.aggregate(
+        base,
+        [node, item, parent, depth, post, rendered],
+        thread,
+      );
+      return frames.map(($) => ({
+        ...$,
+        [thread]: ($[thread] as { post: { createdAt: Date } }[]).slice().sort(
+          (a, b) =>
+            new Date(a.post.createdAt).getTime() -
+            new Date(b.post.createdAt).getTime(),
+        ),
+      }));
+    },
+    then: Actions(Respond<ThreadGetOutput>({ thread })),
+  })),
 }));
 
 // --- posts/get: combine post fields with its rendered html ---
 
-export const PostGetResponse = postGet.sync((
-  { request, post, postData, rendered, result },
-) => ({
-  when: postGet.actions(postGet.request({ post }, { request })),
-  where: async (frames) => {
-    frames = await frames.query(Posting._getPost, { post }, { post: postData });
-    frames = await frames.query(
-      Formatting._getRendered,
-      { target: post },
-      { rendered },
-    );
-    return frames.map(($) => ({
-      ...$,
-      [result]: { ...($[postData] as object), rendered: $[rendered] },
-    }));
-  },
-  then: postGet.actions(
-    postGet.respond<PostGetOutput>({ request, post: result }),
-  ),
-}));
+const postGet = defineEndpoint("/posts/get", ({
+  Sync,
+  Actions,
+  Request,
+  Respond,
+  Fail,
+}) => ({
+  PostGetResponse: Sync(({ post, postData, rendered, result }) => ({
+    when: Actions(Request({ post })),
+    where: async (frames) => {
+      frames = await frames.query(
+        Posting._getPost,
+        { post },
+        { post: postData },
+      );
+      frames = await frames.query(
+        Formatting._getRendered,
+        { target: post },
+        { rendered },
+      );
+      return frames.map(($) => ({
+        ...$,
+        [result]: { ...($[postData] as object), rendered: $[rendered] },
+      }));
+    },
+    then: Actions(Respond<PostGetOutput>({ post: result })),
+  })),
 
-export const PostGetNotFound = postGet.sync(({ request, post, exists }) => ({
-  when: postGet.actions(postGet.request({ post }, { request })),
-  where: async (frames) => {
-    frames = await frames.query(Posting._exists, { post }, { exists });
-    return frames.filter(($) => $[exists] === false);
-  },
-  then: postGet.actions(postGet.error({ request, error: "Post not found." })),
+  PostGetNotFound: Sync(({ post, exists }) => ({
+    when: Actions(Request({ post })),
+    where: async (frames) => {
+      frames = await frames.query(Posting._exists, { post }, { exists });
+      return frames.filter(($) => $[exists] === false);
+    },
+    then: Actions(Fail("Post not found.")),
+  })),
 }));
 
 // --- posts/edit (author-only) ---
 
-export const PostEditRequest = postEdit.sync((
-  { request, session, post, content, user, author },
-) => ({
-  when: postEdit.actions(
-    postEdit.request({ session, post, content }, { request }),
-  ),
-  where: async (frames) => {
-    frames = await frames.query(Sessioning._getUser, { session }, { user });
-    frames = await frames.query(Posting._getAuthor, { post }, { author });
-    return frames.filter(($) => $[author] === $[user]);
-  },
-  then: postEdit.actions([Posting.edit, { post, content }]),
-}));
+const postEdit = defineEndpoint("/posts/edit", ({
+  Sync,
+  Actions,
+  Request,
+  Respond,
+  Fail,
+}) => ({
+  PostEditRequest: Sync(({ session, post, content, user, author }) => ({
+    when: Actions(Request({ session, post, content })),
+    where: async (frames) => {
+      frames = await frames.query(Sessioning._getUser, { session }, { user });
+      frames = await frames.query(Posting._getAuthor, { post }, { author });
+      return frames.filter(($) => $[author] === $[user]);
+    },
+    then: Actions([Posting.edit, { post, content }]),
+  })),
 
-export const PostEditSetsSource = postEdit.sync(({ request, content, post }) => ({
-  when: postEdit.actions(
-    postEdit.request({ content }, { request }),
-    [Posting.edit, {}, { post }],
-  ),
-  then: postEdit.actions([
-    Formatting.setSource,
-    { target: post, source: content },
-  ]),
-}));
+  PostEditSetsSource: Sync(({ content, post }) => ({
+    when: Actions(
+      Request({ content }),
+      [Posting.edit, {}, { post }],
+    ),
+    then: Actions([
+      Formatting.setSource,
+      { target: post, source: content },
+    ]),
+  })),
 
-export const PostEditDerivesLinks = postEdit.sync((
-  { request, content, post, targets },
-) => ({
-  when: postEdit.actions(
-    postEdit.request({ content }, { request }),
-    [Posting.edit, {}, { post }],
-  ),
-  where: async (frames) =>
-    frames.map(($) => ({
-      ...$,
-      [targets]: parseLinkTargets($[content] as string),
-    })),
-  then: postEdit.actions([Linking.setLinks, { source: post, targets }]),
-}));
+  PostEditDerivesLinks: Sync(({ content, post, targets }) => ({
+    when: Actions(
+      Request({ content }),
+      [Posting.edit, {}, { post }],
+    ),
+    where: async (frames) =>
+      frames.map(($) => ({
+        ...$,
+        [targets]: parseLinkTargets($[content] as string),
+      })),
+    then: Actions([Linking.setLinks, { source: post, targets }]),
+  })),
 
-export const PostEditResponse = postEdit.sync(({ request, post }) => ({
-  when: postEdit.actions(
-    postEdit.request({}, { request }),
-    [Posting.edit, {}, { post }],
-  ),
-  then: postEdit.actions(postEdit.respond<PostEditOutput>({ request, post })),
-}));
+  PostEditResponse: Sync(({ post }) => ({
+    when: Actions([Posting.edit, {}, { post }]),
+    then: Actions(Respond<PostEditOutput>({ post })),
+  })),
 
-export const PostEditNotAuthor = postEdit.sync((
-  { request, session, post, user, author },
-) => ({
-  when: postEdit.actions(postEdit.request({ session, post }, { request })),
-  where: async (frames) => {
-    frames = await frames.query(Sessioning._getUser, { session }, { user });
-    frames = await frames.query(Posting._getAuthor, { post }, { author });
-    return frames.filter(($) => $[author] !== $[user]);
-  },
-  then: postEdit.actions(
-    postEdit.error({ request, error: "Not authorized to edit this post." }),
-  ),
-}));
+  PostEditNotAuthor: Sync(({ session, post, user, author }) => ({
+    when: Actions(Request({ session, post })),
+    where: async (frames) => {
+      frames = await frames.query(Sessioning._getUser, { session }, { user });
+      frames = await frames.query(Posting._getAuthor, { post }, { author });
+      return frames.filter(($) => $[author] !== $[user]);
+    },
+    then: Actions(Fail("Not authorized to edit this post.")),
+  })),
 
-export const PostEditInvalidSession = postEdit.sync((
-  { request, session, active },
-) => ({
-  when: postEdit.actions(postEdit.request({ session }, { request })),
-  where: async (frames) => {
-    frames = await frames.query(Sessioning._isActive, { session }, { active });
-    return frames.filter(($) => $[active] === false);
-  },
-  then: postEdit.actions(
-    postEdit.error({ request, error: "Invalid or expired session." }),
-  ),
+  PostEditInvalidSession: Sync(({ session, active }) => ({
+    when: Actions(Request({ session })),
+    where: async (frames) => {
+      frames = await frames.query(
+        Sessioning._isActive,
+        { session },
+        { active },
+      );
+      return frames.filter(($) => $[active] === false);
+    },
+    then: Actions(Fail("Invalid or expired session.")),
+  })),
 }));
 
 // --- posts/delete (author-only, cascades) ---
 
-export const PostDeleteRequest = postDelete.sync((
-  { request, session, post, user, author, node, reply, replies },
-) => ({
-  when: postDelete.actions(postDelete.request({ session, post }, { request })),
-  where: async (frames) => {
-    frames = await frames.query(Sessioning._getUser, { session }, { user });
-    frames = await frames.query(Posting._getAuthor, { post }, { author });
-    frames = frames.filter(($) => $[author] === $[user]);
-    const [authored] = frames;
-    if (authored === undefined) return frames;
-    frames = await frames.query(
-      Conversing._getNodeByItem,
-      { item: post },
-      { node },
-    );
-    frames = await frames.query(Conversing._getReplies, { node }, { reply });
-    frames = frames.aggregate(authored, [reply], replies);
-    return frames.filter(($) => ($[replies] as unknown[]).length === 0);
-  },
-  then: postDelete.actions([Posting.delete, { post }]),
-}));
+const postDelete = defineEndpoint("/posts/delete", ({
+  Sync,
+  Actions,
+  Request,
+  Respond,
+  Fail,
+}) => ({
+  PostDeleteRequest: Sync((
+    { session, post, user, author, node, reply, replies },
+  ) => ({
+    when: Actions(Request({ session, post })),
+    where: async (frames) => {
+      frames = await frames.query(Sessioning._getUser, { session }, { user });
+      frames = await frames.query(Posting._getAuthor, { post }, { author });
+      frames = frames.filter(($) => $[author] === $[user]);
+      const [authored] = frames;
+      if (authored === undefined) return frames;
+      frames = await frames.query(
+        Conversing._getNodeByItem,
+        { item: post },
+        { node },
+      );
+      frames = await frames.query(Conversing._getReplies, { node }, { reply });
+      frames = frames.aggregate(authored, [reply], replies);
+      return frames.filter(($) => ($[replies] as unknown[]).length === 0);
+    },
+    then: Actions([Posting.delete, { post }]),
+  })),
 
-export const PostDeleteHasReplies = postDelete.sync((
-  { request, session, post, user, author, node, reply, replies },
-) => ({
-  when: postDelete.actions(postDelete.request({ session, post }, { request })),
-  where: async (frames) => {
-    frames = await frames.query(Sessioning._getUser, { session }, { user });
-    frames = await frames.query(Posting._getAuthor, { post }, { author });
-    frames = frames.filter(($) => $[author] === $[user]);
-    const [authored] = frames;
-    if (authored === undefined) return frames;
-    frames = await frames.query(
-      Conversing._getNodeByItem,
-      { item: post },
-      { node },
-    );
-    frames = await frames.query(Conversing._getReplies, { node }, { reply });
-    frames = frames.aggregate(authored, [reply], replies);
-    return frames.filter(($) => ($[replies] as unknown[]).length > 0);
-  },
-  then: postDelete.actions(
-    postDelete.error({
-      request,
-      error: "Cannot delete a post that has replies.",
-    }),
-  ),
-}));
+  PostDeleteHasReplies: Sync((
+    { session, post, user, author, node, reply, replies },
+  ) => ({
+    when: Actions(Request({ session, post })),
+    where: async (frames) => {
+      frames = await frames.query(Sessioning._getUser, { session }, { user });
+      frames = await frames.query(Posting._getAuthor, { post }, { author });
+      frames = frames.filter(($) => $[author] === $[user]);
+      const [authored] = frames;
+      if (authored === undefined) return frames;
+      frames = await frames.query(
+        Conversing._getNodeByItem,
+        { item: post },
+        { node },
+      );
+      frames = await frames.query(Conversing._getReplies, { node }, { reply });
+      frames = frames.aggregate(authored, [reply], replies);
+      return frames.filter(($) => ($[replies] as unknown[]).length > 0);
+    },
+    then: Actions(Fail("Cannot delete a post that has replies.")),
+  })),
 
-export const PostDeleteClearsFormatting = postDelete.sync(({ request, post }) => ({
-  when: postDelete.actions(
-    postDelete.request({}, { request }),
-    [Posting.delete, {}, { post }],
-  ),
-  then: postDelete.actions([Formatting.clear, { target: post }]),
-}));
+  PostDeleteClearsFormatting: Sync(({ post }) => ({
+    when: Actions([Posting.delete, {}, { post }]),
+    then: Actions([Formatting.clear, { target: post }]),
+  })),
 
-export const PostDeleteClearsReactions = postDelete.sync(({ request, post }) => ({
-  when: postDelete.actions(
-    postDelete.request({}, { request }),
-    [Posting.delete, {}, { post }],
-  ),
-  then: postDelete.actions([Reacting.clearTarget, { target: post }]),
-}));
+  PostDeleteClearsReactions: Sync(({ post }) => ({
+    when: Actions([Posting.delete, {}, { post }]),
+    then: Actions([Reacting.clearTarget, { target: post }]),
+  })),
 
-export const PostDeleteClearsTags = postDelete.sync(({ request, post }) => ({
-  when: postDelete.actions(
-    postDelete.request({}, { request }),
-    [Posting.delete, {}, { post }],
-  ),
-  then: postDelete.actions([Tagging.clearTarget, { target: post }]),
-}));
+  PostDeleteClearsTags: Sync(({ post }) => ({
+    when: Actions([Posting.delete, {}, { post }]),
+    then: Actions([Tagging.clearTarget, { target: post }]),
+  })),
 
-export const PostDeleteUnregisters = postDelete.sync(({ request, post }) => ({
-  when: postDelete.actions(
-    postDelete.request({}, { request }),
-    [Posting.delete, {}, { post }],
-  ),
-  then: postDelete.actions([Tracking.unregister, { item: post }]),
-}));
+  PostDeleteUnregisters: Sync(({ post }) => ({
+    when: Actions([Posting.delete, {}, { post }]),
+    then: Actions([Tracking.unregister, { item: post }]),
+  })),
 
-export const PostDeleteClearsLinks = postDelete.sync(({ request, post }) => ({
-  when: postDelete.actions(
-    postDelete.request({}, { request }),
-    [Posting.delete, {}, { post }],
-  ),
-  then: postDelete.actions([Linking.clearLinks, { source: post }]),
-}));
+  PostDeleteClearsLinks: Sync(({ post }) => ({
+    when: Actions([Posting.delete, {}, { post }]),
+    then: Actions([Linking.clearLinks, { source: post }]),
+  })),
 
-export const PostDeleteRemovesNode = postDelete.sync(({ request, post, node }) => ({
-  when: postDelete.actions(
-    postDelete.request({}, { request }),
-    [Posting.delete, {}, { post }],
-  ),
-  where: async (frames) =>
-    await frames.query(Conversing._getNodeByItem, { item: post }, { node }),
-  then: postDelete.actions([Conversing.remove, { node }]),
-}));
+  PostDeleteRemovesNode: Sync(({ post, node }) => ({
+    when: Actions([Posting.delete, {}, { post }]),
+    where: async (frames) =>
+      await frames.query(Conversing._getNodeByItem, { item: post }, { node }),
+    then: Actions([Conversing.remove, { node }]),
+  })),
 
-export const PostDeleteResponse = postDelete.sync(({ request, post }) => ({
-  when: postDelete.actions(
-    postDelete.request({}, { request }),
-    [Posting.delete, {}, { post }],
-  ),
-  then: postDelete.actions(
-    postDelete.respond<PostDeleteOutput>({ request, post }),
-  ),
-}));
+  PostDeleteResponse: Sync(({ post }) => ({
+    when: Actions([Posting.delete, {}, { post }]),
+    then: Actions(Respond<PostDeleteOutput>({ post })),
+  })),
 
-export const PostDeleteNotAuthor = postDelete.sync((
-  { request, session, post, user, author },
-) => ({
-  when: postDelete.actions(postDelete.request({ session, post }, { request })),
-  where: async (frames) => {
-    frames = await frames.query(Sessioning._getUser, { session }, { user });
-    frames = await frames.query(Posting._getAuthor, { post }, { author });
-    return frames.filter(($) => $[author] !== $[user]);
-  },
-  then: postDelete.actions(
-    postDelete.error({ request, error: "Not authorized to delete this post." }),
-  ),
-}));
+  PostDeleteNotAuthor: Sync(({ session, post, user, author }) => ({
+    when: Actions(Request({ session, post })),
+    where: async (frames) => {
+      frames = await frames.query(Sessioning._getUser, { session }, { user });
+      frames = await frames.query(Posting._getAuthor, { post }, { author });
+      return frames.filter(($) => $[author] !== $[user]);
+    },
+    then: Actions(Fail("Not authorized to delete this post.")),
+  })),
 
-export const PostDeleteInvalidSession = postDelete.sync((
-  { request, session, active },
-) => ({
-  when: postDelete.actions(postDelete.request({ session }, { request })),
-  where: async (frames) => {
-    frames = await frames.query(Sessioning._isActive, { session }, { active });
-    return frames.filter(($) => $[active] === false);
-  },
-  then: postDelete.actions(
-    postDelete.error({ request, error: "Invalid or expired session." }),
-  ),
+  PostDeleteInvalidSession: Sync(({ session, active }) => ({
+    when: Actions(Request({ session })),
+    where: async (frames) => {
+      frames = await frames.query(
+        Sessioning._isActive,
+        { session },
+        { active },
+      );
+      return frames.filter(($) => $[active] === false);
+    },
+    then: Actions(Fail("Invalid or expired session.")),
+  })),
 }));
 
 // --- threads/list: a newest-first feed of conversation roots ---
 
-export const ThreadListResponse = threadList.sync((
-  { request, conversation, root, item, createdAt, post, conversations },
-) => ({
-  when: threadList.actions(threadList.request({}, { request })),
-  where: async (frames) => {
-    const [base] = frames;
-    frames = await frames.query(
-      Conversing._getConversations,
-      {},
-      { conversation, root, item, createdAt },
-    );
-    frames = await frames.query(Posting._getPost, { post: item }, { post });
-    frames = frames.aggregate(
-      base,
-      [conversation, root, item, createdAt, post],
-      conversations,
-    );
-    return frames.map(($) => ({
-      ...$,
-      [conversations]: ($[conversations] as { createdAt: Date }[]).slice().sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      ),
-    }));
-  },
-  then: threadList.actions(
-    threadList.respond<ThreadListOutput>({ request, conversations }),
-  ),
+const threadList = defineEndpoint("/threads/list", ({
+  Sync,
+  Actions,
+  Respond,
+}) => ({
+  ThreadListResponse: Sync((
+    { conversation, root, item, createdAt, post, conversations },
+  ) => ({
+    when: Actions(),
+    where: async (frames) => {
+      const [base] = frames;
+      frames = await frames.query(
+        Conversing._getConversations,
+        {},
+        { conversation, root, item, createdAt },
+      );
+      frames = await frames.query(Posting._getPost, { post: item }, { post });
+      frames = frames.aggregate(
+        base,
+        [conversation, root, item, createdAt, post],
+        conversations,
+      );
+      return frames.map(($) => ({
+        ...$,
+        [conversations]: ($[conversations] as { createdAt: Date }[]).slice()
+          .sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          ),
+      }));
+    },
+    then: Actions(Respond<ThreadListOutput>({ conversations })),
+  })),
 }));
 
-export const PostsByAuthorResponse = postsByAuthor.sync((
-  { request, author, post, posts },
-) => ({
-  when: postsByAuthor.actions(postsByAuthor.request({ author }, { request })),
-  where: async (frames) => {
-    const [base] = frames;
-    frames = await frames.query(Posting._getByAuthor, { author }, { post });
-    return frames.aggregate(base, [post], posts);
-  },
-  then: postsByAuthor.actions(
-    postsByAuthor.respond<PostsByAuthorOutput>({ request, posts }),
-  ),
+const postsByAuthor = defineEndpoint("/posts/byAuthor", ({
+  Sync,
+  Actions,
+  Request,
+  Respond,
+}) => ({
+  PostsByAuthorResponse: Sync(({ author, post, posts }) => ({
+    when: Actions(Request({ author })),
+    where: async (frames) => {
+      const [base] = frames;
+      frames = await frames.query(Posting._getByAuthor, { author }, { post });
+      return frames.aggregate(base, [post], posts);
+    },
+    then: Actions(Respond<PostsByAuthorOutput>({ posts })),
+  })),
 }));
 
-export const threadsApi = defineFeature({
-  create: threadCreate.define({
-    ThreadCreateRequest,
-    ThreadCreateStartsConversation,
-    ThreadCreateSetsSource,
-    ThreadCreateRegistersUnread,
-    ThreadCreateResponse,
-    ThreadCreateInvalidSession,
-  }),
-  reply: threadReply.define({
-    ThreadReplyRequest,
-    ThreadReplyAttaches,
-    ThreadReplySetsSource,
-    ThreadReplyRegistersUnread,
-    ThreadReplyDerivesLinks,
-    ThreadReplyResponse,
-    ThreadReplyInvalidSession,
-  }),
-  get: threadGet.define({ ThreadGetResponse }),
-  list: threadList.define({ ThreadListResponse }),
-});
+export const threadsApi = {
+  create: threadCreate,
+  reply: threadReply,
+  get: threadGet,
+  list: threadList,
+};
 
-export const postsApi = defineFeature({
-  get: postGet.define({
-    PostGetResponse,
-    PostGetNotFound,
-  }),
-  edit: postEdit.define({
-    PostEditRequest,
-    PostEditSetsSource,
-    PostEditDerivesLinks,
-    PostEditResponse,
-    PostEditNotAuthor,
-    PostEditInvalidSession,
-  }),
-  delete: postDelete.define({
-    PostDeleteRequest,
-    PostDeleteHasReplies,
-    PostDeleteClearsFormatting,
-    PostDeleteClearsReactions,
-    PostDeleteClearsTags,
-    PostDeleteUnregisters,
-    PostDeleteClearsLinks,
-    PostDeleteRemovesNode,
-    PostDeleteResponse,
-    PostDeleteNotAuthor,
-    PostDeleteInvalidSession,
-  }),
-  byAuthor: postsByAuthor.define({ PostsByAuthorResponse }),
-});
+export const postsApi = {
+  get: postGet,
+  edit: postEdit,
+  delete: postDelete,
+  byAuthor: postsByAuthor,
+};

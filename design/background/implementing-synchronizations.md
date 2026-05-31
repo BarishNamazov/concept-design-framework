@@ -6,7 +6,7 @@ The implementation of synchronizations is an almost direct mapping between the s
 
 At the top of each `filename.sync.ts` file, you can use the simplified imports
 `@concepts` and `@engine`. App-facing Requesting endpoints should also use
-`requestingEndpoint(...)` from `@concepts/Requesting/api.ts` so the same sync
+`defineEndpoint(...)` from `@concepts/Requesting/api.ts` so the same sync
 declaration carries SDK types.
 
 ```typescript

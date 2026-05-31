@@ -118,7 +118,7 @@ never inside the concept.
 
 > Sync notation below uses the lightweight spec form from
 > `implementing-synchronizations.md`. The repo's actual TypeScript uses the
-> `requestingEndpoint(...).sync(...)` helper from `@concepts/Requesting/api.ts`
+> `defineEndpoint(...)` helper from `@concepts/Requesting/api.ts`
 > (see `src/syncs/threads.sync.ts`); one example is given in that concrete form.
 
 ---
@@ -654,4 +654,3 @@ concept's worth of surface area for marginal class value — omit to stay lean.
 Each added concept must keep the same discipline already present in this codebase: no
 imports of other concepts, fully polymorphic type parameters, a single evaluable
 purpose, and all cross-concept wiring expressed in `src/syncs/*.sync.ts`.
-

@@ -69,13 +69,33 @@ The response fields are returned as the HTTP JSON body.
 endpoint syncs are declared with the typed Requesting helper:
 
 ```ts
-const createThread = requestingEndpoint("/threads/create")
-  .request<{ session: ID; content: string }>()
-  .respond<CreateThreadOutput>();
+const createThread = defineEndpoint("/threads/create", ({
+  Sync,
+  Actions,
+  Request,
+  Respond,
+}) => ({
+  ThreadCreateRequest: Sync(({ session, content, user }) => ({
+    when: Actions(Request({ session, content })),
+    where: async (frames) =>
+      await frames.query(Sessioning._getUser, { session }, { user }),
+    then: Actions([Posting.create, { author: user, content }]),
+  })),
+
+  ThreadCreateResponse: Sync(({ post, conversation, node }) => ({
+    when: Actions(
+      [Posting.create, {}, { post }],
+      [Conversing.start, {}, { conversation, node }],
+    ),
+    then: Actions(Respond<CreateThreadOutput>({ post, conversation, node })),
+  })),
+}));
 ```
 
-That builder emits normal engine action patterns for runtime behavior and also
-records endpoint input/output types for the SDK contract. See
+The helper emits normal engine action patterns for runtime behavior and records
+endpoint input/output types for the SDK contract. Each endpoint sync is
+request-scoped automatically; `Request(...)` is only needed when the sync reads
+HTTP body fields, and `Respond(...)`/`Fail(...)` bind the request id implicitly.
+See
 [`src/syncs/app.ts`](../../syncs/app.ts) and the
 [HTTP API](../../../docs/ARCHITECTURE.md#http-api-and-endpoint-set) for the forum endpoint set.
-

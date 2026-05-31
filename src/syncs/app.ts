@@ -1,11 +1,10 @@
 import {
-  defineApi,
   syncMap,
   type ApiError,
   type ContractOf,
 } from "@concepts/Requesting/api.ts";
 import type { ID } from "@utils/types.ts";
-import { authApi } from "./auth.sync.ts";
+import { authApi, LoginStartsSession } from "./auth.sync.ts";
 import { linksApi } from "./links.sync.ts";
 import { profilesApi } from "./profiles.sync.ts";
 import { reactionsApi } from "./reactions.sync.ts";
@@ -13,7 +12,7 @@ import { tagsApi } from "./tags.sync.ts";
 import { postsApi, threadsApi } from "./threads.sync.ts";
 import { unreadApi } from "./unread.sync.ts";
 
-export const api = defineApi({
+export const api = {
   auth: authApi,
   links: linksApi,
   profiles: profilesApi,
@@ -22,9 +21,12 @@ export const api = defineApi({
   threads: threadsApi,
   posts: postsApi,
   unread: unreadApi,
-});
+};
 
-export const syncs = syncMap(api);
+export const syncs = {
+  ...syncMap(api),
+  LoginStartsSession,
+};
 
 export default syncs;
 

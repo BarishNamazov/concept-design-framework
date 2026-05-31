@@ -10,8 +10,6 @@ declare const endpointContract: unique symbol;
 export type ApiError = { error: string };
 export type EmptyInput = Record<PropertyKey, never>;
 
-export type ContractShape = Record<string, { input: unknown; output: unknown }>;
-
 export type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
 type Fn<C, K extends keyof C> = C[K] extends (...args: never[]) => unknown
@@ -34,12 +32,12 @@ type ResponseOutputMeta<TOutput> = {
   readonly [responseOutput]: TOutput;
 };
 
-export type EndpointSync<TInput extends object = never, TOutput = never> =
+type EndpointSync<TInput extends object = never, TOutput = never> =
   & Sync
   & RequestInputMeta<TInput>
   & ResponseOutputMeta<TOutput>;
 
-export interface EndpointDefinition<
+interface EndpointDefinition<
   TPath extends string,
   TInput extends object,
   TOutput,
@@ -54,39 +52,31 @@ export interface EndpointDefinition<
   };
 }
 
-export interface EndpointBuilder<TPath extends string> {
-  request<const TInput extends Mapping>(
+interface EndpointDsl {
+  Request<const TInput extends Mapping>(
     input: TInput,
-    output: Mapping,
   ): ActionList & RequestInputMeta<RequestInputFromPattern<TInput>>;
+  Request(): ActionList & RequestInputMeta<EmptyInput>;
 
-  respond<TOutput extends object>(
+  Respond<TOutput extends object>(
     body: Mapping,
   ): ActionList & ResponseOutputMeta<TOutput>;
-  respond<const TBody extends Mapping>(
+  Respond<const TBody extends Mapping>(
     body: TBody,
   ): ActionList & ResponseOutputMeta<ResponseBodyFromPattern<TBody>>;
 
-  error(body: Mapping): ActionList & ResponseOutputMeta<never>;
+  Fail(error: unknown): ActionList & ResponseOutputMeta<never>;
 
-  actions<const TPatterns extends readonly ActionList[]>(
+  Actions<const TPatterns extends readonly ActionList[]>(
     ...patterns: TPatterns
   ): ActionPattern[] & RequestInputMeta<InputUnionFromPatterns<TPatterns>> &
     ResponseOutputMeta<OutputUnionFromPatterns<TPatterns>>;
 
-  sync<const TDeclaration extends EndpointSyncDeclaration>(
+  Sync<const TDeclaration extends EndpointSyncDeclaration>(
     fn: (vars: Vars) => TDeclaration,
   ): EndpointSync<
     InputFromDeclaration<TDeclaration>,
     OutputFromDeclaration<TDeclaration>
-  >;
-
-  define<const TSyncs extends Record<string, EndpointSync<object, unknown>>>(
-    syncs: TSyncs,
-  ): EndpointDefinition<
-    TPath,
-    EndpointInputFromSyncs<TSyncs>,
-    EndpointOutputFromSyncs<TSyncs>
   >;
 }
 
@@ -146,63 +136,95 @@ export type ContractOf<T> = Prettify<
   UnionToIntersection<EndpointContracts<T>>
 >;
 
-export type ApiPath<TApi extends ContractShape> = keyof TApi & string;
-export type Input<TApi extends ContractShape, TPath extends ApiPath<TApi>> =
-  TApi[TPath]["input"];
-export type Output<TApi extends ContractShape, TPath extends ApiPath<TApi>> =
-  TApi[TPath]["output"];
-export type Result<TApi extends ContractShape, TPath extends ApiPath<TApi>> =
-  | Output<TApi, TPath>
-  | ApiError;
-
-export function requestingEndpoint<const TPath extends string>(
+export function defineEndpoint<
+  const TPath extends string,
+  const TSyncs extends Record<string, EndpointSync<object, unknown>>,
+>(
   path: TPath,
-): EndpointBuilder<TPath> {
-  const builder = {
-    request(input: Mapping, output: Mapping) {
-      return [
-        Requesting.request,
-        { path, ...input },
-        output,
-      ] as unknown as ActionList & RequestInputMeta<object>;
-    },
+  build: (helpers: EndpointDsl) => TSyncs,
+): EndpointDefinition<
+  TPath,
+  EndpointInputFromSyncs<TSyncs>,
+  EndpointOutputFromSyncs<TSyncs>
+> {
+  let activeRequest: symbol | undefined;
 
-    respond(body: Mapping) {
-      return [Requesting.respond, body] as unknown as ActionList &
-        ResponseOutputMeta<object>;
-    },
+  const requestPattern = (input: Mapping, output: Mapping) =>
+    [
+      Requesting.request,
+      { path, ...input },
+      output,
+    ] as unknown as ActionList & RequestInputMeta<object>;
 
-    error(body: Mapping) {
-      return [Requesting.respond, body] as unknown as ActionList &
-        ResponseOutputMeta<never>;
-    },
+  const respond = (body: Mapping) =>
+    [Requesting.respond, body] as unknown as ActionList &
+      ResponseOutputMeta<object>;
 
-    actions(...patterns: ActionList[]) {
-      return actions(...patterns);
-    },
-
-    sync(fn: Sync) {
-      return fn;
-    },
-
-    define(syncs: Record<string, Sync>) {
-      return { path, syncs } as EndpointDefinition<TPath, object, unknown>;
-    },
+  const getActiveRequest = (): symbol => {
+    if (activeRequest === undefined) {
+      throw new Error(
+        "Endpoint helper used outside Sync declaration construction.",
+      );
+    }
+    return activeRequest;
   };
 
-  return builder as EndpointBuilder<TPath>;
-}
+  const Request = ((input: Mapping = {}) =>
+    requestPattern(input, { request: getActiveRequest() })) as unknown as
+    EndpointDsl["Request"];
 
-export function defineFeature<const TFeature extends Record<string, unknown>>(
-  feature: TFeature,
-): TFeature {
-  return feature;
-}
+  const Respond = ((body: Mapping) =>
+    respond({ request: getActiveRequest(), ...body })) as unknown as
+    EndpointDsl["Respond"];
 
-export function defineApi<const TApi extends Record<string, unknown>>(
-  api: TApi,
-): TApi {
-  return api;
+  const Fail = ((error: unknown) => {
+    const body = isPlainMapping(error) ? error : { error };
+    return respond({ request: getActiveRequest(), ...body }) as ActionList &
+      ResponseOutputMeta<never>;
+  }) as EndpointDsl["Fail"];
+
+  const Actions = ((...patterns: ActionList[]) =>
+    actions(...patterns)) as unknown as EndpointDsl["Actions"];
+
+  const Sync = ((fn: (vars: Vars) => EndpointSyncDeclaration) => {
+    const sync = ((vars: Vars) => {
+      const previousRequest = activeRequest;
+      const request = vars.__request;
+      activeRequest = request;
+
+      try {
+        const declaration = fn(vars);
+        // Every endpoint sync is request-scoped; explicit Request(...) calls
+        // only add typed body fields to that same request.
+        const [requestAnchor] = actions(
+          requestPattern({}, { request }),
+        );
+        return {
+          ...declaration,
+          when: [requestAnchor, ...declaration.when],
+        };
+      } finally {
+        activeRequest = previousRequest;
+      }
+    }) as Sync;
+
+    return sync as EndpointSync<object, unknown>;
+  }) as EndpointDsl["Sync"];
+
+  const helpers: EndpointDsl = {
+    Request,
+    Respond,
+    Fail,
+    Actions,
+    Sync,
+  };
+
+  const syncs = build(helpers);
+  return { path, syncs } as unknown as EndpointDefinition<
+    TPath,
+    EndpointInputFromSyncs<TSyncs>,
+    EndpointOutputFromSyncs<TSyncs>
+  >;
 }
 
 export function syncMap(api: Record<string, unknown>): Record<string, Sync> {
@@ -233,4 +255,9 @@ function isEndpointDefinition(value: unknown): value is EndpointDefinition<
 > {
   return value !== null && typeof value === "object" &&
     "path" in value && "syncs" in value;
+}
+
+function isPlainMapping(value: unknown): value is Mapping {
+  return value !== null && typeof value === "object" &&
+    !Array.isArray(value);
 }

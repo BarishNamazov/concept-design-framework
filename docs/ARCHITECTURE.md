@@ -292,19 +292,20 @@ Tracing one request end-to-end through the journal and the auth syncs
    `Authenticating.authenticate({ username, password })` — in the same flow.
 
    ```ts
-   export const LoginRequest = login.sync(({ request, username, password }) => ({
-     when: login.actions(login.request({ username, password }, { request })),
-     then: login.actions([Authenticating.authenticate, { username, password }]),
-   }));
+   LoginRequest: Sync(({ username, password }) => ({
+     when: Actions(Request({ username, password })),
+     then: Actions([Authenticating.authenticate, { username, password }]),
+   }))
    ```
 
 3. **Branch on the result.** `Authenticating.authenticate` journals either
    `{ user }` (success) or `{ error }` (failure):
-   - On **success**, `LoginStartsSession` matches the request *and* the
-     `authenticate` output `{ user }` (a join across two `when` clauses), and its
-     `then` invokes `Sessioning.start({ user })`.
-   - On **failure**, `LoginError` matches the request and `{ error }` and
-     responds immediately with `Requesting.respond({ request, error })`. (The
+  - On **success**, `LoginStartsSession` matches the endpoint request anchor and
+    the `authenticate` output `{ user }` (a join across two `when` clauses), and
+    its `then` invokes `Sessioning.start({ user })`.
+  - On **failure**, `LoginError` matches the endpoint request anchor and
+    `{ error }` and responds immediately with
+    `Requesting.respond({ request, error })`. (The
      `{ user }` and `{ error }` patterns are mutually exclusive, so exactly one
      branch fires.)
 
@@ -314,14 +315,13 @@ Tracing one request end-to-end through the journal and the auth syncs
    `Requesting.respond({ request, session, user })`.
 
    ```ts
-   export const LoginResponse = login.sync(({ request, user, session }) => ({
-     when: login.actions(
-       login.request({}, { request }),
+   LoginResponse: Sync(({ user, session }) => ({
+     when: Actions(
        [Authenticating.authenticate, {}, { user }],
        [Sessioning.start, {}, { session }],
      ),
-     then: login.actions(login.respond<LoginOutput>({ request, session, user })),
-   }));
+     then: Actions(Respond<LoginOutput>({ session, user })),
+   }))
    ```
 
 5. **Bridge back to HTTP.** `Requesting.respond` resolves the pending promise the
@@ -641,11 +641,11 @@ concepts, syncs, or generated contract file.
 The app contract lives with the server composition:
 
 ```ts
-export const api = defineApi({ auth, threads, posts });
+export const api = { auth, threads, posts };
 export type ForumApi = ContractOf<typeof api>;
 ```
 
-Each endpoint is declared through `requestingEndpoint(path)`, so the same syncs
+Each endpoint is declared through `defineEndpoint(path, ...)`, so the same syncs
 that implement `Requesting.request` / `Requesting.respond` also carry the input
 and output types used by `ForumApi`.
 
@@ -701,10 +701,9 @@ const api = createClient<ForumApi>({ baseUrl });
 ### Type Flow
 
 1. Sync files declare Requesting endpoints with
-   `requestingEndpoint("/path")`.
-2. Each endpoint sync uses the same builder for runtime patterns and type
-   metadata: `endpoint.request(...)`, `endpoint.respond<Output>(...)`, and
-   `endpoint.error(...)`.
+   `defineEndpoint("/path", ({ Sync, Actions, Request, Respond, Fail }) => ...)`.
+2. Each endpoint sync uses the scoped helpers for runtime patterns and type
+   metadata: `Request(...)`, `Respond<Output>(...)`, and `Fail(...)`.
 3. `src/syncs/app.ts` composes the endpoint groups and exports
    `type ForumApi = ContractOf<typeof api>`.
 4. The generic SDK uses `ForumApi` to infer path, input, and output types.
@@ -740,27 +739,28 @@ is a generic transport bound to that type by the caller.
 
 ### Design
 
-- `src/concepts/Requesting/api.ts` provides `requestingEndpoint(path)`, a typed
-  wrapper over the existing `actions(...)` DSL.
-- `endpoint.request(...)` emits the real `Requesting.request` pattern and records
-  request body keys as phantom TypeScript metadata.
-- `endpoint.respond<Output>(...)` emits the real `Requesting.respond` action and
-  records the success payload type. Error responders use `endpoint.error(...)`
-  and remain part of the SDK `Result` envelope, not the success output.
-- Sync files export normal engine sync functions, but each is created through its
-  endpoint builder. The same syncs are used for runtime registration and API type
-  inference.
+- `src/concepts/Requesting/api.ts` provides `defineEndpoint(path, build)`, a
+  typed wrapper over the existing `actions(...)` DSL.
+- `Request(...)` emits the real `Requesting.request` pattern and records request
+  body keys as phantom TypeScript metadata. Every endpoint sync is already
+  request-scoped, so `Request(...)` is only needed when the sync reads body
+  fields.
+- `Respond<Output>(...)` emits the real `Requesting.respond` action and records
+  the success payload type. Error responders use `Fail(...)` and remain part of
+  the SDK `Result` envelope, not the success output.
+- Sync files define endpoint groups with `defineEndpoint`. The same syncs are
+  used for runtime registration and API type inference.
 - `src/syncs/app.ts` composes the endpoint groups into `api`, exports
   `syncs = syncMap(api)`, and exposes `type ForumApi = ContractOf<typeof api>`.
 
 ### Adding An Endpoint
 
-1. Create a path builder in the relevant sync file:
-   `const login = requestingEndpoint("/auth/login")`.
-2. Write syncs with `login.sync(...)`, `login.request(...)`, and
-   `login.respond<LoginOutput>(...)`.
-3. Add those syncs to the feature export via `login.define({ ... })`.
-4. Include the feature in `src/syncs/app.ts` if it is a new feature group.
+1. Create an endpoint in the relevant sync file with
+   `defineEndpoint("/auth/login", ({ Sync, Actions, Request, Respond, Fail }) => ({ ... }))`.
+2. Write syncs with `Sync(...)`, engine action tuples, and `Request(...)` only
+   where body fields are needed.
+3. Return `Respond<LoginOutput>(...)` or `Fail(...)` from the endpoint syncs.
+4. Include the endpoint group in `src/syncs/app.ts` if it is a new feature group.
 
 There is no generated SDK contract and no separate endpoint manifest to keep in
 sync. Type-checking `ForumApi` is enough to catch API drift.
