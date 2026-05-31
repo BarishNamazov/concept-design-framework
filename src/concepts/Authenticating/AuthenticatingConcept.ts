@@ -1,9 +1,6 @@
 import { Collection, Db } from "mongodb";
-import { freshID } from "@utils/database.ts";
+import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
-
-// Declare collection prefix, use concept name.
-const PREFIX = "Authenticating" + ".";
 
 // Generic types of this concept.
 type User = ID;
@@ -30,8 +27,8 @@ interface UserDoc {
 export default class AuthenticatingConcept {
   private readonly users: Collection<UserDoc>;
 
-  constructor(private readonly db: Db) {
-    this.users = this.db.collection(PREFIX + "users");
+  constructor(private readonly db: Db, namespace = "Authenticating") {
+    this.users = this.db.collection(collectionName(namespace, "users"));
   }
 
   /**

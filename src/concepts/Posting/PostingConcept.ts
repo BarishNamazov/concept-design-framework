@@ -1,9 +1,6 @@
 import { Collection, Db } from "mongodb";
-import { freshID } from "@utils/database.ts";
+import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
-
-// Declare collection prefix, use concept name.
-const PREFIX = "Posting" + ".";
 
 // Generic types of this concept.
 type Author = ID;
@@ -33,8 +30,8 @@ interface PostDoc {
 export default class PostingConcept {
   private readonly posts: Collection<PostDoc>;
 
-  constructor(private readonly db: Db) {
-    this.posts = this.db.collection(PREFIX + "posts");
+  constructor(private readonly db: Db, namespace = "Posting") {
+    this.posts = this.db.collection(collectionName(namespace, "posts"));
   }
 
   /**

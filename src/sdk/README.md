@@ -2,7 +2,7 @@
 
 `src/sdk` is a self-contained, generic Requesting client. It contains only the
 Proxy/fetch runtime and reusable client types; it does not import the forum
-backend, generated files, or app-specific view types.
+backend implementation or app-specific view types.
 
 ```ts
 import { createClient } from "./sdk";
@@ -46,7 +46,6 @@ App-specific exports such as `ForumApi`, `Input<P>`, `Output<P>`, `Result<P>`,
 ## Tests
 
 ```bash
-bun run build
 bun run typecheck
 bun test src/sdk/client.test.ts
 ```

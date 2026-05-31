@@ -8,7 +8,6 @@
  *   POST /unread/markAllSeen { session, scope } -> { user }
  */
 import { Sessioning, Tracking } from "@concepts";
-import type { TrackingConcept } from "@concepts";
 import {
   defineFeature,
   requestingEndpoint,
@@ -21,10 +20,10 @@ const unreadCount = requestingEndpoint("/unread/count");
 const markSeen = requestingEndpoint("/unread/markSeen");
 const markAllSeen = requestingEndpoint("/unread/markAllSeen");
 
-type UnreadListOutput = { items: QueryRow<TrackingConcept, "_getUnread">[] };
-type UnreadCountOutput = QueryRow<TrackingConcept, "_getUnreadCount">;
-type MarkSeenOutput = ActionOk<TrackingConcept, "markSeen">;
-type MarkAllSeenOutput = ActionOk<TrackingConcept, "markAllSeen">;
+type UnreadListOutput = { items: QueryRow<typeof Tracking, "_getUnread">[] };
+type UnreadCountOutput = QueryRow<typeof Tracking, "_getUnreadCount">;
+type MarkSeenOutput = ActionOk<typeof Tracking, "markSeen">;
+type MarkAllSeenOutput = ActionOk<typeof Tracking, "markAllSeen">;
 
 // --- list ---
 

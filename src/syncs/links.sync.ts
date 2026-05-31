@@ -6,7 +6,6 @@
  *   POST /links/forward   { source } -> { targets }
  */
 import { Linking } from "@concepts";
-import type { LinkingConcept } from "@concepts";
 import {
   defineFeature,
   requestingEndpoint,
@@ -16,9 +15,11 @@ import {
 const backlinks = requestingEndpoint("/links/backlinks");
 const forward = requestingEndpoint("/links/forward");
 
-type BacklinksOutput = { sources: QueryRow<LinkingConcept, "_getBacklinks">[] };
+type BacklinksOutput = {
+  sources: QueryRow<typeof Linking, "_getBacklinks">[];
+};
 type ForwardOutput = {
-  targets: QueryRow<LinkingConcept, "_getForwardLinks">[];
+  targets: QueryRow<typeof Linking, "_getForwardLinks">[];
 };
 
 // --- backlinks: public ---

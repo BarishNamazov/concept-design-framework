@@ -3,7 +3,3 @@
 **/.DS_Store
 node_modules
 .obsidian/workspace.json
-
-# Auto-generated barrel files (produced by `bun run build`)
-src/concepts/concepts.ts
-src/concepts/test_concepts.ts

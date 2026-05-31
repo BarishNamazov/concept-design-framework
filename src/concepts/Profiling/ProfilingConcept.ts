@@ -1,9 +1,6 @@
 import { Collection, Db } from "mongodb";
-import { freshID } from "@utils/database.ts";
+import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
-
-// Declare collection prefix, use concept name.
-const PREFIX = "Profiling" + ".";
 
 // Generic types of this concept.
 type User = ID;
@@ -33,8 +30,8 @@ interface ProfileDoc {
 export default class ProfilingConcept {
   private readonly profiles: Collection<ProfileDoc>;
 
-  constructor(private readonly db: Db) {
-    this.profiles = this.db.collection(PREFIX + "profiles");
+  constructor(private readonly db: Db, namespace = "Profiling") {
+    this.profiles = this.db.collection(collectionName(namespace, "profiles"));
   }
 
   /**

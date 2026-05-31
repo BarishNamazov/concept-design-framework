@@ -1,9 +1,6 @@
 import { Collection, Db } from "mongodb";
-import { freshID } from "@utils/database.ts";
+import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
-
-// Declare collection prefix, use concept name.
-const PREFIX = "Linking" + ".";
 
 // Generic types of this concept.
 type Item = ID;
@@ -33,8 +30,8 @@ interface LinkDoc {
 export default class LinkingConcept {
   private readonly links: Collection<LinkDoc>;
 
-  constructor(private readonly db: Db) {
-    this.links = this.db.collection(PREFIX + "links");
+  constructor(private readonly db: Db, namespace = "Linking") {
+    this.links = this.db.collection(collectionName(namespace, "links"));
   }
 
   /**

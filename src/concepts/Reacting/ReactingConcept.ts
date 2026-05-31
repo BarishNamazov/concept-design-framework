@@ -1,9 +1,6 @@
 import { Collection, Db } from "mongodb";
-import { freshID } from "@utils/database.ts";
+import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
-
-// Declare collection prefix, use concept name.
-const PREFIX = "Reacting" + ".";
 
 // Generic types of this concept.
 type User = ID;
@@ -38,8 +35,8 @@ interface ReactionDoc {
 export default class ReactingConcept {
   private readonly reactions: Collection<ReactionDoc>;
 
-  constructor(private readonly db: Db) {
-    this.reactions = this.db.collection(PREFIX + "reactions");
+  constructor(private readonly db: Db, namespace = "Reacting") {
+    this.reactions = this.db.collection(collectionName(namespace, "reactions"));
   }
 
   /**

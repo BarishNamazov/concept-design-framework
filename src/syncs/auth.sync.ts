@@ -9,11 +9,6 @@
  *   POST /auth/changePassword { session, oldPassword, newPassword } -> { user }
  */
 import { Authenticating, Profiling, Sessioning } from "@concepts";
-import type {
-  AuthenticatingConcept,
-  ProfilingConcept,
-  SessioningConcept,
-} from "@concepts";
 import {
   defineFeature,
   requestingEndpoint,
@@ -28,19 +23,19 @@ const logout = requestingEndpoint("/auth/logout");
 const me = requestingEndpoint("/auth/me");
 const changePassword = requestingEndpoint("/auth/changePassword");
 
-type RegisterOutput = ActionOk<AuthenticatingConcept, "register">;
+type RegisterOutput = ActionOk<typeof Authenticating, "register">;
 type LoginOutput = Prettify<
-  & ActionOk<SessioningConcept, "start">
-  & ActionOk<AuthenticatingConcept, "authenticate">
+  & ActionOk<typeof Sessioning, "start">
+  & ActionOk<typeof Authenticating, "authenticate">
 >;
 type LogoutOutput = { ok: true };
 type MeOutput = Prettify<
-  & QueryRow<SessioningConcept, "_getUser">
-  & QueryRow<AuthenticatingConcept, "_getById">
-  & QueryRow<ProfilingConcept, "_getProfile">
+  & QueryRow<typeof Sessioning, "_getUser">
+  & QueryRow<typeof Authenticating, "_getById">
+  & QueryRow<typeof Profiling, "_getProfile">
 >;
 type ChangePasswordOutput = ActionOk<
-  AuthenticatingConcept,
+  typeof Authenticating,
   "changePassword"
 >;
 

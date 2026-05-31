@@ -28,7 +28,6 @@ Line citations are orienting references; prefer the named symbol/file when code
 movement changes exact line numbers.
 
 Recent verification commands:
-- `bun run build` ✅ (regenerates the `@concepts` barrel)
 - `bun run typecheck` ✅
 - `bun x tsc -p example-client` ✅
 - `bun test src/engine/test/cases.basic.test.ts` ✅
@@ -1057,4 +1056,3 @@ Every change above is covered by the existing test suites
 (`src/concepts/**/**.test.ts`, `src/syncs/app.test.ts`,
 `src/syncs/endpoints.consistency.test.ts`, `src/sdk/client.test.ts`); run
 `bun test` and `bun run typecheck` after each step.
-

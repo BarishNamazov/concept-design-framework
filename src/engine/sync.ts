@@ -95,8 +95,9 @@ export class SyncConcept {
   public Action: ActionConcept;
   /** Current verbosity. */
   public logging = Logging.TRACE;
-  /** Memoizes the bound/instrumented wrapper per underlying method. */
-  public boundActions: Map<Function, InstrumentedAction> = new Map();
+  /** Memoizes bound/instrumented wrappers per concept instance. */
+  private boundActionsByConcept: WeakMap<object, Map<Function, InstrumentedAction>> =
+    new WeakMap();
 
   constructor(actionConcept: ActionConcept = new ActionConcept()) {
     this.Action = actionConcept;
@@ -375,15 +376,19 @@ export class SyncConcept {
    *
    * Queries (methods whose name starts with `_`) are bound but left
    * uninstrumented — they have no journal side effects. Every other method is
-   * wrapped exactly once (memoized in {@link boundActions}, keyed by the
-   * original method) so the instrumented identity is stable across accesses.
+   * wrapped exactly once per concept instance so the instrumented identity is
+   * stable across accesses without aliasing sibling instances of the same class.
    * The wrapper records the action in the journal, runs it, records its output,
    * and then drives {@link synchronize}.
    */
   instrumentConcept<T extends object>(concept: T): T {
     const Action = this.Action;
     const synchronize = this.synchronize.bind(this);
-    const boundActions = this.boundActions;
+    let boundActions = this.boundActionsByConcept.get(concept);
+    if (boundActions === undefined) {
+      boundActions = new Map();
+      this.boundActionsByConcept.set(concept, boundActions);
+    }
 
     return new Proxy(concept, {
       get(target, prop, receiver) {

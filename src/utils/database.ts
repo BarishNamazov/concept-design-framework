@@ -29,13 +29,6 @@ async function init(): Promise<[MongoClient, string]> {
   return [client, DB_NAME];
 }
 
-async function dropAllCollections(db: Db): Promise<void> {
-  const collections = await db.listCollections().toArray();
-  for (const collection of collections) {
-    await db.collection(collection.name).drop();
-  }
-}
-
 /**
  * MongoDB database configured by `.env`.
  * @returns initialized database and client
@@ -46,22 +39,14 @@ export async function getDb(): Promise<[Db, MongoClient]> {
 }
 
 /**
- * Test database initialization: connects to a `test-` prefixed database and
- * drops all of its collections so each run starts from a clean slate.
- * @returns initialized test database and client
- */
-export async function testDb(): Promise<[Db, MongoClient]> {
-  const [client, DB_NAME] = await init();
-  const testDbName = `test-${DB_NAME}`;
-  const database = client.db(testDbName);
-  await dropAllCollections(database);
-  return [database, client];
-}
-
-/**
  * Creates a fresh ID.
  * @returns a UUID v7 generic ID.
  */
 export function freshID(): ID {
   return uuidv7() as ID;
+}
+
+/** Builds a namespaced MongoDB collection name for a concept instance. */
+export function collectionName(namespace: string, name: string): string {
+  return `${namespace}.${name}`;
 }

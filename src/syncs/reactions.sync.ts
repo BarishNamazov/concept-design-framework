@@ -7,7 +7,6 @@
  *   POST /reactions/forTarget { target }                -> { reactions }
  */
 import { Reacting, Sessioning } from "@concepts";
-import type { ReactingConcept } from "@concepts";
 import {
   defineFeature,
   requestingEndpoint,
@@ -19,10 +18,10 @@ const add = requestingEndpoint("/reactions/add");
 const remove = requestingEndpoint("/reactions/remove");
 const forTarget = requestingEndpoint("/reactions/forTarget");
 
-type ReactionAddOutput = ActionOk<ReactingConcept, "react">;
+type ReactionAddOutput = ActionOk<typeof Reacting, "react">;
 type ReactionRemoveOutput = { ok: true };
 type ReactionsForTargetOutput = {
-  reactions: QueryRow<ReactingConcept, "_getReactionsForTarget">[];
+  reactions: QueryRow<typeof Reacting, "_getReactionsForTarget">[];
 };
 
 // --- add ---

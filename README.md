@@ -12,14 +12,12 @@ This repository implements a **forum application** using [**concept design**](de
    - `MONGODB_URL`: the MongoDB connection string
    - `DB_NAME`: the database name
    - `PORT` (optional): the port the server binds to, default `8000`
-4. Generate the concept barrel files: `bun run build`
-5. Start the server: `bun run start`
+4. Start the server: `bun run start`
 
 ## Scripts
 
 | Command | Description |
 | --- | --- |
-| `bun run build` | Scans `src/concepts` and regenerates the `@concepts` and `@test-concepts` barrel files. Run this after adding or renaming a concept. |
 | `bun run start` | Starts the application server (`src/main.ts`). |
 | `bun test` | Runs the test suite (engine + concept tests). |
 | `bun run typecheck` | Type-checks the project with `tsc --noEmit`. |
@@ -59,7 +57,7 @@ To add a feature:
 1. Specify the concept in the same style as the [concepts reference](docs/ARCHITECTURE.md#concepts-reference).
 2. Implement it at `src/concepts/{Name}/{Name}Concept.ts`, with a colocated `{Name}Concept.test.ts`.
 3. Wire it up with synchronizations under `src/syncs/`.
-4. Add the feature to `src/syncs/app.ts`, run `bun run build`, then `bun test`.
+4. Import it in `src/concepts/concepts.ts`, add one entry to `conceptClasses`, add the feature to `src/syncs/app.ts`, then run `bun run typecheck` and `bun test`.
 
 ## Frontend SDK
 

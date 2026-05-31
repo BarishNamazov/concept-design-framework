@@ -6,13 +6,12 @@ import net from "node:net";
  * a disposable in-memory MongoDB, exactly as `main.ts` would against a real one.
  *
  * It injects the database connection through the environment **before** importing
- * the generated `@concepts` barrel and the typed `@syncs` app composition, so
+ * the `@concepts` composition module and the typed `@syncs` app composition, so
  * the production singletons (which the synchronizations close over) are wired to
  * the in-memory database. This is what makes the real syncs observable in tests.
  *
- * Because the concept barrel is a module singleton, all synchronization
+ * Because the concept composition is a module singleton, all synchronization
  * integration tests must share a single `setupApp()` (one per test process).
- * Run `bun run build` first so the barrel exists.
  */
 export interface TestApp {
   /**
@@ -50,19 +49,19 @@ let sharedServer: Promise<TestServer> | undefined;
 
 /**
  * Process-global resources captured at boot so {@link teardownTestApp} can
- * release them exactly once after the whole test run. The generated `@concepts`
- * barrel binds its Mongo client once at module load (top-level await), so the
+ * release them exactly once after the whole test run. The `@concepts`
+ * composition binds its Mongo client once at module load (top-level await), so the
  * client and its in-memory server must live for the entire process and never be
  * torn down between suites — otherwise a later suite re-importing the cached
- * barrel would reuse a closed client or hit a stopped server.
+ * module would reuse a closed client or hit a stopped server.
  */
 let sharedClient: { close(): Promise<void> } | undefined;
 let sharedMongo: { stop(): Promise<unknown> } | undefined;
 let sharedHttp: { stop(): void } | undefined;
 
 /**
- * Returns a process-wide singleton app. The generated barrels are module
- * singletons, so every integration test in a process must share one instance;
+ * Returns a process-wide singleton app. The app composition is a module
+ * singleton, so every integration test in a process must share one instance;
  * isolate individual tests with `reset()` in a `beforeEach` hook.
  */
 export function setupApp(): Promise<TestApp> {
@@ -102,9 +101,9 @@ async function boot(): Promise<TestApp> {
 
   const stop = async () => {
     // Intentionally a no-op. The shared app is a single lifecycle for the whole
-    // test process: the generated `@concepts` barrel binds its Mongo client once
+    // test process: the `@concepts` composition binds its Mongo client once
     // at module load, so tearing the client/server down here would break any
-    // sibling suite that later re-imports the cached barrel (it would reuse a
+    // sibling suite that later re-imports the cached module (it would reuse a
     // closed client or hit a stopped server). `teardownTestApp()` — registered
     // as a top-level `afterAll` in the bun test preload — releases everything
     // exactly once after the entire run.

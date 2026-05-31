@@ -8,7 +8,6 @@
  *   POST /profiles/setAvatar      { session, avatar }      -> { user }
  */
 import { Profiling, Sessioning } from "@concepts";
-import type { ProfilingConcept } from "@concepts";
 import {
   defineFeature,
   requestingEndpoint,
@@ -21,10 +20,10 @@ const setDisplayName = requestingEndpoint("/profiles/setDisplayName");
 const setBio = requestingEndpoint("/profiles/setBio");
 const setAvatar = requestingEndpoint("/profiles/setAvatar");
 
-type ProfileGetOutput = QueryRow<ProfilingConcept, "_getProfile">;
-type SetDisplayNameOutput = ActionOk<ProfilingConcept, "setDisplayName">;
-type SetBioOutput = ActionOk<ProfilingConcept, "setBio">;
-type SetAvatarOutput = ActionOk<ProfilingConcept, "setAvatar">;
+type ProfileGetOutput = QueryRow<typeof Profiling, "_getProfile">;
+type SetDisplayNameOutput = ActionOk<typeof Profiling, "setDisplayName">;
+type SetBioOutput = ActionOk<typeof Profiling, "setBio">;
+type SetAvatarOutput = ActionOk<typeof Profiling, "setAvatar">;
 
 // --- get: public lookup of a user's profile ---
 

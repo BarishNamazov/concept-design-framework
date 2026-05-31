@@ -9,7 +9,6 @@
  *   POST /tags/forTarget { target }                -> { tags }
  */
 import { Sessioning, Tagging } from "@concepts";
-import type { TaggingConcept } from "@concepts";
 import {
   defineFeature,
   requestingEndpoint,
@@ -23,11 +22,11 @@ const remove = requestingEndpoint("/tags/remove");
 const tagTargets = requestingEndpoint("/tags/targets");
 const forTarget = requestingEndpoint("/tags/forTarget");
 
-type TagCreateOutput = ActionOk<TaggingConcept, "createTag">;
-type TagAddOutput = ActionOk<TaggingConcept, "addTag">;
-type TagRemoveOutput = ActionOk<TaggingConcept, "removeTag">;
-type TagTargetsOutput = { targets: QueryRow<TaggingConcept, "_getTargets">[] };
-type TagForTargetOutput = { tags: QueryRow<TaggingConcept, "_getTags">[] };
+type TagCreateOutput = ActionOk<typeof Tagging, "createTag">;
+type TagAddOutput = ActionOk<typeof Tagging, "addTag">;
+type TagRemoveOutput = ActionOk<typeof Tagging, "removeTag">;
+type TagTargetsOutput = { targets: QueryRow<typeof Tagging, "_getTargets">[] };
+type TagForTargetOutput = { tags: QueryRow<typeof Tagging, "_getTags">[] };
 
 // --- create ---
 

@@ -5,7 +5,6 @@
   "type": "module",
   "description": "A forum application built with concept design, running on Bun.",
   "scripts": {
-    "build": "bun run src/utils/generate_imports.ts",
     "start": "bun run src/main.ts",
     "example-client": "bun run example-client/server.ts",
     "test": "bun test",

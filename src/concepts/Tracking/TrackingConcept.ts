@@ -1,8 +1,6 @@
 import { Collection, Db } from "mongodb";
+import { collectionName } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
-
-// Declare collection prefix, use concept name.
-const PREFIX = "Tracking" + ".";
 
 // Generic types of this concept.
 type User = ID;
@@ -44,9 +42,9 @@ export default class TrackingConcept {
   private readonly items: Collection<ItemDoc>;
   private readonly seenMarks: Collection<SeenMarkDoc>;
 
-  constructor(private readonly db: Db) {
-    this.items = this.db.collection(PREFIX + "items");
-    this.seenMarks = this.db.collection(PREFIX + "seenMarks");
+  constructor(private readonly db: Db, namespace = "Tracking") {
+    this.items = this.db.collection(collectionName(namespace, "items"));
+    this.seenMarks = this.db.collection(collectionName(namespace, "seenMarks"));
   }
 
   /**

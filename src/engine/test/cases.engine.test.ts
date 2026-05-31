@@ -25,6 +25,34 @@ function setup() {
 }
 
 describe("engine: edge cases", () => {
+  test("same-class concept instances keep separate instrumented wrappers", async () => {
+    class NamedConcept {
+      constructor(public readonly name: string) {}
+
+      ping(_: Record<PropertyKey, never>) {
+        return { name: this.name };
+      }
+
+      _who(_: Record<PropertyKey, never>): { name: string }[] {
+        return [{ name: this.name }];
+      }
+    }
+
+    const Sync = new SyncConcept();
+    Sync.logging = Logging.OFF;
+    const Alpha = Sync.instrumentConcept(new NamedConcept("alpha"));
+    const Beta = Sync.instrumentConcept(new NamedConcept("beta"));
+
+    expect(Alpha.ping).toBe(Alpha.ping);
+    expect(Beta.ping).toBe(Beta.ping);
+    expect(Alpha.ping).not.toBe(Beta.ping);
+    expect(Alpha._who).toBe(Alpha._who);
+    expect(Beta._who).toBe(Beta._who);
+    expect(Alpha._who).not.toBe(Beta._who);
+    expect(await Beta.ping({})).toEqual({ name: "beta" });
+    expect(await Beta._who({})).toEqual([{ name: "beta" }]);
+  });
+
   test("where frames filter prevents extra then actions", async () => {
     const { Button, Notification } = setup();
     await Button.clicked({ kind: "inc" });

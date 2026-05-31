@@ -78,5 +78,4 @@ and respond to the request.
 
 1. Configure environment variables in `.env` (`MONGODB_URL`, `DB_NAME`, and
    optionally `PORT`).
-2. Run `bun run build` to generate the `@concepts` barrel.
-3. Run `bun run start` to register `@syncs` and start the Requesting server.
+2. Run `bun run start` to register `@syncs` and start the Requesting server.

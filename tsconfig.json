@@ -17,7 +17,6 @@
     "paths": {
       "@engine": ["./src/engine/mod.ts"],
       "@concepts": ["./src/concepts/concepts.ts"],
-      "@test-concepts": ["./src/concepts/test_concepts.ts"],
       "@concepts/*": ["./src/concepts/*"],
       "@utils/*": ["./src/utils/*"],
       "@syncs": ["./src/syncs/app.ts"]

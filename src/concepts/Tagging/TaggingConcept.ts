@@ -1,9 +1,6 @@
 import { Collection, Db } from "mongodb";
-import { freshID } from "@utils/database.ts";
+import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
-
-// Declare collection prefix, use concept name.
-const PREFIX = "Tagging" + ".";
 
 // Generic types of this concept.
 type Target = ID;
@@ -41,9 +38,9 @@ export default class TaggingConcept {
   private readonly tags: Collection<TagDoc>;
   private readonly targets: Collection<TargetDoc>;
 
-  constructor(private readonly db: Db) {
-    this.tags = this.db.collection(PREFIX + "tags");
-    this.targets = this.db.collection(PREFIX + "targets");
+  constructor(private readonly db: Db, namespace = "Tagging") {
+    this.tags = this.db.collection(collectionName(namespace, "tags"));
+    this.targets = this.db.collection(collectionName(namespace, "targets"));
   }
 
   /**

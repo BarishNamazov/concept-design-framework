@@ -1,9 +1,6 @@
 import { Collection, Db } from "mongodb";
-import { freshID } from "@utils/database.ts";
+import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
-
-// Declare collection prefix, use concept name.
-const PREFIX = "Sessioning" + ".";
 
 // Generic types of this concept.
 type User = ID;
@@ -34,8 +31,8 @@ interface SessionDoc {
 export default class SessioningConcept {
   private readonly sessions: Collection<SessionDoc>;
 
-  constructor(private readonly db: Db) {
-    this.sessions = this.db.collection(PREFIX + "sessions");
+  constructor(private readonly db: Db, namespace = "Sessioning") {
+    this.sessions = this.db.collection(collectionName(namespace, "sessions"));
   }
 
   /**

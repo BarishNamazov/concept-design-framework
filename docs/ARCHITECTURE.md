@@ -75,8 +75,8 @@ export type {
 | `Empty` / `Frame` / `Mapping` / `Vars` | types | Core vocabulary (see below). |
 
 The application creates one `SyncConcept` instance (exported as `Engine` from the
-generated `@concepts` barrel), sets `Engine.logging`, calls `Engine.register(syncs)`,
-and starts the Requesting server — see `src/main.ts`.
+manual `@concepts` composition module), sets `Engine.logging`, calls
+`Engine.register(syncs)`, and starts the Requesting server — see `src/main.ts`.
 
 ### Concepts as independent state machines
 
@@ -724,7 +724,7 @@ normal backend or transport failures. Callers check `"error" in result`. See als
 ### Goal
 
 The SDK runtime is a self-contained Requesting client. It does not import forum
-concepts, syncs, generated files, or app-specific view types. The forum API type
+concepts, syncs, or app-specific view types. The forum API type
 is inferred from the server's typed Requesting endpoint declarations in
 `src/syncs/app.ts`, then passed to the SDK generic:
 
@@ -772,4 +772,3 @@ sync. Type-checking `ForumApi` is enough to catch API drift.
 - `src/syncs/endpoints.consistency.test.ts` introspects the endpoint groups and
   confirms every typed endpoint is backed by coherent `Requesting.request` paths
   and at least one `Requesting.respond` sync.
-

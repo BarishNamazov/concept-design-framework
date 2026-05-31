@@ -21,11 +21,6 @@ import {
   Tagging,
   Tracking,
 } from "@concepts";
-import type {
-  ConversingConcept,
-  FormattingConcept,
-  PostingConcept,
-} from "@concepts";
 import {
   defineFeature,
   requestingEndpoint,
@@ -46,17 +41,17 @@ const postsByAuthor = requestingEndpoint("/posts/byAuthor");
 // --- Derived view shapes assembled by the read endpoints below ---
 
 /** The post record `{ author, content, createdAt, editedAt }` from Posting. */
-type PostRecord = QueryRow<PostingConcept, "_getPost">["post"];
+type PostRecord = QueryRow<typeof Posting, "_getPost">["post"];
 
 /** A rendered-html row `{ rendered }` from Formatting. */
-type RenderedRow = QueryRow<FormattingConcept, "_getRendered">;
+type RenderedRow = QueryRow<typeof Formatting, "_getRendered">;
 
 /**
  * One enriched thread node, exactly as assembled by the `/threads/get` sync: the
  * Conversing node fields plus the post record and its rendered html.
  */
 type ThreadNode = Prettify<
-  & QueryRow<ConversingConcept, "_getThread">
+  & QueryRow<typeof Conversing, "_getThread">
   & { post: PostRecord }
   & RenderedRow
 >;
@@ -69,25 +64,25 @@ type PostView = Prettify<PostRecord & RenderedRow>;
  * `_getConversations`) enriched with the root post's record.
  */
 type ConversationSummary = Prettify<
-  & QueryRow<ConversingConcept, "_getConversations">
+  & QueryRow<typeof Conversing, "_getConversations">
   & { post: PostRecord }
 >;
 
 type ThreadCreateOutput = Prettify<
-  & ActionOk<PostingConcept, "create">
-  & ActionOk<ConversingConcept, "start">
+  & ActionOk<typeof Posting, "create">
+  & ActionOk<typeof Conversing, "start">
 >;
 type ThreadReplyOutput = Prettify<
-  & ActionOk<PostingConcept, "create">
-  & ActionOk<ConversingConcept, "reply">
+  & ActionOk<typeof Posting, "create">
+  & ActionOk<typeof Conversing, "reply">
 >;
 type ThreadGetOutput = { thread: ThreadNode[] };
 type ThreadListOutput = { conversations: ConversationSummary[] };
 type PostGetOutput = { post: PostView };
-type PostEditOutput = ActionOk<PostingConcept, "edit">;
-type PostDeleteOutput = ActionOk<PostingConcept, "delete">;
+type PostEditOutput = ActionOk<typeof Posting, "edit">;
+type PostDeleteOutput = ActionOk<typeof Posting, "delete">;
 type PostsByAuthorOutput = {
-  posts: QueryRow<PostingConcept, "_getByAuthor">[];
+  posts: QueryRow<typeof Posting, "_getByAuthor">[];
 };
 
 /** Parses `[[<id>]]` references out of post markdown into an array of ids. */

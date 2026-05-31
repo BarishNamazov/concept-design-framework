@@ -15,8 +15,9 @@ import { actions, type Sync } from "@engine";
 // Choose whatever concepts you have
 import { Button, Counter, Notification } from "@concepts";
 ```
-
-If you have an error in importing your concepts, don't forget to run `bun run build` to automatically prepare the `@concepts` import that will scan your `src/concepts/` directory for your concepts and generate the proper imports.
+`@concepts` is the manual app composition module in `src/concepts/concepts.ts`.
+When you add, rename, or instantiate a concept, update its `conceptClasses`
+registry entry directly.
 
 ## Example
 

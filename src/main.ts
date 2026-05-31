@@ -1,12 +1,8 @@
 /**
  * Entry point for an application built with concepts + synchronizations.
  * Requires the Requesting concept as a bootstrap concept.
- * Please run "bun run build" (generate_imports.ts) to prepare "@concepts".
  */
 import * as concepts from "@concepts";
-
-// Use the following line instead to run against the test database, which resets each time.
-// import * as concepts from "@test-concepts";
 
 const { Engine } = concepts;
 import { Logging } from "@engine";

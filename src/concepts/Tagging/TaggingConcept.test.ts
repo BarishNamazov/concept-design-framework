@@ -44,6 +44,23 @@ describe("Tagging", () => {
     expect(await Tagging.createTag({ name: "tech" })).toHaveProperty("error");
   });
 
+  test("namespaces isolate duplicate concept instances", async () => {
+    const Labels = new TaggingConcept(mongo.db, "Labels");
+    const Categories = new TaggingConcept(mongo.db, "Categories");
+
+    const label = ok(await Labels.createTag({ name: "shared" }));
+    const category = ok(await Categories.createTag({ name: "shared" }));
+
+    expect(label.tag).not.toBe(category.tag);
+    expect(await Labels._getTagByName({ name: "shared" })).toEqual([
+      { tag: label.tag },
+    ]);
+    expect(await Categories._getTagByName({ name: "shared" })).toEqual([
+      { tag: category.tag },
+    ]);
+    expect(await Tagging._getTagByName({ name: "shared" })).toEqual([]);
+  });
+
   test("addTag requires an existing tag, not already applied", async () => {
     const t = target("a3");
     expect(

@@ -49,7 +49,6 @@ The backend needs MongoDB and an `.env` (see the [root README](../README.md)):
 ```bash
 # from the repo root
 cp .env.template .env      # set MONGODB_URL and DB_NAME
-bun run build              # generate the concept barrels
 bun run start              # starts the API on http://localhost:8000  (POST /api/*)
 ```
 

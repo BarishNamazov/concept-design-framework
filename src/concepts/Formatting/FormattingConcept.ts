@@ -1,10 +1,8 @@
 import { Collection, Db } from "mongodb";
 import { marked } from "marked";
 import sanitizeHtml from "sanitize-html";
+import { collectionName } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
-
-// Declare collection prefix, use concept name.
-const PREFIX = "Formatting" + ".";
 
 // Generic types of this concept.
 type Target = ID;
@@ -40,8 +38,8 @@ function render(source: string): string {
 export default class FormattingConcept {
   private readonly targets: Collection<TargetDoc>;
 
-  constructor(private readonly db: Db) {
-    this.targets = this.db.collection(PREFIX + "targets");
+  constructor(private readonly db: Db, namespace = "Formatting") {
+    this.targets = this.db.collection(collectionName(namespace, "targets"));
   }
 
   /**

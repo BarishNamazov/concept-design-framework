@@ -1,5 +1,5 @@
 import { Collection, Db } from "mongodb";
-import { freshID } from "@utils/database.ts";
+import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 
 /**
@@ -24,8 +24,6 @@ const REQUESTING_ALLOWED_DOMAIN = process.env.REQUESTING_ALLOWED_DOMAIN ?? "*";
 // Choose whether or not to persist responses
 const REQUESTING_SAVE_RESPONSES =
   (process.env.REQUESTING_SAVE_RESPONSES ?? "true") !== "false";
-
-const PREFIX = "Requesting" + ".";
 
 // --- Type Definitions ---
 // Internal alias for a Request identifier. Named `RequestID` (rather than
@@ -63,8 +61,8 @@ export default class RequestingConcept {
   private readonly pending: Map<RequestID, PendingRequest> = new Map();
   private readonly timeout: number;
 
-  constructor(private readonly db: Db) {
-    this.requests = this.db.collection(PREFIX + "requests");
+  constructor(private readonly db: Db, namespace = "Requesting") {
+    this.requests = this.db.collection(collectionName(namespace, "requests"));
     this.timeout = REQUESTING_TIMEOUT;
     console.log(
       `\nRequesting concept initialized with a timeout of ${this.timeout}ms.`,
