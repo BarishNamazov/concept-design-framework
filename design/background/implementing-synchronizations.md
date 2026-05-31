@@ -4,11 +4,14 @@ The implementation of synchronizations is an almost direct mapping between the s
 
 ## Imports
 
-At the top of each `filename.sync.ts` file, you can use the simplified imports `@concepts` and `@engine`:
+At the top of each `filename.sync.ts` file, you can use the simplified imports
+`@concepts` and `@engine`. App-facing Requesting endpoints should also use
+`requestingEndpoint(...)` from `@concepts/Requesting/api.ts` so the same sync
+declaration carries SDK types.
 
 ```typescript
 // These two help you declare synchronizations
-import { actions, Sync } from "@engine";
+import { actions, type Sync } from "@engine";
 // Choose whatever concepts you have
 import { Button, Counter, Notification } from "@concepts";
 ```
@@ -130,11 +133,13 @@ queries
 
 The input pattern, `{ target: post }` says to query with the `target` specified as whatever we have bound in the current set of frames to the variable `post`. The output pattern `{ comment }` leverages JavaScript's shorthand syntax, and really means `{ comment: comment }`, and says to take whatever the query outputs as `comment`, and bind it back into the frames as the `comment` variable.
 
-To see this in action, consider the following synchronization:
+To see this in action, consider the following synchronization. The current forum
+uses `Conversing` rather than a `Comment` concept, but the example shows the
+generic frame fan-out semantics:
 
 ```sync
 when
-	Requesting.request (path: "posts/delete", post) : (request)
+	Requesting.request (path: "/posts/delete", post) : (request)
 	Post.delete (post) : (post)
 where
 	in Comment: comment has target of post
@@ -220,7 +225,7 @@ export const AddQuestionResponse: Sync = ({ request, question }) => ({
   then: actions([Requesting.respond, { request, question }]),
 });
 
-export const AddQuestionResponseError: Sync = ({ request, question }) => ({
+export const AddQuestionResponseError: Sync = ({ request, error }) => ({
   when: actions(
     [Requesting.request, { path: "/LikertSurvey/addQuestion" }, { request }],
     [LikertSurvey.addQuestion, {}, { error }],
@@ -240,11 +245,11 @@ On the other hand, pattern matching must minimally match all the keys described.
 ```sync
 // INCORRECT
 sync AddQuestionResponse
-when 
+when
   Requesting.request (path: "/LikertSurvey/addQuestion") : (request)
   LikertSurvey.addQuestion () : (question, error)
 then
-  Requesting.response (request, question, error)
+  Requesting.respond (request, question, error)
 
 // CORRECT: the previous split into two syncs
 sync AddQuestionResponse

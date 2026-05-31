@@ -47,8 +47,7 @@ src/
 
 The application is described under `design/`:
 
-- `design/application/` — the overview, and links to all concepts and synchronizations.
-- `design/concepts/` — one specification per concept.
+- `design/application/` — the current app-level overview and sync catalogue.
 - `design/background/` — reference material on concept design, implementation, and testing.
 - `docs/` — design records and developer documentation for the implemented features:
   - [docs/ENGINE.md](docs/ENGINE.md) — the concept + synchronization engine.
@@ -58,7 +57,7 @@ The application is described under `design/`:
 
 To add a feature:
 
-1. Specify the concept under `design/concepts/{Name}/{Name}.md`.
+1. Specify the concept in the same style as [docs/CONCEPTS.md](docs/CONCEPTS.md).
 2. Implement it at `src/concepts/{Name}/{Name}Concept.ts`, with a colocated `{Name}Concept.test.ts`.
 3. Wire it up with synchronizations under `src/syncs/`.
 4. Add the feature to `src/syncs/app.ts`, run `bun run build`, then `bun test`.

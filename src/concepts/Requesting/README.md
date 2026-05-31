@@ -79,12 +79,3 @@ records endpoint input/output types for the SDK contract. See
 [`src/syncs/app.ts`](../../syncs/app.ts) and
 [`docs/API_AND_SDK.md`](../../../docs/API_AND_SDK.md) for the forum endpoint set.
 
-## Why There Is No Passthrough
-
-Older versions exposed concept methods directly as HTTP routes and used an
-allow/deny list to decide which direct routes were acceptable. That made the
-public API depend on implementation details of concept classes.
-
-The current model requires every endpoint to be an explicit Requesting sync. That
-keeps authorization, fan-out across concepts, response shaping, and SDK typing in
-one declared API surface.

@@ -1,25 +1,14 @@
-# Concept Specifications
+# Concept Catalogue
 
-The following are all the concept specifications included in this application.
+The current implemented concept catalogue is maintained in
+[docs/CONCEPTS.md](../../docs/CONCEPTS.md).
 
-[@Requesting](/src/concepts/Requesting/README.md)
+The provided Requesting concept also has a concept-specific README:
+[src/concepts/Requesting/README.md](../../src/concepts/Requesting/README.md).
 
-[@Authenticating](../concepts/Authenticating/Authenticating.md)
+When adding a concept, update:
 
-[@Sessioning](../concepts/Sessioning/Sessioning.md)
-
-[@Profiling](../concepts/Profiling/Profiling.md)
-
-[@Posting](../concepts/Posting/Posting.md)
-
-[@Conversing](../concepts/Conversing/Conversing.md)
-
-[@Reacting](../concepts/Reacting/Reacting.md)
-
-[@Tagging](../concepts/Tagging/Tagging.md)
-
-[@Tracking](../concepts/Tracking/Tracking.md)
-
-[@Linking](../concepts/Linking/Linking.md)
-
-[@Formatting](../concepts/Formatting/Formatting.md)
+1. `src/concepts/{Name}/{Name}Concept.ts`
+2. `src/concepts/{Name}/{Name}Concept.test.ts`
+3. [docs/CONCEPTS.md](../../docs/CONCEPTS.md)
+4. Any application sync documentation in this directory

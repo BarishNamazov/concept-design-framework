@@ -1,16 +1,17 @@
-# Synchronization Specifications
+# Synchronization Catalogue
 
-The following sections describe all synchronization specifications included for this application.
+The application syncs are implemented under `src/syncs/` and composed by
+`src/syncs/app.ts`.
 
-```markdown
-TODO: REMOVE this code block, then link to all your synchronization specifications. For example:
+| File | API Area |
+| --- | --- |
+| `auth.sync.ts` | registration, login, logout, current user, password changes |
+| `profiles.sync.ts` | profile reads and updates |
+| `threads.sync.ts` | threads, posts, rendering, unread registration, link derivation, cascades |
+| `reactions.sync.ts` | add/remove reactions and reaction summaries |
+| `tags.sync.ts` | create/apply/remove tags and tag lookups |
+| `unread.sync.ts` | unread list/count and mark-seen operations |
+| `links.sync.ts` | forward links and backlinks |
 
-[@auth](../syncs/auth.md)
-
-[@sharing](../syncs/sharing.md)
-
-You may also choose to link to synchronization code as well, such as:
-[@auth](/src/syncs/auth.md)
-
-Make sure to keep this file updated to have an updated view of all your synchronizations.
-```
+The endpoint list and SDK contract are documented in
+[docs/API_AND_SDK.md](../../docs/API_AND_SDK.md).

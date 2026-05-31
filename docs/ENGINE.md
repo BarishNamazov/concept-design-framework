@@ -33,13 +33,22 @@ and action inputs/outputs are `Mapping = Record<string, unknown>` (see
 ```ts
 export { actions, Logging, SyncConcept } from "./sync.ts";
 export { Frames } from "./frames.ts";
-export type { Empty, Frame, Mapping, SyncFunction as Sync, Vars } from "./types.ts";
+export type {
+  ActionList,
+  ActionPattern,
+  Empty,
+  Frame,
+  Mapping,
+  SyncFunction as Sync,
+  Vars,
+} from "./types.ts";
 ```
 
 | Export | Kind | Role |
 | --- | --- | --- |
 | `actions(...)` | function | Normalizes `[action, input, output?]` tuples into the clause patterns used in `when` / `then`. |
 | `Sync` (`SyncFunction`) | type | The shape of a sync: `(vars) => { when, where?, then }`. |
+| `ActionList` / `ActionPattern` | types | Clause tuple and normalized pattern types used by `actions(...)` and endpoint builders. |
 | `Frames` | class | The relational working set a sync transforms in `where`. |
 | `Logging` | enum | `OFF` / `TRACE` / `VERBOSE` verbosity for the action trace. |
 | `SyncConcept` | class | The engine itself: registers syncs, instruments concepts, matches and fires. |
@@ -263,14 +272,10 @@ Tracing one request end-to-end through the journal and the auth syncs
    `Authenticating.authenticate({ username, password })` — in the same flow.
 
    ```ts
-   export const LoginRequest: Sync = ({ request, username, password }) => ({
-     when: actions([
-       Requesting.request,
-       { path: "/auth/login", username, password },
-       { request },
-     ]),
-     then: actions([Authenticating.authenticate, { username, password }]),
-   });
+   export const LoginRequest = login.sync(({ request, username, password }) => ({
+     when: login.actions(login.request({ username, password }, { request })),
+     then: login.actions([Authenticating.authenticate, { username, password }]),
+   }));
    ```
 
 3. **Branch on the result.** `Authenticating.authenticate` journals either
@@ -289,14 +294,14 @@ Tracing one request end-to-end through the journal and the auth syncs
    `Requesting.respond({ request, session, user })`.
 
    ```ts
-   export const LoginResponse: Sync = ({ request, user, session }) => ({
-     when: actions(
-       [Requesting.request, { path: "/auth/login" }, { request }],
+   export const LoginResponse = login.sync(({ request, user, session }) => ({
+     when: login.actions(
+       login.request({}, { request }),
        [Authenticating.authenticate, {}, { user }],
        [Sessioning.start, {}, { session }],
      ),
-     then: actions([Requesting.respond, { request, session, user }]),
-   });
+     then: login.actions(login.respond<LoginOutput>({ request, session, user })),
+   }));
    ```
 
 5. **Bridge back to HTTP.** `Requesting.respond` resolves the pending promise the
@@ -310,14 +315,3 @@ never tangles with other concurrent logins.
 For an endpoint that uses `where` (queries + filter) instead of a multi-step
 journal join, see `MeResponse` / `MeInvalidSession` in the same file, and the
 list-endpoint `aggregate` pattern in `src/syncs/threads.sync.ts`.
-
-## See also
-
-- [`docs/REQUESTING.md`](REQUESTING.md) — how HTTP requests become
-  `Requesting.request` actions and how syncs answer them.
-- [`docs/CONCEPTS.md`](CONCEPTS.md) — the concept catalogue (actions, queries,
-  collections).
-- [`docs/API_AND_SDK.md`](API_AND_SDK.md) — the endpoint set and cross-concept
-  wiring.
-- [`docs/SDK_CONTRACT.md`](SDK_CONTRACT.md) — how the typed SDK contract is derived
-  from these syncs.

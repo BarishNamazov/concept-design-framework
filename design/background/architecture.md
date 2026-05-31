@@ -1,68 +1,82 @@
 # Architecture Overview
 
-The concept design approach structures its architecture entirely around two fundamental building blocks:
+The application is structured around two fundamental building blocks:
 
-1.  **Concepts**: Self-contained, modular increments of functionality (e.g., `Sessioning`, `Posting`, `Commenting`).
-2.  **Synchronizations**: The rules that orchestrate interactions *between* concepts (e.g., "when a post is deleted, delete all its comments").
+1. **Concepts**: self-contained, modular increments of functionality, such as
+   `Sessioning`, `Posting`, and `Conversing`.
+2. **Synchronizations**: rules that orchestrate interactions between concepts,
+   such as "when a post is deleted, remove its formatting, reactions, tags, and
+   links."
 
 ## Directory Structure
 
-> **Important:** You should only need to add code within the `src/concepts` and `src/syncs` directories.
+Feature work usually belongs in `src/concepts`, `src/syncs`, and the
+documentation files that describe their public surface.
 
-```
-context/
+```txt
 design/
 src/
-├── concepts/       <-- YOUR CONCEPTS HERE
+├── concepts/
 │   ├── Sessioning/
 │   │   └── SessioningConcept.ts
 │   ├── Posting/
 │   │   └── PostingConcept.ts
 │   └── ...
-├── syncs/          <-- YOUR SYNCHRONIZATIONS HERE
+├── syncs/
+│   ├── app.ts
 │   ├── auth.sync.ts
-│   └── posts.sync.ts
-│
-├── engine/         <-- Framework-provided (ignore)
-├── utils/          <-- Framework-provided (ignore)
-└── main.ts         <-- Entry-point (can configure logging)
+│   ├── threads.sync.ts
+│   └── ...
+├── sdk/
+├── engine/
+├── utils/
+└── main.ts
 ```
 
-## The `Requesting` Concept: Application Entry-point
+## Requesting As The Entrypoint
 
-The architecture will automatically spin up an HTTP server for your application. However, you might wonder how exactly an external HTTP request triggers your logic. This is handled by the provided concept called `Requesting`.
+The HTTP server is provided by the `Requesting` concept. `Requesting` is the
+boundary where HTTP becomes concept actions.
 
-When an HTTP request hits the server, the Concept Engine automatically translates it into a `Requesting.request` action. You don't implement this concept; you just use its actions as triggers in your synchronizations. Public endpoints are explicit synchronizations; concept methods are not exposed directly as HTTP routes.
+When a request hits the server, it becomes a `Requesting.request` action. Public
+endpoints are explicit synchronizations; concept methods are not exposed
+directly as HTTP routes.
 
-For example, an incoming request like `POST /api/posts/create` with a JSON body `{ "title": "My First Post", "content": "Hello world!", "session": "s123" }` is automatically converted into an action that looks like this:
+For example, `POST /api/threads/create` with body
+`{ "content": "Hello world!", "session": "s123" }` becomes:
 
-`Requesting.request({ path: "/posts/create", title: "My First Post", content: "Hello world!", session: "s123" })`
-
-You can then write a [synchronization](implementing-synchronizations.md) to "catch" this action and do something useful with it:
-
-```typescript
-// in src/syncs/posts.sync.ts
-const CreatePostOnRequest: Sync = ({ title, content, session, user }) => ({
-    when: actions(
-        // Catches the request from the engine
-        [Requesting.request, { path: "/posts/create", title, content, session }, {}],
-    ),
-    where: (frames) => {
-        // Authorizes the request by checking the session
-        return frames
-            .query(Sessioning.getUser, { session }, { user });
-    },
-    then: actions(
-        // If we got here, we found a logged in user
-        [Posting.create, { title, content, author: user }],
-    ),
+```ts
+Requesting.request({
+  path: "/threads/create",
+  content: "Hello world!",
+  session: "s123",
 });
 ```
 
-By creating the `Sessioning` and `Posting` concepts and including this synchronization, you created an operational and authenticated API endpoint for creating posts. The `Requesting` concept encapsulates the concerns surrounding HTTP requests, and therefore abstracted away the need for specifying a HTTP server, controllers, middleware, etc.
+The actual syncs use the typed Requesting endpoint builder so the runtime sync
+and SDK contract are declared together:
+
+```ts
+const threadCreate = requestingEndpoint("/threads/create");
+
+export const ThreadCreateRequest = threadCreate.sync((
+  { request, session, content, user },
+) => ({
+  when: threadCreate.actions(
+    threadCreate.request({ session, content }, { request }),
+  ),
+  where: async (frames) =>
+    await frames.query(Sessioning._getUser, { session }, { user }),
+  then: threadCreate.actions([Posting.create, { content, author: user }]),
+}));
+```
+
+Follow-up syncs start the conversation, render Markdown, register unread state,
+and respond to the request.
 
 ## Initialization
 
-1. Configure any environment variables you need in `.env` (Bun loads this automatically).
-2. Build command: `bun run build` to scan and automatically generate imports for concepts.
-3. Start command: `bun run start` to begin your server.
+1. Configure environment variables in `.env` (`MONGODB_URL`, `DB_NAME`, and
+   optionally `PORT`).
+2. Run `bun run build` to generate the `@concepts` barrel.
+3. Run `bun run start` to register `@syncs` and start the Requesting server.

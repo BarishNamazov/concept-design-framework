@@ -23,7 +23,7 @@ For our specific implementation, we will use MongoDB as the database. Each piece
 
 # approach: steps to implementation
 
-The following prefix format for header 1 blocks denote the relevant steps:
+The following prefix format for header 1 blocks denotes the relevant steps:
 
 * `# concept: {name}`
 	* A specification of the concept we're looking to implement
@@ -50,7 +50,9 @@ const item = {
 };
 ```
 
-An `ID` can be otherwise treated as a string for the purposes of insertion. When inserting new documents into MongoDB collections, override the `_id` field with a fresh ID using the provided utility function.
+An `ID` can be otherwise treated as a string for the purposes of insertion. When
+inserting new documents into MongoDB collections, override the `_id` field with a
+fresh ID using the provided utility function.
 
 If you need to manually create an ID (e.g. during testing), simply assert that the string is of the same type:
 
@@ -202,8 +204,8 @@ says that the query should return an array of dictionaries, each with a `user` f
 We provide a helper database script in `@utils` that reads the environment variables in your `.env` file and initializes a MongoDB database. For normal app development, use:
 
 ```typescript
-import {getDb} from "@utils/database.ts";
-import SessioningConcept from "@concepts/SessioningConcept.ts"
+import { getDb } from "@utils/database.ts";
+import SessioningConcept from "../concepts/Sessioning/SessioningConcept.ts";
 
 const [db, client] = await getDb(); // returns [Db, MongoClient]
 ```
