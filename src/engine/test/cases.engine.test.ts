@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { actions, type Frames, Logging, SyncConcept, type Vars } from "../mod.ts";
+import {
+  actions,
+  type Frames,
+  Logging,
+  SyncConcept,
+  type Vars,
+} from "../mod.ts";
 import {
   ButtonConcept,
   CounterConcept,
@@ -86,7 +92,7 @@ describe("engine: edge cases", () => {
             const num = Number(String(frame[tag]).split(":")[1] ?? "NaN");
             return { ...frame, [value]: num } as typeof frame;
           })
-          .filter(($) => (Number($[value]) % 2) === 0)
+          .filter(($) => Number($[value]) % 2 === 0)
           .map((frame) => ({
             ...frame,
             [evenTag]: `even:${String(frame[value])}`,

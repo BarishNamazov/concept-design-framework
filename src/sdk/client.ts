@@ -86,8 +86,10 @@ export type IndexedClient<C extends ContractShape> = {
 /** The grouped surface: `client.auth.login(input)`. */
 export type GroupedClient<C extends ContractShape> = {
   [G in Group<keyof C & string>]: {
-    [P in keyof C & string as Group<P> extends G ? Method<P> : never]:
-      Endpoint<C, P>;
+    [P in keyof C & string as Group<P> extends G ? Method<P> : never]: Endpoint<
+      C,
+      P
+    >;
   };
 };
 
@@ -96,9 +98,8 @@ export type GroupedClient<C extends ContractShape> = {
  * the contract paths (`/group/method`) cleanly split into a flat index and a
  * two-level grouping.
  */
-export type Client<C extends ContractShape> =
-  & IndexedClient<C>
-  & GroupedClient<C>;
+export type Client<C extends ContractShape> = IndexedClient<C> &
+  GroupedClient<C>;
 
 const DEFAULT_BASE_URL = "http://localhost:8000/api";
 
@@ -110,7 +111,7 @@ const DEFAULT_BASE_URL = "http://localhost:8000/api";
  */
 function buildPath(segments: string[]): string {
   if (segments.length === 1 && segments[0].startsWith("/")) return segments[0];
-  return "/" + segments.join("/");
+  return `/${segments.join("/")}`;
 }
 
 /**
@@ -126,9 +127,10 @@ async function request(
 ): Promise<unknown> {
   let extraHeaders: Record<string, string> = {};
   try {
-    extraHeaders = typeof headersOption === "function"
-      ? await headersOption()
-      : headersOption ?? {};
+    extraHeaders =
+      typeof headersOption === "function"
+        ? await headersOption()
+        : (headersOption ?? {});
   } catch (e) {
     return { error: `Failed to resolve headers: ${describe(e)}` };
   }
@@ -161,7 +163,9 @@ async function request(
     !response.ok &&
     (typeof data !== "object" || data === null || !("error" in data))
   ) {
-    return { error: `Request to ${path} failed with status ${response.status}.` };
+    return {
+      error: `Request to ${path} failed with status ${response.status}.`,
+    };
   }
   return data;
 }

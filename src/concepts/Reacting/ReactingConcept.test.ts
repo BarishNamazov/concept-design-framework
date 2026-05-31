@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { setupTestDb } from "@utils/testing.ts";
-import ReactingConcept from "./ReactingConcept.ts";
 import type { ID } from "@utils/types.ts";
+import ReactingConcept from "./ReactingConcept.ts";
 
 const mongo = await setupTestDb();
 const Reacting = new ReactingConcept(mongo.db);

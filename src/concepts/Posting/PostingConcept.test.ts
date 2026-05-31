@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { setupTestDb } from "@utils/testing.ts";
-import PostingConcept from "./PostingConcept.ts";
 import type { ID } from "@utils/types.ts";
+import PostingConcept from "./PostingConcept.ts";
 
 const mongo = await setupTestDb();
 const Posting = new PostingConcept(mongo.db);
@@ -33,7 +33,9 @@ describe("Posting", () => {
     expect(await Posting._getAuthor({ post })).toEqual([{ author: authorA }]);
 
     ok(await Posting.edit({ post, content: "edited" }));
-    expect(await Posting._getContent({ post })).toEqual([{ content: "edited" }]);
+    expect(await Posting._getContent({ post })).toEqual([
+      { content: "edited" },
+    ]);
 
     ok(await Posting.delete({ post }));
     expect(await Posting._exists({ post })).toEqual([{ exists: false }]);
@@ -78,9 +80,7 @@ describe("Posting", () => {
     await Posting.create({ author: authorB, content: "c" });
 
     const result = await Posting._getByAuthor({ author: authorA });
-    expect(result.map((r) => r.post).sort()).toEqual(
-      [p1.post, p2.post].sort(),
-    );
+    expect(result.map((r) => r.post).sort()).toEqual([p1.post, p2.post].sort());
     expect(await Posting._getByAuthor({ author: "nobody" as ID })).toEqual([]);
   });
 

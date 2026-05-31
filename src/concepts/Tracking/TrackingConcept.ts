@@ -1,6 +1,6 @@
-import { Collection, Db } from "mongodb";
 import { collectionName } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
+import type { Collection, Db } from "mongodb";
 
 // Generic types of this concept.
 type User = ID;
@@ -42,7 +42,10 @@ export default class TrackingConcept {
   private readonly items: Collection<ItemDoc>;
   private readonly seenMarks: Collection<SeenMarkDoc>;
 
-  constructor(private readonly db: Db, namespace = "Tracking") {
+  constructor(
+    private readonly db: Db,
+    namespace = "Tracking",
+  ) {
     this.items = this.db.collection(collectionName(namespace, "items"));
     this.seenMarks = this.db.collection(collectionName(namespace, "seenMarks"));
   }
@@ -55,9 +58,13 @@ export default class TrackingConcept {
    * **effects** adds `item` to the set with the given `scope` and `createdAt`
    * the current time; returns `item`
    */
-  async register(
-    { item, scope }: { item: Item; scope: Scope },
-  ): Promise<{ item: Item } | { error: string }> {
+  async register({
+    item,
+    scope,
+  }: {
+    item: Item;
+    scope: Scope;
+  }): Promise<{ item: Item } | { error: string }> {
     const existing = await this.items.findOne({ _id: item });
     if (existing !== null) {
       return { error: "Item is already registered." };
@@ -74,9 +81,11 @@ export default class TrackingConcept {
    * **effects** removes `item` from the set and removes every SeenMark for
    * `item`; returns `item`
    */
-  async unregister(
-    { item }: { item: Item },
-  ): Promise<{ item: Item } | { error: string }> {
+  async unregister({
+    item,
+  }: {
+    item: Item;
+  }): Promise<{ item: Item } | { error: string }> {
     const { deletedCount } = await this.items.deleteOne({ _id: item });
     if (deletedCount === 0) {
       return { error: "Item is not registered." };
@@ -94,9 +103,13 @@ export default class TrackingConcept {
    * **effects** creates a SeenMark for (`user`, `item`) with `seenAt` the
    * current time; returns `item`
    */
-  async markSeen(
-    { user, item }: { user: User; item: Item },
-  ): Promise<{ item: Item } | { error: string }> {
+  async markSeen({
+    user,
+    item,
+  }: {
+    user: User;
+    item: Item;
+  }): Promise<{ item: Item } | { error: string }> {
     const registered = await this.items.findOne({ _id: item });
     if (registered === null) {
       return { error: "Item is not registered." };
@@ -116,9 +129,13 @@ export default class TrackingConcept {
    *
    * **effects** removes the SeenMark for (`user`, `item`); returns `item`
    */
-  async markUnseen(
-    { user, item }: { user: User; item: Item },
-  ): Promise<{ item: Item } | { error: string }> {
+  async markUnseen({
+    user,
+    item,
+  }: {
+    user: User;
+    item: Item;
+  }): Promise<{ item: Item } | { error: string }> {
     const { deletedCount } = await this.seenMarks.deleteOne({ user, item });
     if (deletedCount === 0) {
       return { error: "No SeenMark exists for this user and item." };
@@ -135,9 +152,13 @@ export default class TrackingConcept {
    * `user`, creates a SeenMark for (`user`, item) with `seenAt` the current
    * time; returns `user`
    */
-  async markAllSeen(
-    { user, scope }: { user: User; scope: Scope },
-  ): Promise<{ user: User }> {
+  async markAllSeen({
+    user,
+    scope,
+  }: {
+    user: User;
+    scope: Scope;
+  }): Promise<{ user: User }> {
     const items = await this.items.find({ scope }).toArray();
     const seen = await this.seenMarks.find({ user }).toArray();
     const seenItems = new Set(seen.map((m) => m.item));
@@ -159,9 +180,13 @@ export default class TrackingConcept {
    * **effects** returns every registered Item in `scope` for which no SeenMark
    * exists for `user`
    */
-  async _getUnread(
-    { user, scope }: { user: User; scope: Scope },
-  ): Promise<{ item: Item }[]> {
+  async _getUnread({
+    user,
+    scope,
+  }: {
+    user: User;
+    scope: Scope;
+  }): Promise<{ item: Item }[]> {
     const items = await this.items.find({ scope }).toArray();
     const seen = await this.seenMarks.find({ user }).toArray();
     const seenItems = new Set(seen.map((m) => m.item));
@@ -178,9 +203,13 @@ export default class TrackingConcept {
    * **effects** returns a single result with the number of registered Items in
    * `scope` that have no SeenMark for `user`
    */
-  async _getUnreadCount(
-    { user, scope }: { user: User; scope: Scope },
-  ): Promise<{ count: number }[]> {
+  async _getUnreadCount({
+    user,
+    scope,
+  }: {
+    user: User;
+    scope: Scope;
+  }): Promise<{ count: number }[]> {
     const unread = await this._getUnread({ user, scope });
     return [{ count: unread.length }];
   }
@@ -193,9 +222,13 @@ export default class TrackingConcept {
    * **effects** returns every registered Item in `scope` for which a SeenMark
    * exists for `user`
    */
-  async _getSeen(
-    { user, scope }: { user: User; scope: Scope },
-  ): Promise<{ item: Item }[]> {
+  async _getSeen({
+    user,
+    scope,
+  }: {
+    user: User;
+    scope: Scope;
+  }): Promise<{ item: Item }[]> {
     const items = await this.items.find({ scope }).toArray();
     const seen = await this.seenMarks.find({ user }).toArray();
     const seenItems = new Set(seen.map((m) => m.item));
@@ -212,9 +245,13 @@ export default class TrackingConcept {
    * **effects** returns a single result whose `seen` is true iff a SeenMark
    * exists for (`user`, `item`)
    */
-  async _isSeen(
-    { user, item }: { user: User; item: Item },
-  ): Promise<{ seen: boolean }[]> {
+  async _isSeen({
+    user,
+    item,
+  }: {
+    user: User;
+    item: Item;
+  }): Promise<{ seen: boolean }[]> {
     const mark = await this.seenMarks.findOne({ user, item });
     return [{ seen: mark !== null }];
   }
@@ -226,9 +263,11 @@ export default class TrackingConcept {
    *
    * **effects** returns every registered Item whose scope is `scope`
    */
-  async _getItemsInScope(
-    { scope }: { scope: Scope },
-  ): Promise<{ item: Item }[]> {
+  async _getItemsInScope({
+    scope,
+  }: {
+    scope: Scope;
+  }): Promise<{ item: Item }[]> {
     const items = await this.items.find({ scope }).toArray();
     return items.map((it) => ({ item: it._id }));
   }

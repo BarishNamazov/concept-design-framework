@@ -1,5 +1,5 @@
+import { type Db, MongoClient } from "mongodb";
 import { MongoMemoryServer } from "mongodb-memory-server";
-import { Db, MongoClient } from "mongodb";
 
 /**
  * A disposable, in-memory MongoDB instance for tests. Each call spins up a

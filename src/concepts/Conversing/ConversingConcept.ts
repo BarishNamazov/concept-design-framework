@@ -1,6 +1,6 @@
-import { Collection, Db } from "mongodb";
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
+import type { Collection, Db } from "mongodb";
 
 // Generic types of this concept.
 type Item = ID;
@@ -48,7 +48,10 @@ export default class ConversingConcept {
   private readonly conversations: Collection<ConversationDoc>;
   private readonly nodes: Collection<NodeDoc>;
 
-  constructor(private readonly db: Db, namespace = "Conversing") {
+  constructor(
+    private readonly db: Db,
+    namespace = "Conversing",
+  ) {
     this.conversations = this.db.collection(
       collectionName(namespace, "conversations"),
     );
@@ -65,9 +68,11 @@ export default class ConversingConcept {
    * given `item`, no parent, depth 0, and `createdAt` the current time; sets
    * the root of `c` to `n`; returns `c` as `conversation` and `n` as `node`
    */
-  async start(
-    { item }: { item: Item },
-  ): Promise<{ conversation: Conversation; node: Node } | { error: string }> {
+  async start({
+    item,
+  }: {
+    item: Item;
+  }): Promise<{ conversation: Conversation; node: Node } | { error: string }> {
     const existing = await this.nodes.findOne({ item });
     if (existing !== null) {
       return { error: "Item is already placed in a conversation." };
@@ -101,9 +106,13 @@ export default class ConversingConcept {
    * `parent`, the given `item`, parent set to `parent`, depth one greater than
    * `parent`'s depth, and `createdAt` the current time; returns `n` as `node`
    */
-  async reply(
-    { item, parent }: { item: Item; parent: Node },
-  ): Promise<{ node: Node } | { error: string }> {
+  async reply({
+    item,
+    parent,
+  }: {
+    item: Item;
+    parent: Node;
+  }): Promise<{ node: Node } | { error: string }> {
     const parentDoc = await this.nodes.findOne({ _id: parent });
     if (parentDoc === null) {
       return { error: "Parent node does not exist." };
@@ -134,9 +143,11 @@ export default class ConversingConcept {
    * Conversation and the Conversation now has no Nodes, removes the
    * Conversation as well; returns the removed `node`
    */
-  async remove(
-    { node }: { node: Node },
-  ): Promise<{ node: Node } | { error: string }> {
+  async remove({
+    node,
+  }: {
+    node: Node;
+  }): Promise<{ node: Node } | { error: string }> {
     const doc = await this.nodes.findOne({ _id: node });
     if (doc === null) {
       return { error: "Node does not exist." };
@@ -172,11 +183,15 @@ export default class ConversingConcept {
       createdAt: Date;
     }[]
   > {
-    const convos = await this.conversations.find({})
-      .sort({ createdAt: -1 }).toArray();
-    const roots = await this.nodes.find({
-      _id: { $in: convos.map((c) => c.root) },
-    }).toArray();
+    const convos = await this.conversations
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray();
+    const roots = await this.nodes
+      .find({
+        _id: { $in: convos.map((c) => c.root) },
+      })
+      .toArray();
     const itemByNode = new Map(roots.map((n) => [n._id, n.item]));
     return convos.map((c) => ({
       conversation: c._id,
@@ -193,9 +208,7 @@ export default class ConversingConcept {
    *
    * **effects** returns the Node (zero or one) that places the given `item`
    */
-  async _getNodeByItem(
-    { item }: { item: Item },
-  ): Promise<{ node: Node }[]> {
+  async _getNodeByItem({ item }: { item: Item }): Promise<{ node: Node }[]> {
     const doc = await this.nodes.findOne({ item });
     return doc === null ? [] : [{ node: doc._id }];
   }
@@ -207,9 +220,7 @@ export default class ConversingConcept {
    *
    * **effects** returns the item placed by `node`
    */
-  async _getItem(
-    { node }: { node: Node },
-  ): Promise<{ item: Item }[]> {
+  async _getItem({ node }: { node: Node }): Promise<{ item: Item }[]> {
     const doc = await this.nodes.findOne({ _id: node });
     return doc === null ? [] : [{ item: doc.item }];
   }
@@ -221,9 +232,11 @@ export default class ConversingConcept {
    *
    * **effects** returns the conversation of `node`
    */
-  async _getConversation(
-    { node }: { node: Node },
-  ): Promise<{ conversation: Conversation }[]> {
+  async _getConversation({
+    node,
+  }: {
+    node: Node;
+  }): Promise<{ conversation: Conversation }[]> {
     const doc = await this.nodes.findOne({ _id: node });
     return doc === null ? [] : [{ conversation: doc.conversation }];
   }
@@ -235,9 +248,11 @@ export default class ConversingConcept {
    *
    * **effects** returns the root Node of the given conversation
    */
-  async _getRoot(
-    { conversation }: { conversation: Conversation },
-  ): Promise<{ node: Node }[]> {
+  async _getRoot({
+    conversation,
+  }: {
+    conversation: Conversation;
+  }): Promise<{ node: Node }[]> {
     const doc = await this.conversations.findOne({ _id: conversation });
     return doc === null ? [] : [{ node: doc.root }];
   }
@@ -250,13 +265,17 @@ export default class ConversingConcept {
    * **effects** returns every Node in the conversation, each with its node id,
    * item, parent and depth, ordered by `createdAt` ascending
    */
-  async _getThread(
-    { conversation }: { conversation: Conversation },
-  ): Promise<
+  async _getThread({
+    conversation,
+  }: {
+    conversation: Conversation;
+  }): Promise<
     { node: Node; item: Item; parent: Node | null; depth: number }[]
   > {
-    const docs = await this.nodes.find({ conversation })
-      .sort({ createdAt: 1 }).toArray();
+    const docs = await this.nodes
+      .find({ conversation })
+      .sort({ createdAt: 1 })
+      .toArray();
     return docs.map((d) => ({
       node: d._id,
       item: d.item,
@@ -273,11 +292,11 @@ export default class ConversingConcept {
    * **effects** returns every Node whose parent is `node`, ordered by
    * `createdAt` ascending
    */
-  async _getReplies(
-    { node }: { node: Node },
-  ): Promise<{ reply: Node }[]> {
-    const docs = await this.nodes.find({ parent: node })
-      .sort({ createdAt: 1 }).toArray();
+  async _getReplies({ node }: { node: Node }): Promise<{ reply: Node }[]> {
+    const docs = await this.nodes
+      .find({ parent: node })
+      .sort({ createdAt: 1 })
+      .toArray();
     return docs.map((d) => ({ reply: d._id }));
   }
 
@@ -288,13 +307,9 @@ export default class ConversingConcept {
    *
    * **effects** returns the parent of `node` (zero results for the root)
    */
-  async _getParent(
-    { node }: { node: Node },
-  ): Promise<{ parent: Node }[]> {
+  async _getParent({ node }: { node: Node }): Promise<{ parent: Node }[]> {
     const doc = await this.nodes.findOne({ _id: node });
-    return doc === null || doc.parent === null
-      ? []
-      : [{ parent: doc.parent }];
+    return doc === null || doc.parent === null ? [] : [{ parent: doc.parent }];
   }
 
   /**
@@ -305,9 +320,7 @@ export default class ConversingConcept {
    * **effects** returns the chain of ancestor Nodes from `node`'s parent up to
    * and including the root, ordered nearest-ancestor first
    */
-  async _getAncestors(
-    { node }: { node: Node },
-  ): Promise<{ ancestor: Node }[]> {
+  async _getAncestors({ node }: { node: Node }): Promise<{ ancestor: Node }[]> {
     const ancestors: { ancestor: Node }[] = [];
     let current = await this.nodes.findOne({ _id: node });
     while (current !== null && current.parent !== null) {

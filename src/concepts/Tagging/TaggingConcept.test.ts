@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { setupTestDb } from "@utils/testing.ts";
-import TaggingConcept from "./TaggingConcept.ts";
 import type { ID } from "@utils/types.ts";
+import TaggingConcept from "./TaggingConcept.ts";
 
 const mongo = await setupTestDb();
 const Tagging = new TaggingConcept(mongo.db);
@@ -74,9 +74,7 @@ describe("Tagging", () => {
   test("removeTag requires the tag to be applied; clears empty targets", async () => {
     const t = target("a4");
     const { tag } = ok(await Tagging.createTag({ name: "x" }));
-    expect(await Tagging.removeTag({ target: t, tag })).toHaveProperty(
-      "error",
-    );
+    expect(await Tagging.removeTag({ target: t, tag })).toHaveProperty("error");
     ok(await Tagging.addTag({ target: t, tag }));
     ok(await Tagging.removeTag({ target: t, tag }));
     expect(await Tagging._getTags({ target: t })).toEqual([]);

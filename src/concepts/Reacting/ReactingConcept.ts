@@ -1,6 +1,6 @@
-import { Collection, Db } from "mongodb";
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
+import type { Collection, Db } from "mongodb";
 
 // Generic types of this concept.
 type User = ID;
@@ -35,7 +35,10 @@ interface ReactionDoc {
 export default class ReactingConcept {
   private readonly reactions: Collection<ReactionDoc>;
 
-  constructor(private readonly db: Db, namespace = "Reacting") {
+  constructor(
+    private readonly db: Db,
+    namespace = "Reacting",
+  ) {
     this.reactions = this.db.collection(collectionName(namespace, "reactions"));
   }
 
@@ -47,9 +50,15 @@ export default class ReactingConcept {
    * **effects** creates a fresh Reaction `r` with the given `user`, `target`
    * and `kind`, and `createdAt` the current time; returns `r` as `reaction`
    */
-  async react(
-    { user, target, kind }: { user: User; target: Target; kind: string },
-  ): Promise<{ reaction: Reaction } | { error: string }> {
+  async react({
+    user,
+    target,
+    kind,
+  }: {
+    user: User;
+    target: Target;
+    kind: string;
+  }): Promise<{ reaction: Reaction } | { error: string }> {
     const existing = await this.reactions.findOne({ user, target, kind });
     if (existing !== null) {
       return {
@@ -75,9 +84,15 @@ export default class ReactingConcept {
    * **effects** removes that Reaction from the state; returns the removed
    * `reaction`
    */
-  async unreact(
-    { user, target, kind }: { user: User; target: Target; kind: string },
-  ): Promise<{ reaction: Reaction } | { error: string }> {
+  async unreact({
+    user,
+    target,
+    kind,
+  }: {
+    user: User;
+    target: Target;
+    kind: string;
+  }): Promise<{ reaction: Reaction } | { error: string }> {
     const doc = await this.reactions.findOne({ user, target, kind });
     if (doc === null) {
       return { error: "No matching reaction to remove." };
@@ -94,9 +109,11 @@ export default class ReactingConcept {
    * **effects** removes every Reaction on the given `target` from the state;
    * returns `target`
    */
-  async clearTarget(
-    { target }: { target: Target },
-  ): Promise<{ target: Target }> {
+  async clearTarget({
+    target,
+  }: {
+    target: Target;
+  }): Promise<{ target: Target }> {
     await this.reactions.deleteMany({ target });
     return { target };
   }
@@ -109,9 +126,11 @@ export default class ReactingConcept {
    * **effects** returns every Reaction on the given `target`, each with its
    * reaction id, user and kind
    */
-  async _getReactionsForTarget(
-    { target }: { target: Target },
-  ): Promise<{ reaction: Reaction; user: User; kind: string }[]> {
+  async _getReactionsForTarget({
+    target,
+  }: {
+    target: Target;
+  }): Promise<{ reaction: Reaction; user: User; kind: string }[]> {
     const docs = await this.reactions.find({ target }).toArray();
     return docs.map((d) => ({ reaction: d._id, user: d.user, kind: d.kind }));
   }
@@ -124,9 +143,11 @@ export default class ReactingConcept {
    * **effects** returns every Reaction by the given `user`, each with its
    * reaction id, target and kind
    */
-  async _getReactionsByUser(
-    { user }: { user: User },
-  ): Promise<{ reaction: Reaction; target: Target; kind: string }[]> {
+  async _getReactionsByUser({
+    user,
+  }: {
+    user: User;
+  }): Promise<{ reaction: Reaction; target: Target; kind: string }[]> {
     const docs = await this.reactions.find({ user }).toArray();
     return docs.map((d) => ({
       reaction: d._id,
@@ -143,9 +164,11 @@ export default class ReactingConcept {
    * **effects** returns, for each `kind` present on the given `target`, the
    * number of Reactions of that kind
    */
-  async _countByKind(
-    { target }: { target: Target },
-  ): Promise<{ kind: string; count: number }[]> {
+  async _countByKind({
+    target,
+  }: {
+    target: Target;
+  }): Promise<{ kind: string; count: number }[]> {
     const docs = await this.reactions.find({ target }).toArray();
     const counts = new Map<string, number>();
     for (const d of docs) {
@@ -162,9 +185,15 @@ export default class ReactingConcept {
    * **effects** returns a single result whose `hasReacted` is true iff a
    * Reaction exists with the given `user`, `target` and `kind`
    */
-  async _hasReacted(
-    { user, target, kind }: { user: User; target: Target; kind: string },
-  ): Promise<{ hasReacted: boolean }[]> {
+  async _hasReacted({
+    user,
+    target,
+    kind,
+  }: {
+    user: User;
+    target: Target;
+    kind: string;
+  }): Promise<{ hasReacted: boolean }[]> {
     const doc = await this.reactions.findOne({ user, target, kind });
     return [{ hasReacted: doc !== null }];
   }

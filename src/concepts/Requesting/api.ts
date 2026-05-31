@@ -1,7 +1,6 @@
-import { actions, type ActionList, type ActionPattern } from "@engine";
-import type { Frames } from "@engine";
-import type { Mapping, Sync, Vars } from "@engine";
 import { Requesting } from "@concepts";
+import type { Frames, Mapping, Sync, Vars } from "@engine";
+import { type ActionList, type ActionPattern, actions } from "@engine";
 
 declare const requestInput: unique symbol;
 declare const responseOutput: unique symbol;
@@ -21,8 +20,8 @@ export type ActionOk<C, K extends keyof C> = Exclude<
   ApiError
 >;
 
-export type QueryRow<C, K extends keyof C> = Awaited<ReturnType<Fn<C, K>>> extends
-  readonly (infer R)[] ? R : never;
+export type QueryRow<C, K extends keyof C> =
+  Awaited<ReturnType<Fn<C, K>>> extends readonly (infer R)[] ? R : never;
 
 type RequestInputMeta<TInput extends object> = {
   readonly [requestInput]: TInput;
@@ -32,10 +31,9 @@ type ResponseOutputMeta<TOutput> = {
   readonly [responseOutput]: TOutput;
 };
 
-type EndpointSync<TInput extends object = never, TOutput = never> =
-  & Sync
-  & RequestInputMeta<TInput>
-  & ResponseOutputMeta<TOutput>;
+type EndpointSync<TInput extends object = never, TOutput = never> = Sync &
+  RequestInputMeta<TInput> &
+  ResponseOutputMeta<TOutput>;
 
 interface EndpointDefinition<
   TPath extends string,
@@ -69,7 +67,8 @@ interface EndpointDsl {
 
   Actions<const TPatterns extends readonly ActionList[]>(
     ...patterns: TPatterns
-  ): ActionPattern[] & RequestInputMeta<InputUnionFromPatterns<TPatterns>> &
+  ): ActionPattern[] &
+    RequestInputMeta<InputUnionFromPatterns<TPatterns>> &
     ResponseOutputMeta<OutputUnionFromPatterns<TPatterns>>;
 
   Sync<const TDeclaration extends EndpointSyncDeclaration>(
@@ -95,13 +94,15 @@ type ResponseBodyFromPattern<TBody extends Mapping> = Prettify<{
 }>;
 
 type InputOf<T> = T extends RequestInputMeta<infer TInput> ? TInput : never;
-type OutputOf<T> = T extends ResponseOutputMeta<infer TOutput> ? TOutput
-  : never;
+type OutputOf<T> =
+  T extends ResponseOutputMeta<infer TOutput> ? TOutput : never;
 
-type InputUnionFromPatterns<TPatterns extends readonly unknown[]> =
-  InputOf<TPatterns[number]>;
-type OutputUnionFromPatterns<TPatterns extends readonly unknown[]> =
-  OutputOf<TPatterns[number]>;
+type InputUnionFromPatterns<TPatterns extends readonly unknown[]> = InputOf<
+  TPatterns[number]
+>;
+type OutputUnionFromPatterns<TPatterns extends readonly unknown[]> = OutputOf<
+  TPatterns[number]
+>;
 
 type InputFromDeclaration<TDeclaration extends EndpointSyncDeclaration> =
   InputOf<TDeclaration["when"]>;
@@ -110,31 +111,38 @@ type OutputFromDeclaration<TDeclaration extends EndpointSyncDeclaration> =
 
 type EndpointInputFromSyncs<TSyncs extends Record<string, unknown>> =
   MergeInputUnion<InputOf<TSyncs[keyof TSyncs]>>;
-type EndpointOutputFromSyncs<TSyncs extends Record<string, unknown>> =
-  OutputOf<TSyncs[keyof TSyncs]>;
+type EndpointOutputFromSyncs<TSyncs extends Record<string, unknown>> = OutputOf<
+  TSyncs[keyof TSyncs]
+>;
 
 type KeysOfUnion<T> = T extends T ? keyof T : never;
 
-type MergeInputUnion<TInput> = [KeysOfUnion<TInput>] extends [never] ? EmptyInput
+type MergeInputUnion<TInput> = [KeysOfUnion<TInput>] extends [never]
+  ? EmptyInput
   : Prettify<{
-    [K in KeysOfUnion<TInput> & string]: string;
-  }>;
+      [K in KeysOfUnion<TInput> & string]: string;
+    }>;
 
-type UnionToIntersection<T> =
-  (T extends unknown ? (value: T) => void : never) extends
-    (value: infer I) => void ? I
-    : never;
-
-type EndpointContracts<T> = T extends EndpointDefinition<string, object, unknown>
-  ? NonNullable<T[typeof endpointContract]>
-  : T extends (...args: never[]) => unknown ? never
-  : T extends readonly unknown[] ? EndpointContracts<T[number]>
-  : T extends object ? EndpointContracts<T[keyof T]>
+type UnionToIntersection<T> = (
+  T extends unknown
+    ? (value: T) => void
+    : never
+) extends (value: infer I) => void
+  ? I
   : never;
 
-export type ContractOf<T> = Prettify<
-  UnionToIntersection<EndpointContracts<T>>
->;
+type EndpointContracts<T> =
+  T extends EndpointDefinition<string, object, unknown>
+    ? NonNullable<T[typeof endpointContract]>
+    : T extends (...args: never[]) => unknown
+      ? never
+      : T extends readonly unknown[]
+        ? EndpointContracts<T[number]>
+        : T extends object
+          ? EndpointContracts<T[keyof T]>
+          : never;
+
+export type ContractOf<T> = Prettify<UnionToIntersection<EndpointContracts<T>>>;
 
 export function defineEndpoint<
   const TPath extends string,
@@ -150,11 +158,8 @@ export function defineEndpoint<
   let activeRequest: symbol | undefined;
 
   const requestPattern = (input: Mapping, output: Mapping) =>
-    [
-      Requesting.request,
-      { path, ...input },
-      output,
-    ] as unknown as ActionList & RequestInputMeta<object>;
+    [Requesting.request, { path, ...input }, output] as unknown as ActionList &
+      RequestInputMeta<object>;
 
   const respond = (body: Mapping) =>
     [Requesting.respond, body] as unknown as ActionList &
@@ -170,12 +175,15 @@ export function defineEndpoint<
   };
 
   const Request = ((input: Mapping = {}) =>
-    requestPattern(input, { request: getActiveRequest() })) as unknown as
-    EndpointDsl["Request"];
+    requestPattern(input, {
+      request: getActiveRequest(),
+    })) as unknown as EndpointDsl["Request"];
 
   const Respond = ((body: Mapping) =>
-    respond({ request: getActiveRequest(), ...body })) as unknown as
-    EndpointDsl["Respond"];
+    respond({
+      request: getActiveRequest(),
+      ...body,
+    })) as unknown as EndpointDsl["Respond"];
 
   const Fail = ((error: unknown) => {
     const body = isPlainMapping(error) ? error : { error };
@@ -196,9 +204,7 @@ export function defineEndpoint<
         const declaration = fn(vars);
         // Every endpoint sync is request-scoped; explicit Request(...) calls
         // only add typed body fields to that same request.
-        const [requestAnchor] = actions(
-          requestPattern({}, { request }),
-        );
+        const [requestAnchor] = actions(requestPattern({}, { request }));
         return {
           ...declaration,
           when: [requestAnchor, ...declaration.when],
@@ -248,16 +254,17 @@ export function syncMap(api: Record<string, unknown>): Record<string, Sync> {
   return out;
 }
 
-function isEndpointDefinition(value: unknown): value is EndpointDefinition<
-  string,
-  object,
-  unknown
-> {
-  return value !== null && typeof value === "object" &&
-    "path" in value && "syncs" in value;
+function isEndpointDefinition(
+  value: unknown,
+): value is EndpointDefinition<string, object, unknown> {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "path" in value &&
+    "syncs" in value
+  );
 }
 
 function isPlainMapping(value: unknown): value is Mapping {
-  return value !== null && typeof value === "object" &&
-    !Array.isArray(value);
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }

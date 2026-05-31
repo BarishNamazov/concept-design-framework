@@ -1,9 +1,9 @@
 import { beforeAll, expect, test } from "bun:test";
-import { setupApp, type TestApp } from "@utils/app_testing.ts";
-import { $vars } from "../engine/vars.ts";
-import type { ActionPattern, Sync } from "@engine";
 import type { EmptyInput } from "@concepts/Requesting/api.ts";
+import type { ActionPattern, Sync } from "@engine";
+import { setupApp, type TestApp } from "@utils/app_testing.ts";
 import type { ID } from "@utils/types.ts";
+import { $vars } from "../engine/vars.ts";
 import type { ForumApi } from "./app.ts";
 
 let app: TestApp;
@@ -14,7 +14,7 @@ let respondAction: unknown;
 beforeAll(async () => {
   app = await setupApp();
   ({ api } = await import("./app.ts"));
-  const Requesting = app.concepts.Requesting as Record<string, unknown>;
+  const Requesting = app.concepts.Requesting;
   requestAction = Requesting.request;
   respondAction = Requesting.respond;
 });
@@ -31,8 +31,12 @@ function collectEndpoints(value: unknown): EndpointRuntime[] {
 }
 
 function isEndpoint(value: unknown): value is EndpointRuntime {
-  return value !== null && typeof value === "object" &&
-    "path" in value && "syncs" in value;
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "path" in value &&
+    "syncs" in value
+  );
 }
 
 test("every typed endpoint is backed by coherent Requesting syncs", () => {
@@ -62,7 +66,8 @@ test("every typed endpoint is backed by coherent Requesting syncs", () => {
 });
 
 type Equal<A, B> =
-  (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
+    ? true
     : false;
 type Expect<T extends true> = T;
 

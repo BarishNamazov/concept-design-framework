@@ -1,6 +1,6 @@
-import { Collection, Db } from "mongodb";
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
+import type { Collection, Db } from "mongodb";
 
 // Generic types of this concept.
 type Author = ID;
@@ -30,7 +30,10 @@ interface PostDoc {
 export default class PostingConcept {
   private readonly posts: Collection<PostDoc>;
 
-  constructor(private readonly db: Db, namespace = "Posting") {
+  constructor(
+    private readonly db: Db,
+    namespace = "Posting",
+  ) {
     this.posts = this.db.collection(collectionName(namespace, "posts"));
   }
 
@@ -43,9 +46,13 @@ export default class PostingConcept {
    * its content to `content`, its `createdAt` to the current time, and leaves
    * `editedAt` unset; returns `p` as `post`
    */
-  async create(
-    { author, content }: { author: Author; content: string },
-  ): Promise<{ post: Post }> {
+  async create({
+    author,
+    content,
+  }: {
+    author: Author;
+    content: string;
+  }): Promise<{ post: Post }> {
     const post = freshID() as Post;
     await this.posts.insertOne({
       _id: post,
@@ -70,9 +77,13 @@ export default class PostingConcept {
    *
    * **effects** returns an explanatory `error`; state is unchanged
    */
-  async edit(
-    { post, content }: { post: Post; content: string },
-  ): Promise<{ post: Post } | { error: string }> {
+  async edit({
+    post,
+    content,
+  }: {
+    post: Post;
+    content: string;
+  }): Promise<{ post: Post } | { error: string }> {
     const { matchedCount } = await this.posts.updateOne(
       { _id: post },
       { $set: { content, editedAt: new Date() } },
@@ -97,9 +108,11 @@ export default class PostingConcept {
    *
    * **effects** returns an explanatory `error`; state is unchanged
    */
-  async delete(
-    { post }: { post: Post },
-  ): Promise<{ post: Post } | { error: string }> {
+  async delete({
+    post,
+  }: {
+    post: Post;
+  }): Promise<{ post: Post } | { error: string }> {
     const { deletedCount } = await this.posts.deleteOne({ _id: post });
     if (deletedCount === 0) {
       return { error: "Post not found." };
@@ -115,9 +128,7 @@ export default class PostingConcept {
    * **effects** returns the author, content, createdAt and editedAt of the given
    * Post as a single record
    */
-  async _getPost(
-    { post }: { post: Post },
-  ): Promise<
+  async _getPost({ post }: { post: Post }): Promise<
     {
       post: {
         author: Author;
@@ -128,14 +139,18 @@ export default class PostingConcept {
     }[]
   > {
     const doc = await this.posts.findOne({ _id: post });
-    return doc === null ? [] : [{
-      post: {
-        author: doc.author,
-        content: doc.content,
-        createdAt: doc.createdAt,
-        editedAt: doc.editedAt ?? null,
-      },
-    }];
+    return doc === null
+      ? []
+      : [
+          {
+            post: {
+              author: doc.author,
+              content: doc.content,
+              createdAt: doc.createdAt,
+              editedAt: doc.editedAt ?? null,
+            },
+          },
+        ];
   }
 
   /**
@@ -145,9 +160,7 @@ export default class PostingConcept {
    *
    * **effects** returns the content of the given Post
    */
-  async _getContent(
-    { post }: { post: Post },
-  ): Promise<{ content: string }[]> {
+  async _getContent({ post }: { post: Post }): Promise<{ content: string }[]> {
     const doc = await this.posts.findOne({ _id: post });
     return doc === null ? [] : [{ content: doc.content }];
   }
@@ -159,9 +172,11 @@ export default class PostingConcept {
    *
    * **effects** returns every Post whose author is `author`
    */
-  async _getByAuthor(
-    { author }: { author: Author },
-  ): Promise<{ post: Post }[]> {
+  async _getByAuthor({
+    author,
+  }: {
+    author: Author;
+  }): Promise<{ post: Post }[]> {
     const docs = await this.posts.find({ author }).toArray();
     return docs.map((doc) => ({ post: doc._id }));
   }
@@ -173,9 +188,7 @@ export default class PostingConcept {
    *
    * **effects** returns the author of the given Post
    */
-  async _getAuthor(
-    { post }: { post: Post },
-  ): Promise<{ author: Author }[]> {
+  async _getAuthor({ post }: { post: Post }): Promise<{ author: Author }[]> {
     const doc = await this.posts.findOne({ _id: post });
     return doc === null ? [] : [{ author: doc.author }];
   }
@@ -188,9 +201,7 @@ export default class PostingConcept {
    * **effects** returns a single result whose `exists` is true iff a Post with
    * the given id exists
    */
-  async _exists(
-    { post }: { post: Post },
-  ): Promise<{ exists: boolean }[]> {
+  async _exists({ post }: { post: Post }): Promise<{ exists: boolean }[]> {
     const doc = await this.posts.findOne({ _id: post });
     return [{ exists: doc !== null }];
   }

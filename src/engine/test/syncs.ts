@@ -1,6 +1,6 @@
 /* Sync declarations for tests, designed to be clean + declarative */
 import { actions, type Frames, type Vars } from "../mod.ts";
-import {
+import type {
   ButtonConcept,
   CounterConcept,
   ListConcept,
@@ -16,7 +16,7 @@ export function makeSyncs(
   Recorder: RecorderConcept,
 ) {
   // Simple: button click increments counter
-  const ButtonIncrements = ({}: Vars) => ({
+  const ButtonIncrements = (_vars: Vars) => ({
     when: actions([Button.clicked, { kind: "inc" }, {}]),
     then: actions([Counter.increment, {}]),
   });
@@ -38,12 +38,10 @@ export function makeSyncs(
   const FanoutOverList = ({ value, tag }: Vars) => ({
     when: actions([Button.clicked, { kind: "fanout" }, {}]),
     where: (frames: Frames) =>
-      frames
-        .query(List._items, {}, { value })
-        .map((frame) => ({
-          ...frame,
-          [tag]: `v:${String(frame[value])}`,
-        })),
+      frames.query(List._items, {}, { value }).map((frame) => ({
+        ...frame,
+        [tag]: `v:${String(frame[value])}`,
+      })),
     then: actions([Recorder.record, { tag }]),
   });
 
@@ -51,9 +49,13 @@ export function makeSyncs(
   const FanoutOverListAsync = ({ value, tag }: Vars) => ({
     when: actions([Button.clicked, { kind: "fanout-async" }, {}]),
     where: async (frames: Frames) => {
-      const withValues = await frames.queryAsync(List._itemsAsync, {}, {
-        value,
-      });
+      const withValues = await frames.queryAsync(
+        List._itemsAsync,
+        {},
+        {
+          value,
+        },
+      );
       return withValues.map((frame) => ({
         ...frame,
         [tag]: `v:${String(frame[value])}`,

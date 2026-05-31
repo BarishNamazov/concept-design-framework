@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { setupTestDb } from "@utils/testing.ts";
-import ConversingConcept from "./ConversingConcept.ts";
 import type { ID } from "@utils/types.ts";
+import ConversingConcept from "./ConversingConcept.ts";
 
 const mongo = await setupTestDb();
 const Conversing = new ConversingConcept(mongo.db);
@@ -125,10 +125,12 @@ describe("Conversing", () => {
   test("removing the last node removes the conversation", async () => {
     const root = ok(await Conversing.start({ item: item("solo") }));
     ok(await Conversing.remove({ node: root.node }));
-    expect(await Conversing._getRoot({ conversation: root.conversation }))
-      .toEqual([]);
-    expect(await Conversing._getThread({ conversation: root.conversation }))
-      .toEqual([]);
+    expect(
+      await Conversing._getRoot({ conversation: root.conversation }),
+    ).toEqual([]);
+    expect(
+      await Conversing._getThread({ conversation: root.conversation }),
+    ).toEqual([]);
   });
 
   test("queries: node lookups by item, item by node, root, parent", async () => {
@@ -142,8 +144,9 @@ describe("Conversing", () => {
     expect(await Conversing._getItem({ node: child.node })).toEqual([
       { item: item("q-1") },
     ]);
-    expect(await Conversing._getRoot({ conversation: root.conversation }))
-      .toEqual([{ node: root.node }]);
+    expect(
+      await Conversing._getRoot({ conversation: root.conversation }),
+    ).toEqual([{ node: root.node }]);
     expect(await Conversing._getParent({ node: child.node })).toEqual([
       { parent: root.node },
     ]);

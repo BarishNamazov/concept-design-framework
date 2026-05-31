@@ -25,36 +25,22 @@ export type { Frame, Mapping } from "./types.ts";
 
 /** Infers the new frame keys contributed by a query's `output` mapping. */
 type ExtractSymbolMappings<TOutputMapping, TFunctionOutput> = {
-  [
-    K in keyof TOutputMapping as TOutputMapping[K] extends symbol
-      ? TOutputMapping[K]
-      : never
-  ]: K extends keyof TFunctionOutput ? TFunctionOutput[K] : never;
+  [K in keyof TOutputMapping as TOutputMapping[K] extends symbol
+    ? TOutputMapping[K]
+    : never]: K extends keyof TFunctionOutput ? TFunctionOutput[K] : never;
 };
 
 export interface Frames<TFrame extends Frame = Frame> {
   map<U extends Frame>(
-    callbackfn: (
-      value: TFrame,
-      index: number,
-      array: TFrame[],
-    ) => U,
+    callbackfn: (value: TFrame, index: number, array: TFrame[]) => U,
     thisArg?: unknown,
   ): Frames<U>;
   map<U>(
-    callbackfn: (
-      value: TFrame,
-      index: number,
-      array: TFrame[],
-    ) => U,
+    callbackfn: (value: TFrame, index: number, array: TFrame[]) => U,
     thisArg?: unknown,
   ): U[];
   filter<S extends TFrame>(
-    predicate: (
-      value: TFrame,
-      index: number,
-      array: TFrame[],
-    ) => value is S,
+    predicate: (value: TFrame, index: number, array: TFrame[]) => value is S,
     thisArg?: unknown,
   ): Frames<S>;
   filter(
@@ -80,19 +66,11 @@ export interface Frames<TFrame extends Frame = Frame> {
   ): U[];
 
   find<S extends TFrame>(
-    predicate: (
-      value: TFrame,
-      index: number,
-      array: TFrame[],
-    ) => value is S,
+    predicate: (value: TFrame, index: number, array: TFrame[]) => value is S,
     thisArg?: unknown,
   ): S | undefined;
   find(
-    predicate: (
-      value: TFrame,
-      index: number,
-      array: TFrame[],
-    ) => unknown,
+    predicate: (value: TFrame, index: number, array: TFrame[]) => unknown,
     thisArg?: unknown,
   ): TFrame | undefined;
 
@@ -111,10 +89,12 @@ export interface Frames<TFrame extends Frame = Frame> {
 /** Methods that own their return value and must NOT be auto-rewrapped. */
 const UNWRAPPED_METHODS = new Set<PropertyKey>(["query", "queryAsync"]);
 
+// biome-ignore lint/suspicious/noUnsafeDeclarationMerging: The interface overloads Array methods so fluent frame transforms keep their narrowed return types.
 export class Frames<TFrame extends Frame = Frame> extends Array<TFrame> {
   constructor(...frames: TFrame[]) {
     super(...frames);
     // Re-wrap array-returning methods so the fluent API stays a `Frames`.
+    // biome-ignore lint/correctness/noConstructorReturn: Returning this proxy keeps built-in Array methods closed over Frames.
     return new Proxy(this, {
       get(target, prop, receiver) {
         const value = Reflect.get(target, prop, receiver);
@@ -191,9 +171,8 @@ export class Frames<TFrame extends Frame = Frame> extends Array<TFrame> {
     TInputMapping extends Record<string, unknown>,
     TOutputMapping extends Record<string, symbol>,
     TFunctionOutput = ReturnType<TFunction> extends (infer U)[] ? U : never,
-    TNewFrame extends Frame =
-      & TFrame
-      & ExtractSymbolMappings<TOutputMapping, TFunctionOutput>,
+    TNewFrame extends Frame = TFrame &
+      ExtractSymbolMappings<TOutputMapping, TFunctionOutput>,
   >(
     f: TFunction,
     input: TInputMapping,
@@ -203,11 +182,11 @@ export class Frames<TFrame extends Frame = Frame> extends Array<TFrame> {
     TFunction extends (...args: never[]) => Promise<unknown[]>,
     TInputMapping extends Record<string, unknown>,
     TOutputMapping extends Record<string, symbol>,
-    TFunctionOutput = Awaited<ReturnType<TFunction>> extends (infer U)[] ? U
+    TFunctionOutput = Awaited<ReturnType<TFunction>> extends (infer U)[]
+      ? U
       : never,
-    TNewFrame extends Frame =
-      & TFrame
-      & ExtractSymbolMappings<TOutputMapping, TFunctionOutput>,
+    TNewFrame extends Frame = TFrame &
+      ExtractSymbolMappings<TOutputMapping, TFunctionOutput>,
   >(
     f: TFunction,
     input: TInputMapping,
@@ -255,11 +234,11 @@ export class Frames<TFrame extends Frame = Frame> extends Array<TFrame> {
     TFunction extends (...args: never[]) => Promise<unknown[]>,
     TInputMapping extends Record<string, unknown>,
     TOutputMapping extends Record<string, symbol>,
-    TFunctionOutput = Awaited<ReturnType<TFunction>> extends (infer U)[] ? U
+    TFunctionOutput = Awaited<ReturnType<TFunction>> extends (infer U)[]
+      ? U
       : never,
-    TNewFrame extends Frame =
-      & TFrame
-      & ExtractSymbolMappings<TOutputMapping, TFunctionOutput>,
+    TNewFrame extends Frame = TFrame &
+      ExtractSymbolMappings<TOutputMapping, TFunctionOutput>,
   >(
     f: TFunction,
     input: TInputMapping,

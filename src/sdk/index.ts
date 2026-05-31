@@ -1,5 +1,5 @@
 /** Self-contained, generic Requesting client SDK. */
-export { createClient } from "./client.ts";
+
 export type {
   ApiError,
   Client,
@@ -10,3 +10,4 @@ export type {
   HeadersOption,
   IndexedClient,
 } from "./client.ts";
+export { createClient } from "./client.ts";

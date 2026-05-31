@@ -20,6 +20,8 @@
  *    the sync. Matching only ever considers records within the firing action's
  *    flow, which keeps independent invocations from cross-matching.
  */
+
+import type { InstrumentedAction } from "./types.ts";
 import { uuid } from "./util.ts";
 
 /**
@@ -31,7 +33,7 @@ import { uuid } from "./util.ts";
  */
 export interface ActionRecord {
   id?: string;
-  action: Function;
+  action: InstrumentedAction;
   concept: object;
   input: Record<string, unknown>;
   output?: Record<string, unknown>;
@@ -65,9 +67,9 @@ export class ActionConcept {
   }
 
   /** Attach an action's output once it has resolved. */
-  invoked(
-    { id, output }: { id: string; output: Record<string, unknown> },
-  ): { id: string } {
+  invoked({ id, output }: { id: string; output: Record<string, unknown> }): {
+    id: string;
+  } {
     const action = this.actions.get(id);
     if (action === undefined) {
       throw new Error(`Action with id ${id} not found.`);

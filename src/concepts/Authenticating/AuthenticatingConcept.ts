@@ -1,6 +1,6 @@
-import { Collection, Db } from "mongodb";
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
+import type { Collection, Db } from "mongodb";
 
 // Generic types of this concept.
 type User = ID;
@@ -27,7 +27,10 @@ interface UserDoc {
 export default class AuthenticatingConcept {
   private readonly users: Collection<UserDoc>;
 
-  constructor(private readonly db: Db, namespace = "Authenticating") {
+  constructor(
+    private readonly db: Db,
+    namespace = "Authenticating",
+  ) {
     this.users = this.db.collection(collectionName(namespace, "users"));
   }
 
@@ -39,9 +42,13 @@ export default class AuthenticatingConcept {
    * **effects** creates a fresh User `u`; sets the username of `u` to `username`
    * and the password of `u` to `password`; returns `u` as `user`
    */
-  async register(
-    { username, password }: { username: string; password: string },
-  ): Promise<{ user: User } | { error: string }> {
+  async register({
+    username,
+    password,
+  }: {
+    username: string;
+    password: string;
+  }): Promise<{ user: User } | { error: string }> {
     const existing = await this.users.findOne({ username });
     if (existing !== null) {
       return { error: `Username "${username}" is already taken.` };
@@ -59,9 +66,13 @@ export default class AuthenticatingConcept {
    *
    * **effects** none; returns the matching User as `user`
    */
-  async authenticate(
-    { username, password }: { username: string; password: string },
-  ): Promise<{ user: User } | { error: string }> {
+  async authenticate({
+    username,
+    password,
+  }: {
+    username: string;
+    password: string;
+  }): Promise<{ user: User } | { error: string }> {
     const doc = await this.users.findOne({ username });
     if (doc === null || doc.password !== password) {
       return { error: "Invalid username or password." };
@@ -76,20 +87,25 @@ export default class AuthenticatingConcept {
    *
    * **effects** sets the password of `user` to `newPassword`; returns `user`
    */
-  async changePassword(
-    { user, oldPassword, newPassword }: {
-      user: User;
-      oldPassword: string;
-      newPassword: string;
-    },
-  ): Promise<{ user: User } | { error: string }> {
+  async changePassword({
+    user,
+    oldPassword,
+    newPassword,
+  }: {
+    user: User;
+    oldPassword: string;
+    newPassword: string;
+  }): Promise<{ user: User } | { error: string }> {
     const doc = await this.users.findOne({ _id: user });
     if (doc === null || doc.password !== oldPassword) {
       return { error: "User not found or incorrect password." };
     }
-    await this.users.updateOne({ _id: user }, {
-      $set: { password: newPassword },
-    });
+    await this.users.updateOne(
+      { _id: user },
+      {
+        $set: { password: newPassword },
+      },
+    );
     return { user };
   }
 
@@ -101,9 +117,13 @@ export default class AuthenticatingConcept {
    *
    * **effects** sets the username of `user` to `username`; returns `user`
    */
-  async changeUsername(
-    { user, username }: { user: User; username: string },
-  ): Promise<{ user: User } | { error: string }> {
+  async changeUsername({
+    user,
+    username,
+  }: {
+    user: User;
+    username: string;
+  }): Promise<{ user: User } | { error: string }> {
     const doc = await this.users.findOne({ _id: user });
     if (doc === null) {
       return { error: "User not found." };
@@ -124,9 +144,11 @@ export default class AuthenticatingConcept {
    * **effects** removes `user` and its username and password from the state;
    * returns `user`
    */
-  async unregister(
-    { user }: { user: User },
-  ): Promise<{ user: User } | { error: string }> {
+  async unregister({
+    user,
+  }: {
+    user: User;
+  }): Promise<{ user: User } | { error: string }> {
     const { deletedCount } = await this.users.deleteOne({ _id: user });
     if (deletedCount === 0) {
       return { error: "User not found." };
@@ -141,9 +163,7 @@ export default class AuthenticatingConcept {
    *
    * **effects** returns the username of `user`
    */
-  async _getById(
-    { user }: { user: User },
-  ): Promise<{ username: string }[]> {
+  async _getById({ user }: { user: User }): Promise<{ username: string }[]> {
     const doc = await this.users.findOne({ _id: user });
     return doc === null ? [] : [{ username: doc.username }];
   }
@@ -155,9 +175,11 @@ export default class AuthenticatingConcept {
    *
    * **effects** returns the User (zero or one) whose username equals `username`
    */
-  async _getByUsername(
-    { username }: { username: string },
-  ): Promise<{ user: User }[]> {
+  async _getByUsername({
+    username,
+  }: {
+    username: string;
+  }): Promise<{ user: User }[]> {
     const doc = await this.users.findOne({ username });
     return doc === null ? [] : [{ user: doc._id }];
   }
@@ -170,9 +192,11 @@ export default class AuthenticatingConcept {
    * **effects** returns a single result whose `exists` is true iff some User has
    * the given `username`
    */
-  async _existsByUsername(
-    { username }: { username: string },
-  ): Promise<{ exists: boolean }[]> {
+  async _existsByUsername({
+    username,
+  }: {
+    username: string;
+  }): Promise<{ exists: boolean }[]> {
     const doc = await this.users.findOne({ username });
     return [{ exists: doc !== null }];
   }

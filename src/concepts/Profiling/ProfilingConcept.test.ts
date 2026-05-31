@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { setupTestDb } from "@utils/testing.ts";
-import ProfilingConcept from "./ProfilingConcept.ts";
 import type { ID } from "@utils/types.ts";
+import ProfilingConcept from "./ProfilingConcept.ts";
 
 const mongo = await setupTestDb();
 const Profiling = new ProfilingConcept(mongo.db);

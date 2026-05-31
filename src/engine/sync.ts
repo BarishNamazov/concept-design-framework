@@ -26,18 +26,20 @@
  * `then` inherit the triggering action's flow, and matching is restricted to a
  * single flow so independent invocations never cross-match.
  */
-import { $vars } from "./vars.ts";
-import { inspect, inspectCustom, uuid } from "./util.ts";
+
 import { ActionConcept, type ActionRecord } from "./actions.ts";
 import { Frames } from "./frames.ts";
 import type {
   ActionList,
   ActionPattern,
+  AnyAction,
   Frame,
   InstrumentedAction,
   SyncFunctionMap,
   Synchronization,
 } from "./types.ts";
+import { inspect, inspectCustom, uuid } from "./util.ts";
+import { $vars } from "./vars.ts";
 
 /**
  * Reserved frame keys carried alongside the user's logic variables:
@@ -96,8 +98,10 @@ export class SyncConcept {
   /** Current verbosity. */
   public logging = Logging.TRACE;
   /** Memoizes bound/instrumented wrappers per concept instance. */
-  private boundActionsByConcept: WeakMap<object, Map<Function, InstrumentedAction>> =
-    new WeakMap();
+  private boundActionsByConcept: WeakMap<
+    object,
+    Map<AnyAction, InstrumentedAction>
+  > = new WeakMap();
 
   constructor(actionConcept: ActionConcept = new ActionConcept()) {
     this.Action = actionConcept;
@@ -141,7 +145,8 @@ export class SyncConcept {
       let frames = matched;
       if (sync.where !== undefined) {
         const maybeFrames = sync.where(frames);
-        frames = maybeFrames instanceof Promise ? await maybeFrames : maybeFrames;
+        frames =
+          maybeFrames instanceof Promise ? await maybeFrames : maybeFrames;
         this.logFrames(`After processing \`where\`:`, frames);
       }
       await this.addThen(frames, sync, actionSymbols);
@@ -223,7 +228,10 @@ export class SyncConcept {
       if (this.logging === Logging.VERBOSE) {
         console.log(`${sync.sync}: THEN ${thenAction}`, thenRecord);
       }
-      await thenAction(thenRecord);
+      const runThen = thenAction as unknown as (
+        args: ActionArguments,
+      ) => Promise<unknown>;
+      await runThen(thenRecord);
     }
   }
 
@@ -239,7 +247,9 @@ export class SyncConcept {
       }
       const action = this.Action._getById(id);
       if (action?.synced === undefined) {
-        throw new Error(`Action ${String(action)} missing or missing synced Map.`);
+        throw new Error(
+          `Action ${String(action)} missing or missing synced Map.`,
+        );
       }
       return action;
     });
@@ -300,7 +310,9 @@ export class SyncConcept {
     newFrame = unified;
 
     if (when.output === undefined) {
-      throw new Error(`When pattern: ${String(when)} is missing output pattern.`);
+      throw new Error(
+        `When pattern: ${String(when)} is missing output pattern.`,
+      );
     }
     if (record.output === undefined) return undefined;
     const unifiedOut = this.unifyPattern(record.output, when.output, newFrame);
@@ -364,9 +376,9 @@ export class SyncConcept {
         ? boundAction.name.slice("bound ".length)
         : "UNDEFINED";
       console.log(
-        `\n${conceptName}.${boundName} ${inspect(record.input)} => ${
-          inspect(record.output)
-        }\n`,
+        `\n${conceptName}.${boundName} ${inspect(record.input)} => ${inspect(
+          record.output,
+        )}\n`,
       );
     }
   }
@@ -394,18 +406,19 @@ export class SyncConcept {
       get(target, prop, receiver) {
         const value = Reflect.get(target, prop, receiver);
         if (typeof value !== "function") return value;
+        const actionKey = value as AnyAction;
 
         // Queries: bound, but never instrumented.
         if (value.name.startsWith("_")) {
-          const cached = boundActions.get(value);
+          const cached = boundActions.get(actionKey);
           if (cached !== undefined) return cached;
           const bound = value.bind(concept) as InstrumentedAction;
-          boundActions.set(value, bound);
+          boundActions.set(actionKey, bound);
           return bound;
         }
 
         // Actions: instrument once, then memoize.
-        let instrumented = boundActions.get(value);
+        let instrumented = boundActions.get(actionKey);
         if (instrumented !== undefined) return instrumented;
 
         const action = value.bind(concept);
@@ -440,7 +453,7 @@ export class SyncConcept {
           };
 
           Action.invoke(actionRecord);
-          const output = await action(input);
+          const output = (await action(input)) as Record<string, unknown>;
           Action.invoked({ id, output });
           await synchronize({ ...actionRecord, output });
           return output;
@@ -456,7 +469,7 @@ export class SyncConcept {
           configurable: true,
         });
 
-        boundActions.set(value, instrumented);
+        boundActions.set(actionKey, instrumented);
         return instrumented;
       },
     });

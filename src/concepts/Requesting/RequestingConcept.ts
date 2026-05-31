@@ -1,6 +1,6 @@
-import { Collection, Db } from "mongodb";
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
+import type { Collection, Db } from "mongodb";
 
 /**
  * # Requesting concept configuration
@@ -61,7 +61,10 @@ export default class RequestingConcept {
   private readonly pending: Map<RequestID, PendingRequest> = new Map();
   private readonly timeout: number;
 
-  constructor(private readonly db: Db, namespace = "Requesting") {
+  constructor(
+    private readonly db: Db,
+    namespace = "Requesting",
+  ) {
     this.requests = this.db.collection(collectionName(namespace, "requests"));
     this.timeout = REQUESTING_TIMEOUT;
     console.log(
@@ -77,9 +80,10 @@ export default class RequestingConcept {
    *
    * **effects** creates a new Request `r`; sets the input of `r` to be the path and all other input parameters; returns `r` as `request`
    */
-  async request(
-    inputs: { path: string; [key: string]: unknown },
-  ): Promise<{ request: RequestID }> {
+  async request(inputs: {
+    path: string;
+    [key: string]: unknown;
+  }): Promise<{ request: RequestID }> {
     const requestId = freshID() as RequestID;
     const requestDoc: RequestDoc = {
       _id: requestId,
@@ -110,9 +114,13 @@ export default class RequestingConcept {
    *
    * **effects** sets the response of the given Request to the provided key-value pairs.
    */
-  async respond(
-    { request, ...response }: { request: RequestID; [key: string]: unknown },
-  ): Promise<{ request: string }> {
+  async respond({
+    request,
+    ...response
+  }: {
+    request: RequestID;
+    [key: string]: unknown;
+  }): Promise<{ request: string }> {
     const pendingRequest = this.pending.get(request);
     if (pendingRequest) {
       // Resolve the promise for any waiting `_awaitResponse` call.
@@ -132,9 +140,11 @@ export default class RequestingConcept {
    *
    * **effects** returns the response associated with the given request, waiting if necessary up to a configured timeout.
    */
-  async _awaitResponse(
-    { request }: { request: RequestID },
-  ): Promise<{ response: unknown }[]> {
+  async _awaitResponse({
+    request,
+  }: {
+    request: RequestID;
+  }): Promise<{ response: unknown }[]> {
     const pendingRequest = this.pending.get(request);
 
     if (!pendingRequest) {
@@ -145,7 +155,7 @@ export default class RequestingConcept {
       );
     }
 
-    let timeoutId: ReturnType<typeof setTimeout>;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(
         () =>
@@ -165,7 +175,7 @@ export default class RequestingConcept {
       return [{ response }];
     } finally {
       // Clean up regardless of outcome.
-      clearTimeout(timeoutId!);
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
       this.pending.delete(request);
     }
   }
@@ -200,7 +210,10 @@ function json(data: unknown, status = 200): Response {
  * or malformed. The Requesting route uses `undefined` as the fallback so it can
  * reject invalid or missing object bodies with a 400.
  */
-async function readJsonBody<T>(req: Request, fallback: T): Promise<unknown | T> {
+async function readJsonBody<T>(
+  req: Request,
+  fallback: T,
+): Promise<unknown | T> {
   try {
     const text = await req.text();
     if (text.trim() === "") return fallback;
@@ -222,8 +235,13 @@ async function readJsonBody<T>(req: Request, fallback: T): Promise<unknown | T> 
  *   environment variable (default 8000) is used, preserving existing behavior.
  * @returns The `Bun.serve` server instance.
  */
+type RequestingServerConcepts = { Requesting: RequestingConcept } & Record<
+  string,
+  unknown
+>;
+
 export function startRequestingServer(
-  concepts: Record<string, any>,
+  concepts: RequestingServerConcepts,
   options: { port?: number } = {},
 ) {
   const { Requesting } = concepts;

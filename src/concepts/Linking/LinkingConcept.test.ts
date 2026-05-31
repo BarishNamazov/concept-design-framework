@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
-import { setupTestDb } from "@utils/testing.ts";
 import { freshID } from "@utils/database.ts";
+import { setupTestDb } from "@utils/testing.ts";
 import type { ID } from "@utils/types.ts";
 import LinkingConcept from "./LinkingConcept.ts";
 
@@ -32,9 +32,7 @@ describe("Linking", () => {
     expect(await Linking._getForwardLinks({ source: a })).toEqual([
       { target: b },
     ]);
-    expect(await Linking._getBacklinks({ target: b })).toEqual([
-      { source: a },
-    ]);
+    expect(await Linking._getBacklinks({ target: b })).toEqual([{ source: a }]);
 
     ok(await Linking.unlink({ source: a, target: b }));
     expect(await Linking._getForwardLinks({ source: a })).toEqual([]);

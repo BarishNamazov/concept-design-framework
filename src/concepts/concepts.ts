@@ -1,6 +1,6 @@
-import type { Db } from "mongodb";
 import { SyncConcept } from "@engine";
 import { getDb } from "@utils/database.ts";
+import type { Db } from "mongodb";
 import AuthenticatingConcept from "./Authenticating/AuthenticatingConcept.ts";
 import ConversingConcept from "./Conversing/ConversingConcept.ts";
 import FormattingConcept from "./Formatting/FormattingConcept.ts";

@@ -17,7 +17,6 @@ import {
   type TestApp,
   type TestServer,
 } from "@utils/app_testing.ts";
-import { createClient } from "./index.ts";
 import type {
   ApiContract,
   ApiError,
@@ -26,9 +25,8 @@ import type {
   Result,
   ThreadNode,
 } from "../syncs/app.ts";
-import type {
-  Client,
-} from "./index.ts";
+import type { Client } from "./index.ts";
+import { createClient } from "./index.ts";
 
 let app: TestApp;
 let server: TestServer;
@@ -63,7 +61,11 @@ function ok<T>(result: T | ApiError): T {
 /** Registers a user and logs them in, returning their session and id. */
 async function makeUser(username: string) {
   const reg = ok(
-    await api.auth.register({ username, password: "pw", displayName: username }),
+    await api.auth.register({
+      username,
+      password: "pw",
+      displayName: username,
+    }),
   );
   const login = ok(await api.auth.login({ username, password: "pw" }));
   return { user: reg.user, session: login.session };
@@ -82,7 +84,9 @@ describe("auth flows", () => {
     );
     expect(reg.user).toBeDefined();
 
-    const login = ok(await api.auth.login({ username: "alice", password: "pw" }));
+    const login = ok(
+      await api.auth.login({ username: "alice", password: "pw" }),
+    );
     expect(login.session).toBeDefined();
     expect(login.user).toBe(reg.user);
 
@@ -139,9 +143,7 @@ describe("thread & post flows", () => {
   test("create renders markdown, reply, ordered thread, get, edit, delete", async () => {
     const { user, session } = await makeUser("dave");
 
-    const root = ok(
-      await api.threads.create({ session, content: "# Title" }),
-    );
+    const root = ok(await api.threads.create({ session, content: "# Title" }));
     expect(root.post).toBeDefined();
     expect(root.conversation).toBeDefined();
     expect(root.node).toBeDefined();
@@ -250,9 +252,7 @@ describe("reaction flows", () => {
 describe("tag flows", () => {
   test("create, add, forTarget, targets, remove", async () => {
     const { session } = await makeUser("heidi");
-    const root = ok(
-      await api.threads.create({ session, content: "tag me" }),
-    );
+    const root = ok(await api.threads.create({ session, content: "tag me" }));
 
     const tag = ok(await api.tags.create({ session, name: "news" }));
     ok(await api.tags.add({ session, target: root.post, tag: tag.tag }));
@@ -312,7 +312,9 @@ describe("unread flows", () => {
       await api.unread.markAllSeen({ session: reader.session, scope }),
     );
     expect(all.user).toBe(reader.user);
-    const after = ok(await api.unread.count({ session: reader.session, scope }));
+    const after = ok(
+      await api.unread.count({ session: reader.session, scope }),
+    );
     expect(after.count).toBe(0);
   });
 });
@@ -345,7 +347,7 @@ describe("link flows", () => {
 // --- Indexed call style ----------------------------------------------------
 
 describe("indexed call style", () => {
-  test("client[\"/path\"](input) works identically to the grouped style", async () => {
+  test('client["/path"](input) works identically to the grouped style', async () => {
     const reg = ok(
       await api["/auth/register"]({
         username: "leo",
@@ -368,7 +370,8 @@ describe("indexed call style", () => {
 // `ApiContract`. `Equal`/`Expect` is the standard exact-type-equality trick.
 
 type Equal<A, B> =
-  (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
+    ? true
     : false;
 type Expect<T extends true> = T;
 

@@ -165,7 +165,10 @@ async function registerAndLogin(
     password: "pw",
     displayName,
   });
-  const { session } = await app.send("/auth/login", { username, password: "pw" });
+  const { session } = await app.send("/auth/login", {
+    username,
+    password: "pw",
+  });
   return { user, session };
 }
 
@@ -187,7 +190,10 @@ describe("profile synchronizations", () => {
     });
     expect(dn.user).toBe(user);
 
-    const bio = await app.send("/profiles/setBio", { session, bio: "hi there" });
+    const bio = await app.send("/profiles/setBio", {
+      session,
+      bio: "hi there",
+    });
     expect(bio.user).toBe(user);
 
     const av = await app.send("/profiles/setAvatar", {
@@ -460,22 +466,28 @@ describe("post edit / delete synchronizations", () => {
       session: author.session,
       name: "topic",
     });
-    await app.send("/tags/add", { session: author.session, target, tag: tag.tag });
+    await app.send("/tags/add", {
+      session: author.session,
+      target,
+      tag: tag.tag,
+    });
 
     // Sanity: everything is in place before the delete.
     expect(
       (await app.send("/reactions/forTarget", { target })).reactions,
     ).toHaveLength(1);
-    expect((await app.send("/tags/forTarget", { target })).tags).toHaveLength(1);
-    expect(
-      (await app.send("/tags/targets", { tag: tag.tag })).targets,
-    ).toEqual([{ target }]);
+    expect((await app.send("/tags/forTarget", { target })).tags).toHaveLength(
+      1,
+    );
+    expect((await app.send("/tags/targets", { tag: tag.tag })).targets).toEqual(
+      [{ target }],
+    );
     expect(
       (await app.send("/links/forward", { source: target })).targets,
     ).toEqual([{ target: root.post }]);
-    expect(
-      await app.concepts.Formatting._getRendered({ target }),
-    ).toHaveLength(1);
+    expect(await app.concepts.Formatting._getRendered({ target })).toHaveLength(
+      1,
+    );
     expect(
       await app.concepts.Conversing._getNodeByItem({ item: target }),
     ).toHaveLength(1);
@@ -498,17 +510,15 @@ describe("post edit / delete synchronizations", () => {
     ).toEqual([]);
     // Tagging.clearTarget cleared the tag application (both directions).
     expect((await app.send("/tags/forTarget", { target })).tags).toEqual([]);
-    expect(
-      (await app.send("/tags/targets", { tag: tag.tag })).targets,
-    ).toEqual([]);
+    expect((await app.send("/tags/targets", { tag: tag.tag })).targets).toEqual(
+      [],
+    );
     // Linking.clearLinks cleared the forward links from the deleted post.
     expect(
       (await app.send("/links/forward", { source: target })).targets,
     ).toEqual([]);
     // Formatting.clear removed the rendered source.
-    expect(
-      await app.concepts.Formatting._getRendered({ target }),
-    ).toEqual([]);
+    expect(await app.concepts.Formatting._getRendered({ target })).toEqual([]);
     // Conversing.remove deleted the node placing the post.
     expect(
       await app.concepts.Conversing._getNodeByItem({ item: target }),
@@ -521,8 +531,9 @@ describe("post edit / delete synchronizations", () => {
     expect(after.count).toBe(1);
 
     // The root post is untouched.
-    expect((await app.send("/posts/get", { post: root.post })).post.content)
-      .toBe("cascade root");
+    expect(
+      (await app.send("/posts/get", { post: root.post })).post.content,
+    ).toBe("cascade root");
   });
 });
 

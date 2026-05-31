@@ -60,22 +60,22 @@
       <input id="password" type="password" value="hunter2" /><br />
       <label for="displayName">Display name</label>
       <input id="displayName" value="Alice" /><br />
-      <button id="btnRegister">Register</button>
-      <button id="btnLogin">Login</button>
-      <button id="btnBadLogin">Login with wrong password (error demo)</button>
-      <button id="btnMe">Who am I?</button>
+      <button type="button" id="btnRegister">Register</button>
+      <button type="button" id="btnLogin">Login</button>
+      <button type="button" id="btnBadLogin">Login with wrong password (error demo)</button>
+      <button type="button" id="btnMe">Who am I?</button>
       <div class="muted">Session: <span id="session">(none)</span></div>
     </fieldset>
 
     <h2>2. Create a thread</h2>
     <fieldset>
       <textarea id="threadContent" rows="3"># Hello from the SDK demo</textarea>
-      <button id="btnCreate">Create thread</button>
+      <button type="button" id="btnCreate">Create thread</button>
     </fieldset>
 
     <h2>3. Threads</h2>
     <fieldset>
-      <button id="btnList">List threads (/threads/list)</button>
+      <button type="button" id="btnList">List threads (/threads/list)</button>
       <ul id="threads" class="threads"></ul>
     </fieldset>
 
@@ -84,7 +84,7 @@
       <div class="muted">Open conversation: <span id="openConv">(none)</span></div>
       <div id="thread"></div>
       <textarea id="replyContent" rows="2">A reply, also via the SDK.</textarea>
-      <button id="btnReply">Reply</button>
+      <button type="button" id="btnReply">Reply</button>
     </fieldset>
 
     <h2>Log</h2>

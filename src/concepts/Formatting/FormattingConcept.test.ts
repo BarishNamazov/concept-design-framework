@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
-import { setupTestDb } from "@utils/testing.ts";
 import { freshID } from "@utils/database.ts";
+import { setupTestDb } from "@utils/testing.ts";
 import type { ID } from "@utils/types.ts";
 import FormattingConcept from "./FormattingConcept.ts";
 

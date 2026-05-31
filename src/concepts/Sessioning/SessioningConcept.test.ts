@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { setupTestDb } from "@utils/testing.ts";
-import SessioningConcept from "./SessioningConcept.ts";
 import type { ID } from "@utils/types.ts";
+import SessioningConcept from "./SessioningConcept.ts";
 
 const mongo = await setupTestDb();
 const Sessioning = new SessioningConcept(mongo.db);
@@ -48,7 +48,9 @@ describe("Sessioning", () => {
 
     ok(await Sessioning.end({ session }));
     expect(await Sessioning._getUser({ session })).toEqual([]);
-    expect(await Sessioning._isActive({ session })).toEqual([{ active: false }]);
+    expect(await Sessioning._isActive({ session })).toEqual([
+      { active: false },
+    ]);
   });
 
   test("start creates an active session with no expiry", async () => {
@@ -106,8 +108,9 @@ describe("Sessioning", () => {
 
   test("expire requires an expired session and then removes it", async () => {
     const active = await Sessioning.start({ user: userA });
-    expect(await Sessioning.expire({ session: active.session }))
-      .toHaveProperty("error");
+    expect(await Sessioning.expire({ session: active.session })).toHaveProperty(
+      "error",
+    );
 
     const expired = "session:exp" as ID;
     await insertExpired(expired, userA);

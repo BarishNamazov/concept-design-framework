@@ -1,6 +1,6 @@
-import { Collection, Db } from "mongodb";
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
+import type { Collection, Db } from "mongodb";
 
 // Generic types of this concept.
 type Item = ID;
@@ -30,7 +30,10 @@ interface LinkDoc {
 export default class LinkingConcept {
   private readonly links: Collection<LinkDoc>;
 
-  constructor(private readonly db: Db, namespace = "Linking") {
+  constructor(
+    private readonly db: Db,
+    namespace = "Linking",
+  ) {
     this.links = this.db.collection(collectionName(namespace, "links"));
   }
 
@@ -42,9 +45,13 @@ export default class LinkingConcept {
    * **effects** creates a fresh Link `l` with the given `source` and `target`,
    * and `createdAt` the current time; returns `l` as `link`
    */
-  async link(
-    { source, target }: { source: Item; target: Item },
-  ): Promise<{ link: Link } | { error: string }> {
+  async link({
+    source,
+    target,
+  }: {
+    source: Item;
+    target: Item;
+  }): Promise<{ link: Link } | { error: string }> {
     const existing = await this.links.findOne({ source, target });
     if (existing !== null) {
       return { error: "Link already exists for this source and target." };
@@ -66,9 +73,13 @@ export default class LinkingConcept {
    *
    * **effects** removes that Link from the state; returns the removed `link`
    */
-  async unlink(
-    { source, target }: { source: Item; target: Item },
-  ): Promise<{ link: Link } | { error: string }> {
+  async unlink({
+    source,
+    target,
+  }: {
+    source: Item;
+    target: Item;
+  }): Promise<{ link: Link } | { error: string }> {
     const doc = await this.links.findOne({ source, target });
     if (doc === null) {
       return { error: "No Link exists for this source and target." };
@@ -88,9 +99,13 @@ export default class LinkingConcept {
    * listed items are created with `createdAt` the current time); returns
    * `source`
    */
-  async setLinks(
-    { source, targets }: { source: Item; targets: Item[] },
-  ): Promise<{ source: Item }> {
+  async setLinks({
+    source,
+    targets,
+  }: {
+    source: Item;
+    targets: Item[];
+  }): Promise<{ source: Item }> {
     const desired = new Set(targets);
     const existing = await this.links.find({ source }).toArray();
     const existingTargets = new Set(existing.map((l) => l.target));
@@ -124,9 +139,7 @@ export default class LinkingConcept {
    *
    * **effects** removes every Link whose source is `source`; returns `source`
    */
-  async clearLinks(
-    { source }: { source: Item },
-  ): Promise<{ source: Item }> {
+  async clearLinks({ source }: { source: Item }): Promise<{ source: Item }> {
     await this.links.deleteMany({ source });
     return { source };
   }
@@ -138,9 +151,11 @@ export default class LinkingConcept {
    *
    * **effects** returns the target of every Link whose source is `source`
    */
-  async _getForwardLinks(
-    { source }: { source: Item },
-  ): Promise<{ target: Item }[]> {
+  async _getForwardLinks({
+    source,
+  }: {
+    source: Item;
+  }): Promise<{ target: Item }[]> {
     const docs = await this.links.find({ source }).toArray();
     return docs.map((l) => ({ target: l.target }));
   }
@@ -152,9 +167,11 @@ export default class LinkingConcept {
    *
    * **effects** returns the source of every Link whose target is `target`
    */
-  async _getBacklinks(
-    { target }: { target: Item },
-  ): Promise<{ source: Item }[]> {
+  async _getBacklinks({
+    target,
+  }: {
+    target: Item;
+  }): Promise<{ source: Item }[]> {
     const docs = await this.links.find({ target }).toArray();
     return docs.map((l) => ({ source: l.source }));
   }
@@ -167,9 +184,13 @@ export default class LinkingConcept {
    * **effects** returns a single result whose `linked` is true iff a Link
    * exists with the given `source` and `target`
    */
-  async _hasLink(
-    { source, target }: { source: Item; target: Item },
-  ): Promise<{ linked: boolean }[]> {
+  async _hasLink({
+    source,
+    target,
+  }: {
+    source: Item;
+    target: Item;
+  }): Promise<{ linked: boolean }[]> {
     const doc = await this.links.findOne({ source, target });
     return [{ linked: doc !== null }];
   }
@@ -182,9 +203,11 @@ export default class LinkingConcept {
    * **effects** returns a single result with the number of Links whose source
    * is `source`
    */
-  async _getOutgoingCount(
-    { source }: { source: Item },
-  ): Promise<{ count: number }[]> {
+  async _getOutgoingCount({
+    source,
+  }: {
+    source: Item;
+  }): Promise<{ count: number }[]> {
     const count = await this.links.countDocuments({ source });
     return [{ count }];
   }
@@ -197,9 +220,11 @@ export default class LinkingConcept {
    * **effects** returns a single result with the number of Links whose target
    * is `target`
    */
-  async _getBacklinkCount(
-    { target }: { target: Item },
-  ): Promise<{ count: number }[]> {
+  async _getBacklinkCount({
+    target,
+  }: {
+    target: Item;
+  }): Promise<{ count: number }[]> {
     const count = await this.links.countDocuments({ target });
     return [{ count }];
   }

@@ -1,6 +1,6 @@
-import { Db, MongoClient } from "mongodb";
-import { v7 as uuidv7 } from "uuid";
 import type { ID } from "@utils/types.ts";
+import { type Db, MongoClient } from "mongodb";
+import { v7 as uuidv7 } from "uuid";
 
 /**
  * Connects a MongoClient using the `MONGODB_URL` environment variable.
@@ -15,7 +15,7 @@ async function initMongoClient(): Promise<MongoClient> {
   try {
     await client.connect();
   } catch (e) {
-    throw new Error("MongoDB connection failed: " + e);
+    throw new Error(`MongoDB connection failed: ${e}`);
   }
   return client;
 }

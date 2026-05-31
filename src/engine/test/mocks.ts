@@ -59,7 +59,11 @@ export class ListConcept {
 // output pattern keyed on a field the record lacks rejects the match.
 export class GateConcept {
   public seen: string[] = [];
-  check({ value }: { value: number }): { error: string } | { question: string } {
+  check({
+    value,
+  }: {
+    value: number;
+  }): { error: string } | { question: string } {
     if (value < 0) return { error: `negative:${value}` };
     return { question: `value:${value}` };
   }

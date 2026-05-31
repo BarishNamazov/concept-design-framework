@@ -1,5 +1,7 @@
-import { MongoMemoryServer } from "mongodb-memory-server";
 import net from "node:net";
+import { MongoMemoryServer } from "mongodb-memory-server";
+
+type ConceptsModule = typeof import("@concepts");
 
 /**
  * Boots the full application — every concept and every synchronization — against
@@ -18,9 +20,10 @@ export interface TestApp {
    * Drives a request end-to-end through the engine just like the HTTP server:
    * fires `Requesting.request` and awaits the matching `Requesting.respond`.
    */
+  // biome-ignore lint/suspicious/noExplicitAny: The test helper intentionally preserves loose endpoint payloads for concise assertions.
   send: (path: string, body?: Record<string, unknown>) => Promise<any>;
   /** The instrumented concept singletons (and `Engine`), for direct assertions. */
-  concepts: Record<string, any>;
+  concepts: ConceptsModule;
   /** Drops every collection so the next test starts from a clean slate. */
   reset: () => Promise<void>;
   /** Tears down the in-memory MongoDB. */
@@ -65,7 +68,8 @@ let sharedHttp: { stop(): void } | undefined;
  * isolate individual tests with `reset()` in a `beforeEach` hook.
  */
 export function setupApp(): Promise<TestApp> {
-  return (shared ??= boot());
+  if (shared === undefined) shared = boot();
+  return shared;
 }
 
 async function boot(): Promise<TestApp> {
@@ -83,7 +87,7 @@ async function boot(): Promise<TestApp> {
   concepts.Engine.logging = Logging.OFF;
   concepts.Engine.register(syncs);
 
-  const { Requesting, db, client } = concepts as any;
+  const { Requesting, db, client } = concepts;
   sharedClient = client;
   sharedMongo = server;
 
@@ -109,7 +113,7 @@ async function boot(): Promise<TestApp> {
     // exactly once after the entire run.
   };
 
-  return { send, concepts: concepts as Record<string, any>, reset, stop };
+  return { send, concepts, reset, stop };
 }
 
 function freeLocalPort(): Promise<number> {
@@ -138,7 +142,8 @@ function freeLocalPort(): Promise<number> {
  * for the whole process.
  */
 export function startTestServer(): Promise<TestServer> {
-  return (sharedServer ??= bootServer());
+  if (sharedServer === undefined) sharedServer = bootServer();
+  return sharedServer;
 }
 
 async function bootServer(): Promise<TestServer> {

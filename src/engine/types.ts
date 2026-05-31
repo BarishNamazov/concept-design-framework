@@ -23,6 +23,9 @@ export type ActionFunction<TInput = Mapping, TOutput = Mapping> = (
   input: TInput,
 ) => TOutput;
 
+/** A concept method reference stored as identity, not called through this type. */
+export type AnyAction = (...args: never[]) => unknown;
+
 /**
  * A tuple passed to {@link actions}: an instrumented action plus the input
  * pattern and (optionally) the output pattern to match/produce.
@@ -59,9 +62,9 @@ export interface Synchronization extends SyncDeclaration {
  * method, it carries back-references to its `concept` and the original bound
  * `action`, which {@link actions} and the logger rely on.
  */
-export interface InstrumentedAction extends Function {
+export interface InstrumentedAction extends AnyAction {
   concept?: object;
-  action?: Function;
+  action?: AnyAction;
 }
 
 /**

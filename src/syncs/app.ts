@@ -1,10 +1,10 @@
 import {
-  syncMap,
   type ApiError,
   type ContractOf,
+  syncMap,
 } from "@concepts/Requesting/api.ts";
 import type { ID } from "@utils/types.ts";
-import { authApi, LoginStartsSession } from "./auth.sync.ts";
+import { authApi } from "./auth.sync.ts";
 import { linksApi } from "./links.sync.ts";
 import { profilesApi } from "./profiles.sync.ts";
 import { reactionsApi } from "./reactions.sync.ts";
@@ -25,7 +25,6 @@ export const api = {
 
 export const syncs = {
   ...syncMap(api),
-  LoginStartsSession,
 };
 
 export default syncs;

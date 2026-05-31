@@ -105,9 +105,11 @@ describe("Authenticating", () => {
     expect(await Authenticating._getByUsername({ username: "ghost" })).toEqual(
       [],
     );
-    expect(await Authenticating._existsByUsername({ username: "grace" }))
-      .toEqual([{ exists: true }]);
-    expect(await Authenticating._existsByUsername({ username: "ghost" }))
-      .toEqual([{ exists: false }]);
+    expect(
+      await Authenticating._existsByUsername({ username: "grace" }),
+    ).toEqual([{ exists: true }]);
+    expect(
+      await Authenticating._existsByUsername({ username: "ghost" }),
+    ).toEqual([{ exists: false }]);
   });
 });

@@ -8,7 +8,8 @@
 import { createClient } from "../src/sdk/index.ts";
 import type { ForumApi, Output } from "../src/syncs/app.ts";
 
-const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+const $ = <T extends HTMLElement>(id: string) =>
+  document.getElementById(id) as T;
 
 const logEl = $("log");
 const sessionEl = $("session");
@@ -26,7 +27,8 @@ let openRootNode: string | null = null;
 /** Appends a labelled, pretty-printed entry to the on-page log. */
 function log(label: string, value: unknown): void {
   const time = new Date().toLocaleTimeString();
-  logEl.textContent = `[${time}] ${label}\n${JSON.stringify(value, null, 2)}\n\n` +
+  logEl.textContent =
+    `[${time}] ${label}\n${JSON.stringify(value, null, 2)}\n\n` +
     logEl.textContent;
 }
 

@@ -4,8 +4,9 @@
  * against an append-only action journal — see the individual modules for the
  * model (flow, frames, when/where/then, synced marks).
  */
-export { actions, Logging, SyncConcept } from "./sync.ts";
+
 export { Frames } from "./frames.ts";
+export { actions, Logging, SyncConcept } from "./sync.ts";
 export type {
   ActionList,
   ActionPattern,
