@@ -28,21 +28,21 @@ async function registerAndLogin(
 }
 
 /**
- * Grant `user` the `"pin"` capability inside `scope` by defining a "pinner"
- * role and granting it in that scope's authorization context.
+ * Grant `user` the `"pin"` capability inside `scope` using an administrator
+ * session.
  */
 async function grantPin(
-  session: string,
+  adminSession: string,
   user: string,
   scope: string,
 ): Promise<void> {
   await app.send("/roles/define", {
-    session,
+    session: adminSession,
     name: "pinner",
     capabilities: ["pin"],
   });
   await app.send("/roles/grant", {
-    session,
+    session: adminSession,
     user,
     context: scope,
     role: "pinner",
@@ -50,12 +50,26 @@ async function grantPin(
 }
 
 describe("pinning synchronizations", () => {
-  test("a user with the pin capability can pin within a scope", async () => {
-    const { user, session } = await registerAndLogin("pin_staff");
-    await grantPin(session, user, "scopeA");
+  test("the first registered administrator can pin in any scope", async () => {
+    const { session } = await registerAndLogin("pin_admin");
 
     const res = await app.send("/pins/pin", {
       session,
+      item: "post1",
+      scope: "scopeA",
+      priority: 5,
+    });
+    expect(res.pin).toBeDefined();
+    expect(res.error).toBeUndefined();
+  });
+
+  test("a user with the pin capability can pin within a scope", async () => {
+    const admin = await registerAndLogin("pin_staff_admin");
+    const staff = await registerAndLogin("pin_staff");
+    await grantPin(admin.session, staff.user, "scopeA");
+
+    const res = await app.send("/pins/pin", {
+      session: staff.session,
       item: "post1",
       scope: "scopeA",
       priority: 5,
@@ -76,6 +90,7 @@ describe("pinning synchronizations", () => {
   });
 
   test("a user without the pin capability is forbidden", async () => {
+    await registerAndLogin("pin_student_admin");
     const { session } = await registerAndLogin("pin_student");
 
     const res = await app.send("/pins/pin", {
@@ -95,11 +110,12 @@ describe("pinning synchronizations", () => {
   });
 
   test("the pin capability is scoped: it does not leak to other scopes", async () => {
-    const { user, session } = await registerAndLogin("pin_scoped");
-    await grantPin(session, user, "scopeA");
+    const admin = await registerAndLogin("pin_scoped_admin");
+    const staff = await registerAndLogin("pin_scoped");
+    await grantPin(admin.session, staff.user, "scopeA");
 
     const ok = await app.send("/pins/pin", {
-      session,
+      session: staff.session,
       item: "post1",
       scope: "scopeA",
       priority: 1,
@@ -107,7 +123,7 @@ describe("pinning synchronizations", () => {
     expect(ok.pin).toBeDefined();
 
     const forbidden = await app.send("/pins/pin", {
-      session,
+      session: staff.session,
       item: "post1",
       scope: "scopeB",
       priority: 1,
@@ -117,17 +133,18 @@ describe("pinning synchronizations", () => {
   });
 
   test("setPriority reorders pins by descending priority", async () => {
-    const { user, session } = await registerAndLogin("pin_order");
-    await grantPin(session, user, "scopeA");
+    const admin = await registerAndLogin("pin_order_admin");
+    const staff = await registerAndLogin("pin_order");
+    await grantPin(admin.session, staff.user, "scopeA");
 
     await app.send("/pins/pin", {
-      session,
+      session: staff.session,
       item: "low",
       scope: "scopeA",
       priority: 1,
     });
     await app.send("/pins/pin", {
-      session,
+      session: staff.session,
       item: "high",
       scope: "scopeA",
       priority: 2,
@@ -140,7 +157,7 @@ describe("pinning synchronizations", () => {
     ]);
 
     const res = await app.send("/pins/setPriority", {
-      session,
+      session: staff.session,
       item: "low",
       scope: "scopeA",
       priority: 10,
@@ -155,10 +172,11 @@ describe("pinning synchronizations", () => {
   });
 
   test("unpin removes a pin and requires the capability", async () => {
-    const { user, session } = await registerAndLogin("pin_unpin");
-    await grantPin(session, user, "scopeA");
+    const admin = await registerAndLogin("pin_unpin_admin");
+    const staff = await registerAndLogin("pin_unpin");
+    await grantPin(admin.session, staff.user, "scopeA");
     await app.send("/pins/pin", {
-      session,
+      session: staff.session,
       item: "post1",
       scope: "scopeA",
       priority: 1,
@@ -173,7 +191,7 @@ describe("pinning synchronizations", () => {
     expect(forbidden.error).toBeDefined();
 
     const res = await app.send("/pins/unpin", {
-      session,
+      session: staff.session,
       item: "post1",
       scope: "scopeA",
     });

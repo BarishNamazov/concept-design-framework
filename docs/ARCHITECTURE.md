@@ -683,7 +683,7 @@ unprefixed `path` value.
 #### Pins
 
 - `POST /pins/pin` `{ session, item, scope, priority }` -> `{ pin }`
-  Requires the `pin` capability in the scope.
+  Requires the `pin` capability in the scope, or forum-wide `pin`.
 - `POST /pins/unpin` `{ session, item, scope }` -> `{ pin }`
 - `POST /pins/setPriority` `{ session, item, scope, priority }` -> `{ pin }`
 - `POST /pins/forScope` `{ scope }` -> `{ pinned }`
@@ -746,9 +746,9 @@ unprefixed `path` value.
   formatting, reactions, tags, tracking, links, and conversation node.
 - **Lock enforcement:** `/threads/reply` is refused while the conversation is
   locked (`Locking._isLocked`).
-- **Capability gates:** pinning requires the `pin` capability in the scope and
-  flag resolution requires the `moderate` capability, both via
-  `Roling._hasCapability`.
+- **Capability gates:** pinning requires the `pin` capability in the scope or in
+  the global `forum` context, while flag resolution requires the `moderate`
+  capability, both via `Roling._hasCapability`.
 
 ### SDK Contract
 
