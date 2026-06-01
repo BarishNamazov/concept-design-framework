@@ -172,3 +172,120 @@ describe("role synchronizations", () => {
     expect(res.error).toBe("Invalid or expired session.");
   });
 });
+
+/**
+ * Establish the very first forum administrator. The role gate stays open until
+ * someone holds the `"administer"` capability in the `"forum"` context, so the
+ * first operator can grant the role to themselves; afterwards the forum is
+ * "claimed" and enforcement applies.
+ */
+async function establishAdmin(
+  username: string,
+): Promise<{ user: string; session: string }> {
+  const admin = await registerAndLogin(username);
+  await app.send("/roles/define", {
+    session: admin.session,
+    name: "administrator",
+    capabilities: ["administer", "moderate"],
+  });
+  await app.send("/roles/grant", {
+    session: admin.session,
+    user: admin.user,
+    context: "forum",
+    role: "administrator",
+  });
+  return admin;
+}
+
+describe("role administration authorization", () => {
+  test("the first operator can bootstrap themselves as administrator", async () => {
+    const admin = await establishAdmin("role_boot_admin");
+
+    const can = await app.send("/roles/can", {
+      user: admin.user,
+      context: "forum",
+      capability: "administer",
+    });
+    expect(can.allowed).toBe(true);
+  });
+
+  test("once an administrator exists, a non-admin cannot grant roles", async () => {
+    await establishAdmin("role_esc_admin");
+    const attacker = await registerAndLogin("role_esc_attacker");
+
+    // The attacker defines a powerful role and tries to grant it to themselves.
+    const defined = await app.send("/roles/define", {
+      session: attacker.session,
+      name: "superuser",
+      capabilities: ["administer", "moderate"],
+    });
+    expect(defined.error).toBe("Not authorized to manage roles.");
+    expect(defined.role).toBeUndefined();
+
+    const granted = await app.send("/roles/grant", {
+      session: attacker.session,
+      user: attacker.user,
+      context: "forum",
+      role: "administrator",
+    });
+    expect(granted.error).toBe("Not authorized to manage roles.");
+    expect(granted.grant).toBeUndefined();
+
+    // The escalation did not take effect.
+    const can = await app.send("/roles/can", {
+      user: attacker.user,
+      context: "forum",
+      capability: "administer",
+    });
+    expect(can.allowed).toBe(false);
+  });
+
+  test("an administrator can grant and revoke roles after the forum is claimed", async () => {
+    const admin = await establishAdmin("role_admin_ok");
+    const member = await registerAndLogin("role_admin_member");
+
+    const { role } = await app.send("/roles/define", {
+      session: admin.session,
+      name: "ta",
+      capabilities: ["pin"],
+    });
+    expect(role).toBeDefined();
+
+    const granted = await app.send("/roles/grant", {
+      session: admin.session,
+      user: member.user,
+      context: "course",
+      role,
+    });
+    expect(granted.grant).toBeDefined();
+
+    const revoked = await app.send("/roles/revoke", {
+      session: admin.session,
+      user: member.user,
+      context: "course",
+      role,
+    });
+    expect(revoked.grant).toBe(granted.grant);
+  });
+
+  test("a non-admin cannot revoke an administrator's grant", async () => {
+    const admin = await establishAdmin("role_revoke_admin");
+    const attacker = await registerAndLogin("role_revoke_attacker");
+
+    const res = await app.send("/roles/revoke", {
+      session: attacker.session,
+      user: admin.user,
+      context: "forum",
+      role: "administrator",
+    });
+    expect(res.error).toBe("Not authorized to manage roles.");
+
+    // The administrator's own grant survived the attempt.
+    const can = await app.send("/roles/can", {
+      user: admin.user,
+      context: "forum",
+      capability: "administer",
+    });
+    expect(can.allowed).toBe(true);
+  });
+});

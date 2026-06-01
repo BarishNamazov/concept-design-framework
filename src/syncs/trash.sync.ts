@@ -14,6 +14,11 @@ import {
   defineEndpoint,
   type QueryRow,
 } from "@concepts/Requesting/api.ts";
+import {
+  authorizeCapable,
+  MODERATE_CAPABILITY,
+  rejectIncapable,
+} from "./authorization.ts";
 
 type TrashOutput = ActionOk<typeof Trashing, "trash">;
 type RestoreOutput = ActionOk<typeof Trashing, "restore">;
@@ -26,10 +31,16 @@ type TrashListOutput = { trashed: QueryRow<typeof Trashing, "_getTrashed">[] };
 const trash = defineEndpoint(
   "/trash/trash",
   ({ Sync, Actions, Request, Respond, Fail }) => ({
-    TrashRequest: Sync(({ session, item, user }) => ({
+    TrashRequest: Sync(({ session, item, user, allowed, present }) => ({
       when: Actions(Request({ session, item })),
-      where: async (frames) =>
-        await frames.query(Sessioning._getUser, { session }, { user }),
+      where: (frames) =>
+        authorizeCapable(frames, {
+          session,
+          user,
+          allowed,
+          present,
+          capability: MODERATE_CAPABILITY,
+        }),
       then: Actions([Trashing.trash, { item, by: user }]),
     })),
 
@@ -41,6 +52,19 @@ const trash = defineEndpoint(
     TrashError: Sync(({ error }) => ({
       when: Actions([Trashing.trash, {}, { error }]),
       then: Actions(Fail(error)),
+    })),
+
+    TrashForbidden: Sync(({ session, item, user, allowed, present }) => ({
+      when: Actions(Request({ session, item })),
+      where: (frames) =>
+        rejectIncapable(frames, {
+          session,
+          user,
+          allowed,
+          present,
+          capability: MODERATE_CAPABILITY,
+        }),
+      then: Actions(Fail("Not authorized to trash items.")),
     })),
 
     TrashInvalidSession: Sync(({ session, active }) => ({
@@ -63,10 +87,16 @@ const trash = defineEndpoint(
 const restore = defineEndpoint(
   "/trash/restore",
   ({ Sync, Actions, Request, Respond, Fail }) => ({
-    RestoreRequest: Sync(({ session, item, user }) => ({
+    RestoreRequest: Sync(({ session, item, user, allowed, present }) => ({
       when: Actions(Request({ session, item })),
-      where: async (frames) =>
-        await frames.query(Sessioning._getUser, { session }, { user }),
+      where: (frames) =>
+        authorizeCapable(frames, {
+          session,
+          user,
+          allowed,
+          present,
+          capability: MODERATE_CAPABILITY,
+        }),
       then: Actions([Trashing.restore, { item }]),
     })),
 
@@ -78,6 +108,19 @@ const restore = defineEndpoint(
     RestoreError: Sync(({ error }) => ({
       when: Actions([Trashing.restore, {}, { error }]),
       then: Actions(Fail(error)),
+    })),
+
+    RestoreForbidden: Sync(({ session, item, user, allowed, present }) => ({
+      when: Actions(Request({ session, item })),
+      where: (frames) =>
+        rejectIncapable(frames, {
+          session,
+          user,
+          allowed,
+          present,
+          capability: MODERATE_CAPABILITY,
+        }),
+      then: Actions(Fail("Not authorized to restore items.")),
     })),
 
     RestoreInvalidSession: Sync(({ session, active }) => ({
@@ -100,10 +143,16 @@ const restore = defineEndpoint(
 const purge = defineEndpoint(
   "/trash/purge",
   ({ Sync, Actions, Request, Respond, Fail }) => ({
-    PurgeRequest: Sync(({ session, item, user }) => ({
+    PurgeRequest: Sync(({ session, item, user, allowed, present }) => ({
       when: Actions(Request({ session, item })),
-      where: async (frames) =>
-        await frames.query(Sessioning._getUser, { session }, { user }),
+      where: (frames) =>
+        authorizeCapable(frames, {
+          session,
+          user,
+          allowed,
+          present,
+          capability: MODERATE_CAPABILITY,
+        }),
       then: Actions([Trashing.purge, { item }]),
     })),
 
@@ -115,6 +164,19 @@ const purge = defineEndpoint(
     PurgeError: Sync(({ error }) => ({
       when: Actions([Trashing.purge, {}, { error }]),
       then: Actions(Fail(error)),
+    })),
+
+    PurgeForbidden: Sync(({ session, item, user, allowed, present }) => ({
+      when: Actions(Request({ session, item })),
+      where: (frames) =>
+        rejectIncapable(frames, {
+          session,
+          user,
+          allowed,
+          present,
+          capability: MODERATE_CAPABILITY,
+        }),
+      then: Actions(Fail("Not authorized to purge items.")),
     })),
 
     PurgeInvalidSession: Sync(({ session, active }) => ({

@@ -220,3 +220,112 @@ describe("category synchronizations", () => {
     expect(res.category).toBeUndefined();
   });
 });
+
+/** Bootstrap a forum administrator (holds both `administer` and `moderate`). */
+async function establishAdmin(
+  username: string,
+): Promise<{ user: string; session: string }> {
+  const admin = await registerAndLogin(username);
+  await app.send("/roles/define", {
+    session: admin.session,
+    name: "administrator",
+    capabilities: ["administer", "moderate"],
+  });
+  await app.send("/roles/grant", {
+    session: admin.session,
+    user: admin.user,
+    context: "forum",
+    role: "administrator",
+  });
+  return admin;
+}
+
+describe("category authorization", () => {
+  test("once the forum has an admin, members cannot create or delete categories", async () => {
+    const admin = await establishAdmin("cat_admin");
+    const member = await registerAndLogin("cat_member");
+
+    const create = await app.send("/categories/create", {
+      session: member.session,
+      name: "General",
+      description: "General discussion",
+    });
+    expect(create.error).toBe("Not authorized to manage categories.");
+    expect(create.category).toBeUndefined();
+
+    // An admin can still create, and a member cannot delete it.
+    const created = await app.send("/categories/create", {
+      session: admin.session,
+      name: "General",
+      description: "General discussion",
+    });
+    const del = await app.send("/categories/delete", {
+      session: member.session,
+      category: created.category,
+    });
+    expect(del.error).toBe("Not authorized to manage categories.");
+
+    const list = await app.send("/categories/list", {});
+    expect(list.categories).toHaveLength(1);
+  });
+
+  test("assigning items requires moderate; an ordinary member is rejected", async () => {
+    const admin = await establishAdmin("cat_admin2");
+    const member = await registerAndLogin("cat_member2");
+    const { category } = await app.send("/categories/create", {
+      session: admin.session,
+      name: "General",
+      description: "General discussion",
+    });
+
+    const assign = await app.send("/categories/assign", {
+      session: member.session,
+      item: "p1",
+      category,
+    });
+    expect(assign.error).toBe("Not authorized to assign categories.");
+
+    const unassign = await app.send("/categories/unassign", {
+      session: member.session,
+      item: "p1",
+    });
+    expect(unassign.error).toBe("Not authorized to assign categories.");
+
+    const items = await app.send("/categories/items", { category });
+    expect(items.items).toEqual([]);
+  });
+
+  test("a forum moderator can assign and unassign items", async () => {
+    const admin = await establishAdmin("cat_admin3");
+    const mod = await registerAndLogin("cat_mod");
+    await app.send("/roles/define", {
+      session: admin.session,
+      name: "moderator",
+      capabilities: ["moderate"],
+    });
+    await app.send("/roles/grant", {
+      session: admin.session,
+      user: mod.user,
+      context: "forum",
+      role: "moderator",
+    });
+    const { category } = await app.send("/categories/create", {
+      session: admin.session,
+      name: "General",
+      description: "General discussion",
+    });
+
+    const assigned = await app.send("/categories/assign", {
+      session: mod.session,
+      item: "p1",
+      category,
+    });
+    expect(assigned.item).toBe("p1");
+
+    const unassigned = await app.send("/categories/unassign", {
+      session: mod.session,
+      item: "p1",
+    });
+    expect(unassigned.item).toBe("p1");
+  });
+});

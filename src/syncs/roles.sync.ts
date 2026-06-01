@@ -14,6 +14,11 @@ import {
   defineEndpoint,
   type QueryRow,
 } from "@concepts/Requesting/api.ts";
+import {
+  ADMIN_CAPABILITY,
+  authorizeCapable,
+  rejectIncapable,
+} from "./authorization.ts";
 
 type RoleDefineOutput = ActionOk<typeof Roling, "defineRole">;
 type RoleGrantOutput = ActionOk<typeof Roling, "grant">;
@@ -26,12 +31,20 @@ type RoleCanOutput = QueryRow<typeof Roling, "_hasCapability">;
 const define = defineEndpoint(
   "/roles/define",
   ({ Sync, Actions, Request, Respond, Fail }) => ({
-    RoleDefineRequest: Sync(({ session, name, capabilities, user }) => ({
-      when: Actions(Request({ session, name, capabilities })),
-      where: async (frames) =>
-        await frames.query(Sessioning._getUser, { session }, { user }),
-      then: Actions([Roling.defineRole, { name, capabilities }]),
-    })),
+    RoleDefineRequest: Sync(
+      ({ session, name, capabilities, user, allowed, present }) => ({
+        when: Actions(Request({ session, name, capabilities })),
+        where: (frames) =>
+          authorizeCapable(frames, {
+            session,
+            user,
+            allowed,
+            present,
+            capability: ADMIN_CAPABILITY,
+          }),
+        then: Actions([Roling.defineRole, { name, capabilities }]),
+      }),
+    ),
 
     RoleDefineResponse: Sync(({ role }) => ({
       when: Actions([Roling.defineRole, {}, { role }]),
@@ -41,6 +54,19 @@ const define = defineEndpoint(
     RoleDefineError: Sync(({ error }) => ({
       when: Actions([Roling.defineRole, {}, { error }]),
       then: Actions(Fail(error)),
+    })),
+
+    RoleDefineForbidden: Sync(({ session, user, allowed, present }) => ({
+      when: Actions(Request({ session })),
+      where: (frames) =>
+        rejectIncapable(frames, {
+          session,
+          user,
+          allowed,
+          present,
+          capability: ADMIN_CAPABILITY,
+        }),
+      then: Actions(Fail("Not authorized to manage roles.")),
     })),
 
     RoleDefineInvalidSession: Sync(({ session, active }) => ({
@@ -63,29 +89,33 @@ const define = defineEndpoint(
 const grant = defineEndpoint(
   "/roles/grant",
   ({ Sync, Actions, Request, Respond, Fail }) => ({
-    RoleGrantRequest: Sync(({ session, user, context, role, actor }) => ({
-      when: Actions(Request({ session, user, context, role })),
-      where: async (frames) => {
-        frames = await frames.query(
-          Sessioning._getUser,
-          { session },
-          { user: actor },
-        );
-        // Allow grants to reference a role by its human-readable name as well
-        // as by its id; resolve names to ids, leaving ids (and unknown values)
-        // untouched so the grant action can validate existence.
-        const resolved = await Promise.all(
-          frames.map(async ($) => {
-            const rows = await Roling._getRoleByName({
-              name: $[role] as string,
-            });
-            return rows.length > 0 ? rows[0].role : ($[role] as string);
-          }),
-        );
-        return frames.map(($, i) => ({ ...$, [role]: resolved[i] }));
-      },
-      then: Actions([Roling.grant, { user, context, role }]),
-    })),
+    RoleGrantRequest: Sync(
+      ({ session, user, context, role, actor, allowed, present }) => ({
+        when: Actions(Request({ session, user, context, role })),
+        where: async (frames) => {
+          frames = await authorizeCapable(frames, {
+            session,
+            user: actor,
+            allowed,
+            present,
+            capability: ADMIN_CAPABILITY,
+          });
+          // Allow grants to reference a role by its human-readable name as well
+          // as by its id; resolve names to ids, leaving ids (and unknown values)
+          // untouched so the grant action can validate existence.
+          const resolved = await Promise.all(
+            frames.map(async ($) => {
+              const rows = await Roling._getRoleByName({
+                name: $[role] as string,
+              });
+              return rows.length > 0 ? rows[0].role : ($[role] as string);
+            }),
+          );
+          return frames.map(($, i) => ({ ...$, [role]: resolved[i] }));
+        },
+        then: Actions([Roling.grant, { user, context, role }]),
+      }),
+    ),
 
     RoleGrantResponse: Sync(({ grant }) => ({
       when: Actions([Roling.grant, {}, { grant }]),
@@ -95,6 +125,19 @@ const grant = defineEndpoint(
     RoleGrantError: Sync(({ error }) => ({
       when: Actions([Roling.grant, {}, { error }]),
       then: Actions(Fail(error)),
+    })),
+
+    RoleGrantForbidden: Sync(({ session, user, allowed, present }) => ({
+      when: Actions(Request({ session })),
+      where: (frames) =>
+        rejectIncapable(frames, {
+          session,
+          user,
+          allowed,
+          present,
+          capability: ADMIN_CAPABILITY,
+        }),
+      then: Actions(Fail("Not authorized to manage roles.")),
     })),
 
     RoleGrantInvalidSession: Sync(({ session, active }) => ({
@@ -117,12 +160,20 @@ const grant = defineEndpoint(
 const revoke = defineEndpoint(
   "/roles/revoke",
   ({ Sync, Actions, Request, Respond, Fail }) => ({
-    RoleRevokeRequest: Sync(({ session, user, context, role, actor }) => ({
-      when: Actions(Request({ session, user, context, role })),
-      where: async (frames) =>
-        await frames.query(Sessioning._getUser, { session }, { user: actor }),
-      then: Actions([Roling.revoke, { user, context, role }]),
-    })),
+    RoleRevokeRequest: Sync(
+      ({ session, user, context, role, actor, allowed, present }) => ({
+        when: Actions(Request({ session, user, context, role })),
+        where: (frames) =>
+          authorizeCapable(frames, {
+            session,
+            user: actor,
+            allowed,
+            present,
+            capability: ADMIN_CAPABILITY,
+          }),
+        then: Actions([Roling.revoke, { user, context, role }]),
+      }),
+    ),
 
     RoleRevokeResponse: Sync(({ grant }) => ({
       when: Actions([Roling.revoke, {}, { grant }]),
@@ -132,6 +183,19 @@ const revoke = defineEndpoint(
     RoleRevokeError: Sync(({ error }) => ({
       when: Actions([Roling.revoke, {}, { error }]),
       then: Actions(Fail(error)),
+    })),
+
+    RoleRevokeForbidden: Sync(({ session, user, allowed, present }) => ({
+      when: Actions(Request({ session })),
+      where: (frames) =>
+        rejectIncapable(frames, {
+          session,
+          user,
+          allowed,
+          present,
+          capability: ADMIN_CAPABILITY,
+        }),
+      then: Actions(Fail("Not authorized to manage roles.")),
     })),
 
     RoleRevokeInvalidSession: Sync(({ session, active }) => ({

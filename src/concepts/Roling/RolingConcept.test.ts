@@ -174,6 +174,42 @@ describe("Roling", () => {
     expect(users).toContainEqual({ user: user("u2") });
   });
 
+  test("_hasCapabilityHolder reports whether a context has a capability holder", async () => {
+    const c = context("forum");
+    const { role: adminRole } = ok(
+      await Roling.defineRole({
+        name: "administrator",
+        capabilities: ["administer", "moderate"],
+      }),
+    );
+    // The capability exists on a role, but nobody has been granted it yet.
+    expect(
+      await Roling._hasCapabilityHolder({
+        context: c,
+        capability: "administer",
+      }),
+    ).toEqual([{ present: false }]);
+
+    ok(await Roling.grant({ user: user("root"), context: c, role: adminRole }));
+    // Now a holder exists in this context...
+    expect(
+      await Roling._hasCapabilityHolder({
+        context: c,
+        capability: "administer",
+      }),
+    ).toEqual([{ present: true }]);
+    // ...but not in an unrelated context, and not for a capability no role lists.
+    expect(
+      await Roling._hasCapabilityHolder({
+        context: context("other"),
+        capability: "administer",
+      }),
+    ).toEqual([{ present: false }]);
+    expect(
+      await Roling._hasCapabilityHolder({ context: c, capability: "fly" }),
+    ).toEqual([{ present: false }]);
+  });
+
   test("_getRoleByName and _getCapabilities", async () => {
     const { role } = ok(
       await Roling.defineRole({

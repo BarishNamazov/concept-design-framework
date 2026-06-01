@@ -16,6 +16,12 @@ import {
   defineEndpoint,
   type QueryRow,
 } from "@concepts/Requesting/api.ts";
+import {
+  ADMIN_CAPABILITY,
+  authorizeCapable,
+  MODERATE_CAPABILITY,
+  rejectIncapable,
+} from "./authorization.ts";
 
 type CategoryCreateOutput = ActionOk<typeof Categorizing, "createCategory">;
 type CategoryDeleteOutput = ActionOk<typeof Categorizing, "deleteCategory">;
@@ -36,12 +42,20 @@ type CategoryForItemOutput = {
 const create = defineEndpoint(
   "/categories/create",
   ({ Sync, Actions, Request, Respond, Fail }) => ({
-    CategoryCreateRequest: Sync(({ session, name, description, user }) => ({
-      when: Actions(Request({ session, name, description })),
-      where: async (frames) =>
-        await frames.query(Sessioning._getUser, { session }, { user }),
-      then: Actions([Categorizing.createCategory, { name, description }]),
-    })),
+    CategoryCreateRequest: Sync(
+      ({ session, name, description, user, allowed, present }) => ({
+        when: Actions(Request({ session, name, description })),
+        where: (frames) =>
+          authorizeCapable(frames, {
+            session,
+            user,
+            allowed,
+            present,
+            capability: ADMIN_CAPABILITY,
+          }),
+        then: Actions([Categorizing.createCategory, { name, description }]),
+      }),
+    ),
 
     CategoryCreateResponse: Sync(({ category }) => ({
       when: Actions([Categorizing.createCategory, {}, { category }]),
@@ -52,6 +66,21 @@ const create = defineEndpoint(
       when: Actions([Categorizing.createCategory, {}, { error }]),
       then: Actions(Fail(error)),
     })),
+
+    CategoryCreateForbidden: Sync(
+      ({ session, name, user, allowed, present }) => ({
+        when: Actions(Request({ session, name })),
+        where: (frames) =>
+          rejectIncapable(frames, {
+            session,
+            user,
+            allowed,
+            present,
+            capability: ADMIN_CAPABILITY,
+          }),
+        then: Actions(Fail("Not authorized to manage categories.")),
+      }),
+    ),
 
     CategoryCreateInvalidSession: Sync(({ session, active }) => ({
       when: Actions(Request({ session })),
@@ -73,12 +102,20 @@ const create = defineEndpoint(
 const remove = defineEndpoint(
   "/categories/delete",
   ({ Sync, Actions, Request, Respond, Fail }) => ({
-    CategoryDeleteRequest: Sync(({ session, category, user }) => ({
-      when: Actions(Request({ session, category })),
-      where: async (frames) =>
-        await frames.query(Sessioning._getUser, { session }, { user }),
-      then: Actions([Categorizing.deleteCategory, { category }]),
-    })),
+    CategoryDeleteRequest: Sync(
+      ({ session, category, user, allowed, present }) => ({
+        when: Actions(Request({ session, category })),
+        where: (frames) =>
+          authorizeCapable(frames, {
+            session,
+            user,
+            allowed,
+            present,
+            capability: ADMIN_CAPABILITY,
+          }),
+        then: Actions([Categorizing.deleteCategory, { category }]),
+      }),
+    ),
 
     CategoryDeleteResponse: Sync(({ category }) => ({
       when: Actions([Categorizing.deleteCategory, {}, { category }]),
@@ -89,6 +126,21 @@ const remove = defineEndpoint(
       when: Actions([Categorizing.deleteCategory, {}, { error }]),
       then: Actions(Fail(error)),
     })),
+
+    CategoryDeleteForbidden: Sync(
+      ({ session, category, user, allowed, present }) => ({
+        when: Actions(Request({ session, category })),
+        where: (frames) =>
+          rejectIncapable(frames, {
+            session,
+            user,
+            allowed,
+            present,
+            capability: ADMIN_CAPABILITY,
+          }),
+        then: Actions(Fail("Not authorized to manage categories.")),
+      }),
+    ),
 
     CategoryDeleteInvalidSession: Sync(({ session, active }) => ({
       when: Actions(Request({ session })),
@@ -110,12 +162,20 @@ const remove = defineEndpoint(
 const assign = defineEndpoint(
   "/categories/assign",
   ({ Sync, Actions, Request, Respond, Fail }) => ({
-    CategoryAssignRequest: Sync(({ session, item, category, user }) => ({
-      when: Actions(Request({ session, item, category })),
-      where: async (frames) =>
-        await frames.query(Sessioning._getUser, { session }, { user }),
-      then: Actions([Categorizing.assign, { item, category }]),
-    })),
+    CategoryAssignRequest: Sync(
+      ({ session, item, category, user, allowed, present }) => ({
+        when: Actions(Request({ session, item, category })),
+        where: (frames) =>
+          authorizeCapable(frames, {
+            session,
+            user,
+            allowed,
+            present,
+            capability: MODERATE_CAPABILITY,
+          }),
+        then: Actions([Categorizing.assign, { item, category }]),
+      }),
+    ),
 
     CategoryAssignResponse: Sync(({ item }) => ({
       when: Actions([Categorizing.assign, {}, { item }]),
@@ -126,6 +186,21 @@ const assign = defineEndpoint(
       when: Actions([Categorizing.assign, {}, { error }]),
       then: Actions(Fail(error)),
     })),
+
+    CategoryAssignForbidden: Sync(
+      ({ session, item, user, allowed, present }) => ({
+        when: Actions(Request({ session, item })),
+        where: (frames) =>
+          rejectIncapable(frames, {
+            session,
+            user,
+            allowed,
+            present,
+            capability: MODERATE_CAPABILITY,
+          }),
+        then: Actions(Fail("Not authorized to assign categories.")),
+      }),
+    ),
 
     CategoryAssignInvalidSession: Sync(({ session, active }) => ({
       when: Actions(Request({ session })),
@@ -147,12 +222,20 @@ const assign = defineEndpoint(
 const unassign = defineEndpoint(
   "/categories/unassign",
   ({ Sync, Actions, Request, Respond, Fail }) => ({
-    CategoryUnassignRequest: Sync(({ session, item, user }) => ({
-      when: Actions(Request({ session, item })),
-      where: async (frames) =>
-        await frames.query(Sessioning._getUser, { session }, { user }),
-      then: Actions([Categorizing.unassign, { item }]),
-    })),
+    CategoryUnassignRequest: Sync(
+      ({ session, item, user, allowed, present }) => ({
+        when: Actions(Request({ session, item })),
+        where: (frames) =>
+          authorizeCapable(frames, {
+            session,
+            user,
+            allowed,
+            present,
+            capability: MODERATE_CAPABILITY,
+          }),
+        then: Actions([Categorizing.unassign, { item }]),
+      }),
+    ),
 
     CategoryUnassignResponse: Sync(({ item }) => ({
       when: Actions([Categorizing.unassign, {}, { item }]),
@@ -163,6 +246,21 @@ const unassign = defineEndpoint(
       when: Actions([Categorizing.unassign, {}, { error }]),
       then: Actions(Fail(error)),
     })),
+
+    CategoryUnassignForbidden: Sync(
+      ({ session, item, user, allowed, present }) => ({
+        when: Actions(Request({ session, item })),
+        where: (frames) =>
+          rejectIncapable(frames, {
+            session,
+            user,
+            allowed,
+            present,
+            capability: MODERATE_CAPABILITY,
+          }),
+        then: Actions(Fail("Not authorized to assign categories.")),
+      }),
+    ),
 
     CategoryUnassignInvalidSession: Sync(({ session, active }) => ({
       when: Actions(Request({ session })),

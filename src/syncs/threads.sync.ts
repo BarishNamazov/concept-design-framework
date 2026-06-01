@@ -21,6 +21,7 @@ import {
   Sessioning,
   Tagging,
   Tracking,
+  Trashing,
 } from "@concepts";
 import {
   type ActionOk,
@@ -256,6 +257,7 @@ const threadGet = defineEndpoint(
         item,
         parent,
         depth,
+        trashed,
         post,
         rendered,
         thread,
@@ -268,6 +270,13 @@ const threadGet = defineEndpoint(
             { conversation },
             { node, item, parent, depth },
           );
+          // Soft-deleted posts are hidden from the thread view.
+          frames = await frames.query(
+            Trashing._isTrashed,
+            { item },
+            { trashed },
+          );
+          frames = frames.filter(($) => $[trashed] === false);
           frames = await frames.query(
             Posting._getPost,
             { post: item },
@@ -305,7 +314,7 @@ const threadGet = defineEndpoint(
 const postGet = defineEndpoint(
   "/posts/get",
   ({ Sync, Actions, Request, Respond, Fail }) => ({
-    PostGetResponse: Sync(({ post, postData, rendered, result }) => ({
+    PostGetResponse: Sync(({ post, postData, rendered, trashed, result }) => ({
       when: Actions(Request({ post })),
       where: async (frames) => {
         frames = await frames.query(
@@ -313,6 +322,15 @@ const postGet = defineEndpoint(
           { post },
           { post: postData },
         );
+        // A soft-deleted post reads as if it no longer exists (see PostGetTrashed).
+        frames = await frames.query(
+          Trashing._isTrashed,
+          { item: post },
+          {
+            trashed,
+          },
+        );
+        frames = frames.filter(($) => $[trashed] === false);
         frames = await frames.query(
           Formatting._getRendered,
           { target: post },
@@ -324,6 +342,21 @@ const postGet = defineEndpoint(
         }));
       },
       then: Actions(Respond<PostGetOutput>({ post: result })),
+    })),
+
+    PostGetTrashed: Sync(({ post, trashed }) => ({
+      when: Actions(Request({ post })),
+      where: async (frames) => {
+        frames = await frames.query(
+          Trashing._isTrashed,
+          { item: post },
+          {
+            trashed,
+          },
+        );
+        return frames.filter(($) => $[trashed] === true);
+      },
+      then: Actions(Fail("Post not found.")),
     })),
 
     PostGetNotFound: Sync(({ post, exists }) => ({
@@ -535,7 +568,15 @@ const threadList = defineEndpoint(
   "/threads/list",
   ({ Sync, Actions, Respond }) => ({
     ThreadListResponse: Sync(
-      ({ conversation, root, item, createdAt, post, conversations }) => ({
+      ({
+        conversation,
+        root,
+        item,
+        createdAt,
+        trashed,
+        post,
+        conversations,
+      }) => ({
         when: Actions(),
         where: async (frames) => {
           const [base] = frames;
@@ -544,6 +585,13 @@ const threadList = defineEndpoint(
             {},
             { conversation, root, item, createdAt },
           );
+          // Hide conversations whose root post has been soft-deleted.
+          frames = await frames.query(
+            Trashing._isTrashed,
+            { item },
+            { trashed },
+          );
+          frames = frames.filter(($) => $[trashed] === false);
           frames = await frames.query(
             Posting._getPost,
             { post: item },
@@ -574,11 +622,18 @@ const threadList = defineEndpoint(
 const postsByAuthor = defineEndpoint(
   "/posts/byAuthor",
   ({ Sync, Actions, Request, Respond }) => ({
-    PostsByAuthorResponse: Sync(({ author, post, posts }) => ({
+    PostsByAuthorResponse: Sync(({ author, post, trashed, posts }) => ({
       when: Actions(Request({ author })),
       where: async (frames) => {
         const [base] = frames;
         frames = await frames.query(Posting._getByAuthor, { author }, { post });
+        // Omit soft-deleted posts from the author's public post list.
+        frames = await frames.query(
+          Trashing._isTrashed,
+          { item: post },
+          { trashed },
+        );
+        frames = frames.filter(($) => $[trashed] === false);
         return frames.aggregate(base, [post], posts);
       },
       then: Actions(Respond<PostsByAuthorOutput>({ posts })),

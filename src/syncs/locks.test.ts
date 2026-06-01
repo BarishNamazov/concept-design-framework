@@ -91,3 +91,82 @@ describe("lock synchronizations", () => {
     expect(res.error).toBe("Invalid or expired session.");
   });
 });
+
+/** Bootstrap a forum administrator (holds both `administer` and `moderate`). */
+async function establishAdmin(
+  username: string,
+): Promise<{ user: string; session: string }> {
+  const admin = await registerAndLogin(username);
+  await app.send("/roles/define", {
+    session: admin.session,
+    name: "administrator",
+    capabilities: ["administer", "moderate"],
+  });
+  await app.send("/roles/grant", {
+    session: admin.session,
+    user: admin.user,
+    context: "forum",
+    role: "administrator",
+  });
+  return admin;
+}
+
+describe("lock authorization", () => {
+  test("once the forum has an admin, an ordinary member cannot lock", async () => {
+    await establishAdmin("lock_admin");
+    const member = await registerAndLogin("lock_member");
+
+    const res = await app.send("/locks/lock", {
+      session: member.session,
+      target: "t1",
+    });
+    expect(res.error).toBe("Not authorized to lock targets.");
+    expect(res.target).toBeUndefined();
+
+    const isLocked = await app.send("/locks/isLocked", { target: "t1" });
+    expect(isLocked.locked).toBe(false);
+  });
+
+  test("a forum moderator can lock and unlock", async () => {
+    const admin = await establishAdmin("lock_admin2");
+    const mod = await registerAndLogin("lock_mod");
+    await app.send("/roles/define", {
+      session: admin.session,
+      name: "moderator",
+      capabilities: ["moderate"],
+    });
+    await app.send("/roles/grant", {
+      session: admin.session,
+      user: mod.user,
+      context: "forum",
+      role: "moderator",
+    });
+
+    const locked = await app.send("/locks/lock", {
+      session: mod.session,
+      target: "t1",
+    });
+    expect(locked).toEqual({ target: "t1" });
+
+    const unlocked = await app.send("/locks/unlock", {
+      session: mod.session,
+      target: "t1",
+    });
+    expect(unlocked).toEqual({ target: "t1" });
+  });
+
+  test("an ordinary member cannot unlock a moderator's lock", async () => {
+    const admin = await establishAdmin("lock_admin3");
+    const member = await registerAndLogin("lock_member3");
+    await app.send("/locks/lock", { session: admin.session, target: "t1" });
+
+    const res = await app.send("/locks/unlock", {
+      session: member.session,
+      target: "t1",
+    });
+    expect(res.error).toBe("Not authorized to lock targets.");
+
+    const isLocked = await app.send("/locks/isLocked", { target: "t1" });
+    expect(isLocked.locked).toBe(true);
+  });
+});

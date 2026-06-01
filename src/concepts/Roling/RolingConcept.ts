@@ -166,6 +166,37 @@ export default class RolingConcept {
   }
 
   /**
+   * _hasCapabilityHolder (context: Context, capability: String): (present: Flag)
+   *
+   * **requires** true
+   *
+   * **effects** returns a single result whose `present` is true iff some Grant
+   * in the given `context` references a Role whose capabilities include the
+   * given `capability` — i.e. at least one user already holds that capability
+   * there. Used by syncs to detect whether a context has been "claimed" (e.g.
+   * whether the forum already has an administrator) so the very first such
+   * grant can bootstrap before enforcement begins.
+   */
+  async _hasCapabilityHolder({
+    context,
+    capability,
+  }: {
+    context: Context;
+    capability: string;
+  }): Promise<{ present: boolean }[]> {
+    const roles = await this.roles.find({ capabilities: capability }).toArray();
+    if (roles.length === 0) {
+      return [{ present: false }];
+    }
+    const roleIds = roles.map((r) => r._id);
+    const grant = await this.grants.findOne({
+      context,
+      role: { $in: roleIds },
+    });
+    return [{ present: grant !== null }];
+  }
+
+  /**
    * _getRoles (user: User, context: Context): (role: Role)
    *
    * **requires** true

@@ -13,6 +13,11 @@ import {
   defineEndpoint,
   type QueryRow,
 } from "@concepts/Requesting/api.ts";
+import {
+  authorizeCapable,
+  MODERATE_CAPABILITY,
+  rejectIncapable,
+} from "./authorization.ts";
 
 type LockOutput = ActionOk<typeof Locking, "lock">;
 type UnlockOutput = ActionOk<typeof Locking, "unlock">;
@@ -24,10 +29,16 @@ type LockListOutput = { locked: QueryRow<typeof Locking, "_getLocked">[] };
 const lock = defineEndpoint(
   "/locks/lock",
   ({ Sync, Actions, Request, Respond, Fail }) => ({
-    LockRequest: Sync(({ session, target, user }) => ({
+    LockRequest: Sync(({ session, target, user, allowed, present }) => ({
       when: Actions(Request({ session, target })),
-      where: async (frames) =>
-        await frames.query(Sessioning._getUser, { session }, { user }),
+      where: (frames) =>
+        authorizeCapable(frames, {
+          session,
+          user,
+          allowed,
+          present,
+          capability: MODERATE_CAPABILITY,
+        }),
       then: Actions([Locking.lock, { target }]),
     })),
 
@@ -39,6 +50,19 @@ const lock = defineEndpoint(
     LockError: Sync(({ error }) => ({
       when: Actions([Locking.lock, {}, { error }]),
       then: Actions(Fail(error)),
+    })),
+
+    LockForbidden: Sync(({ session, target, user, allowed, present }) => ({
+      when: Actions(Request({ session, target })),
+      where: (frames) =>
+        rejectIncapable(frames, {
+          session,
+          user,
+          allowed,
+          present,
+          capability: MODERATE_CAPABILITY,
+        }),
+      then: Actions(Fail("Not authorized to lock targets.")),
     })),
 
     LockInvalidSession: Sync(({ session, active }) => ({
@@ -61,10 +85,16 @@ const lock = defineEndpoint(
 const unlock = defineEndpoint(
   "/locks/unlock",
   ({ Sync, Actions, Request, Respond, Fail }) => ({
-    UnlockRequest: Sync(({ session, target, user }) => ({
+    UnlockRequest: Sync(({ session, target, user, allowed, present }) => ({
       when: Actions(Request({ session, target })),
-      where: async (frames) =>
-        await frames.query(Sessioning._getUser, { session }, { user }),
+      where: (frames) =>
+        authorizeCapable(frames, {
+          session,
+          user,
+          allowed,
+          present,
+          capability: MODERATE_CAPABILITY,
+        }),
       then: Actions([Locking.unlock, { target }]),
     })),
 
@@ -76,6 +106,19 @@ const unlock = defineEndpoint(
     UnlockError: Sync(({ error }) => ({
       when: Actions([Locking.unlock, {}, { error }]),
       then: Actions(Fail(error)),
+    })),
+
+    UnlockForbidden: Sync(({ session, target, user, allowed, present }) => ({
+      when: Actions(Request({ session, target })),
+      where: (frames) =>
+        rejectIncapable(frames, {
+          session,
+          user,
+          allowed,
+          present,
+          capability: MODERATE_CAPABILITY,
+        }),
+      then: Actions(Fail("Not authorized to lock targets.")),
     })),
 
     UnlockInvalidSession: Sync(({ session, active }) => ({
