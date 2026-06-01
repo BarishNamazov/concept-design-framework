@@ -7,10 +7,17 @@ import { v7 as uuidv7 } from "uuid";
  * Bun loads variables from `.env` automatically.
  */
 async function initMongoClient(): Promise<MongoClient> {
-  const DB_CONN = process.env.MONGODB_URL;
+  let DB_CONN = process.env.MONGODB_URL;
   if (DB_CONN === undefined) {
     throw new Error("Could not find environment variable: MONGODB_URL");
   }
+
+  if (DB_CONN === "memory") {
+    const { MongoMemoryServer } = await import("mongodb-memory-server");
+    const mongoServer = await MongoMemoryServer.create();
+    DB_CONN = mongoServer.getUri();
+  }
+
   const client = new MongoClient(DB_CONN);
   try {
     await client.connect();
