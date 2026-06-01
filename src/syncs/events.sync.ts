@@ -213,6 +213,12 @@ export const PurgeClearsLinks: Sync = ({ item }) => ({
   then: actions([Linking.clearLinks, { source: item }]),
 });
 
+/** Drop every inbound reference link pointing at the purged item. */
+export const PurgeClearsBacklinks: Sync = ({ item }) => ({
+  when: actions([Trashing.purge, {}, { item }]),
+  then: actions([Linking.clearBacklinks, { target: item }]),
+});
+
 /** Detach the purged item's conversation node, if it has one. */
 export const PurgeRemovesNode: Sync = ({ item, node }) => ({
   when: actions([Trashing.purge, {}, { item }]),
@@ -234,5 +240,6 @@ export const eventSyncs = {
   PurgeClearsTags,
   PurgeUnregistersTracking,
   PurgeClearsLinks,
+  PurgeClearsBacklinks,
   PurgeRemovesNode,
 };

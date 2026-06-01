@@ -77,24 +77,29 @@ export default class NotifyingConcept {
   }
 
   /**
-   * markRead (notification: Notification): (notification: Notification)
+   * markRead (notification: Notification, recipient: User): (notification: Notification)
    *
-   * **requires** the `notification` exists
+   * **requires** the `notification` exists and is owned by `recipient`
    *
    * **effects** sets the `read` of that Notification to true; returns it as
    * `notification`
    */
   async markRead({
     notification,
+    recipient,
   }: {
     notification: Notification;
+    recipient: User;
   }): Promise<{ notification: Notification } | { error: string }> {
-    const doc = await this.notifications.findOne({ _id: notification });
+    const doc = await this.notifications.findOne({
+      _id: notification,
+      recipient,
+    });
     if (doc === null) {
       return { error: "Notification does not exist." };
     }
     await this.notifications.updateOne(
-      { _id: notification },
+      { _id: notification, recipient },
       { $set: { read: true } },
     );
     return { notification };
@@ -121,23 +126,28 @@ export default class NotifyingConcept {
   }
 
   /**
-   * dismiss (notification: Notification): (notification: Notification)
+   * dismiss (notification: Notification, recipient: User): (notification: Notification)
    *
-   * **requires** the `notification` exists
+   * **requires** the `notification` exists and is owned by `recipient`
    *
    * **effects** removes that Notification from the state; returns the removed
    * `notification`
    */
   async dismiss({
     notification,
+    recipient,
   }: {
     notification: Notification;
+    recipient: User;
   }): Promise<{ notification: Notification } | { error: string }> {
-    const doc = await this.notifications.findOne({ _id: notification });
+    const doc = await this.notifications.findOne({
+      _id: notification,
+      recipient,
+    });
     if (doc === null) {
       return { error: "Notification does not exist." };
     }
-    await this.notifications.deleteOne({ _id: notification });
+    await this.notifications.deleteOne({ _id: notification, recipient });
     return { notification };
   }
 

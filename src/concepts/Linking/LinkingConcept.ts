@@ -145,6 +145,22 @@ export default class LinkingConcept {
   }
 
   /**
+   * clearBacklinks (target: Item): (target: Item)
+   *
+   * **requires** true
+   *
+   * **effects** removes every Link whose target is `target`; returns `target`
+   */
+  async clearBacklinks({
+    target,
+  }: {
+    target: Item;
+  }): Promise<{ target: Item }> {
+    await this.links.deleteMany({ target });
+    return { target };
+  }
+
+  /**
    * _getForwardLinks (source: Item): (target: Item)
    *
    * **requires** true

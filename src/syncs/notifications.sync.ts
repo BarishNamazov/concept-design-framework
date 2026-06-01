@@ -124,7 +124,7 @@ const markRead = defineEndpoint(
       when: Actions(Request({ session, notification })),
       where: async (frames) =>
         await frames.query(Sessioning._getUser, { session }, { user }),
-      then: Actions([Notifying.markRead, { notification }]),
+      then: Actions([Notifying.markRead, { notification, recipient: user }]),
     })),
 
     NotificationsMarkReadResponse: Sync(({ notification }) => ({
@@ -193,7 +193,7 @@ const dismiss = defineEndpoint(
       when: Actions(Request({ session, notification })),
       where: async (frames) =>
         await frames.query(Sessioning._getUser, { session }, { user }),
-      then: Actions([Notifying.dismiss, { notification }]),
+      then: Actions([Notifying.dismiss, { notification, recipient: user }]),
     })),
 
     NotificationsDismissResponse: Sync(({ notification }) => ({

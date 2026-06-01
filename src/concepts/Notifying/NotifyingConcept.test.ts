@@ -46,14 +46,14 @@ describe("Notifying", () => {
       { count: 1 },
     ]);
     // after reading it no longer counts as unread, but remains in the inbox
-    ok(await Notifying.markRead({ notification }));
+    ok(await Notifying.markRead({ notification, recipient: u }));
     expect(await Notifying._getUnreadCount({ recipient: u })).toEqual([
       { count: 0 },
     ]);
     expect(await Notifying._getUnread({ recipient: u })).toEqual([]);
     expect(await Notifying._getInbox({ recipient: u })).toHaveLength(1);
     // dismissing it removes it for good
-    ok(await Notifying.dismiss({ notification }));
+    ok(await Notifying.dismiss({ notification, recipient: u }));
     expect(await Notifying._getInbox({ recipient: u })).toEqual([]);
   });
 
@@ -91,13 +91,16 @@ describe("Notifying", () => {
 
   test("markRead requires the notification to exist", async () => {
     expect(
-      await Notifying.markRead({ notification: user("ghost") }),
+      await Notifying.markRead({
+        notification: user("ghost"),
+        recipient: user("carol"),
+      }),
     ).toHaveProperty("error");
     const u = user("carol");
     const { notification } = ok(
       await Notifying.notify({ recipient: u, kind: "mention", subject: "x" }),
     );
-    const read = ok(await Notifying.markRead({ notification }));
+    const read = ok(await Notifying.markRead({ notification, recipient: u }));
     expect(read.notification).toBe(notification);
     expect(await Notifying._getUnreadCount({ recipient: u })).toEqual([
       { count: 0 },
@@ -123,15 +126,42 @@ describe("Notifying", () => {
 
   test("dismiss requires the notification to exist and removes it", async () => {
     expect(
-      await Notifying.dismiss({ notification: user("ghost") }),
+      await Notifying.dismiss({
+        notification: user("ghost"),
+        recipient: user("frank"),
+      }),
     ).toHaveProperty("error");
     const u = user("frank");
     const { notification } = ok(
       await Notifying.notify({ recipient: u, kind: "mention", subject: "x" }),
     );
-    const removed = ok(await Notifying.dismiss({ notification }));
+    const removed = ok(await Notifying.dismiss({ notification, recipient: u }));
     expect(removed.notification).toBe(notification);
     expect(await Notifying._getInbox({ recipient: u })).toEqual([]);
+  });
+
+  test("markRead and dismiss reject a non-owner recipient (no IDOR)", async () => {
+    const owner = user("owner");
+    const attacker = user("attacker");
+    const { notification } = ok(
+      await Notifying.notify({
+        recipient: owner,
+        kind: "mention",
+        subject: "x",
+      }),
+    );
+    // an attacker cannot mark another user's notification as read
+    expect(
+      await Notifying.markRead({ notification, recipient: attacker }),
+    ).toHaveProperty("error");
+    expect(await Notifying._getUnreadCount({ recipient: owner })).toEqual([
+      { count: 1 },
+    ]);
+    // nor dismiss it
+    expect(
+      await Notifying.dismiss({ notification, recipient: attacker }),
+    ).toHaveProperty("error");
+    expect(await Notifying._getInbox({ recipient: owner })).toHaveLength(1);
   });
 
   test("_getInbox returns every notification newest-first", async () => {
@@ -167,7 +197,9 @@ describe("Notifying", () => {
     expect(await Notifying._getUnreadCount({ recipient: u })).toEqual([
       { count: 2 },
     ]);
-    ok(await Notifying.markRead({ notification: a.notification }));
+    ok(
+      await Notifying.markRead({ notification: a.notification, recipient: u }),
+    );
     expect(await Notifying._getUnreadCount({ recipient: u })).toEqual([
       { count: 1 },
     ]);
@@ -183,7 +215,12 @@ describe("Notifying", () => {
       await Notifying.notify({ recipient: u, kind: "b", subject: "second" }),
     );
     // reading the older one removes it from the unread list
-    ok(await Notifying.markRead({ notification: first.notification }));
+    ok(
+      await Notifying.markRead({
+        notification: first.notification,
+        recipient: u,
+      }),
+    );
     const unread = await Notifying._getUnread({ recipient: u });
     expect(unread).toEqual([
       {

@@ -100,6 +100,27 @@ describe("Linking", () => {
     ]);
   });
 
+  test("clearBacklinks removes every link pointing at a target", async () => {
+    const a = id();
+    const b = id();
+    const c = id();
+    // a -> c and b -> c are inbound links to c
+    ok(await Linking.link({ source: a, target: c }));
+    ok(await Linking.link({ source: b, target: c }));
+    // c -> a is an outbound link from c that must survive
+    ok(await Linking.link({ source: c, target: a }));
+
+    ok(await Linking.clearBacklinks({ target: c }));
+    expect(await Linking._getBacklinks({ target: c })).toEqual([]);
+    expect(await Linking._getBacklinkCount({ target: c })).toEqual([
+      { count: 0 },
+    ]);
+    // outbound link from c is untouched
+    expect(await Linking._getForwardLinks({ source: c })).toEqual([
+      { target: a },
+    ]);
+  });
+
   test("queries: hasLink, outgoing and backlink counts", async () => {
     const a = id();
     const b = id();

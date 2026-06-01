@@ -487,6 +487,11 @@ const postDelete = defineEndpoint(
       then: Actions([Linking.clearLinks, { source: post }]),
     })),
 
+    PostDeleteClearsBacklinks: Sync(({ post }) => ({
+      when: Actions([Posting.delete, {}, { post }]),
+      then: Actions([Linking.clearBacklinks, { target: post }]),
+    })),
+
     PostDeleteRemovesNode: Sync(({ post, node }) => ({
       when: Actions([Posting.delete, {}, { post }]),
       where: async (frames) =>

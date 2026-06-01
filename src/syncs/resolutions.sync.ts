@@ -50,6 +50,11 @@ const accept = defineEndpoint(
       then: Actions(Respond<ResolutionAcceptOutput>({ resolution })),
     })),
 
+    ResolutionAcceptError: Sync(({ error }) => ({
+      when: Actions([Resolving.accept, {}, { error }]),
+      then: Actions(Fail(error)),
+    })),
+
     ResolutionAcceptNotAuthor: Sync(({ session, question, user, author }) => ({
       when: Actions(Request({ session, question })),
       where: async (frames) => {
