@@ -85,6 +85,7 @@ type ExpectedPaths =
   | "/threads/reply"
   | "/threads/get"
   | "/threads/list"
+  | "/threads/forItem"
   | "/posts/get"
   | "/posts/edit"
   | "/posts/delete"

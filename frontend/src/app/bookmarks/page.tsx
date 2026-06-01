@@ -14,7 +14,7 @@ import {
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { loadRootIndex } from "@/lib/loaders";
+import { loadPostConversationIndex } from "@/lib/loaders";
 import type { Bookmark as BookmarkModel } from "@/lib/models";
 import { relativeTime } from "@/lib/format";
 
@@ -23,7 +23,16 @@ function Bookmarks() {
   const { data, error, loading, refetch } = useQuery<{
     bookmarks: BookmarkModel[];
   }>(session ? () => api.bookmarks.list({ session }) : null, [session]);
-  const index = useQuery<Record<string, string>>(() => loadRootIndex(), []);
+  const bookmarkItems = (data?.bookmarks ?? []).map((bookmark) =>
+    String(bookmark.item),
+  );
+  const bookmarkIndexKey = bookmarkItems.join("\u0000");
+  const index = useQuery<Record<string, string>>(
+    bookmarkItems.length > 0
+      ? () => loadPostConversationIndex(bookmarkItems)
+      : null,
+    [bookmarkIndexKey],
+  );
 
   async function unsave(item: string) {
     if (!session) return;

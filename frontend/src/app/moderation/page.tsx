@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Flag, Lock, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "@/components/link";
@@ -17,8 +16,13 @@ import {
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { loadRootIndex } from "@/lib/loaders";
-import type { Flag as FlagModel, LockedTarget, OpenFlag, TrashedItem } from "@/lib/models";
+import { loadPostConversationIndex } from "@/lib/loaders";
+import type {
+  Flag as FlagModel,
+  LockedTarget,
+  OpenFlag,
+  TrashedItem,
+} from "@/lib/models";
 import { relativeTime, shortId } from "@/lib/format";
 
 function FlagDetails({ target }: { target: string }) {
@@ -47,7 +51,12 @@ function FlagsQueue() {
     session ? () => api.flags.open({ session }) : null,
     [session],
   );
-  const index = useQuery<Record<string, string>>(() => loadRootIndex(), []);
+  const flagItems = (data?.targets ?? []).map(({ target }) => String(target));
+  const flagIndexKey = flagItems.join("\u0000");
+  const index = useQuery<Record<string, string>>(
+    flagItems.length > 0 ? () => loadPostConversationIndex(flagItems) : null,
+    [flagIndexKey],
+  );
 
   async function resolve(target: string, outcome: string) {
     if (!session) return;
@@ -99,10 +108,18 @@ function FlagsQueue() {
               <div>
                 <FlagDetails target={item} />
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={() => resolve(item, "accepted")}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => resolve(item, "accepted")}
+                  >
                     Uphold
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => resolve(item, "rejected")}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => resolve(item, "rejected")}
+                  >
                     Dismiss
                   </Button>
                   <Button
@@ -126,10 +143,9 @@ function FlagsQueue() {
 
 function LockedTopics() {
   const { session } = useAuth();
-  const { data, error, loading, refetch } = useQuery<{ locked: LockedTarget[] }>(
-    () => api.locks.list({}),
-    [],
-  );
+  const { data, error, loading, refetch } = useQuery<{
+    locked: LockedTarget[];
+  }>(() => api.locks.list({}), []);
 
   async function unlock(target: string) {
     if (!session) return;
@@ -157,9 +173,15 @@ function LockedTopics() {
       {data.locked.map((lock) => {
         const target = String(lock.target);
         return (
-          <div key={target} className="flex items-center justify-between gap-3 p-4">
+          <div
+            key={target}
+            className="flex items-center justify-between gap-3 p-4"
+          >
             <div>
-              <Link href={`/t/${target}`} className="font-medium hover:text-primary">
+              <Link
+                href={`/t/${target}`}
+                className="font-medium hover:text-primary"
+              >
                 Conversation {shortId(target)}
               </Link>
               <p className="text-xs text-muted-foreground">
@@ -178,10 +200,9 @@ function LockedTopics() {
 
 function TrashBin() {
   const { session } = useAuth();
-  const { data, error, loading, refetch } = useQuery<{ trashed: TrashedItem[] }>(
-    () => api.trash.list({}),
-    [],
-  );
+  const { data, error, loading, refetch } = useQuery<{
+    trashed: TrashedItem[];
+  }>(() => api.trash.list({}), []);
 
   async function restore(item: string) {
     if (!session) return;
@@ -225,13 +246,20 @@ function TrashBin() {
             meta={
               <span>
                 Trashed by{" "}
-                <UserName user={String(entry.trashedBy)} className="text-foreground" />{" "}
+                <UserName
+                  user={String(entry.trashedBy)}
+                  className="text-foreground"
+                />{" "}
                 {relativeTime(entry.trashedAt)}
               </span>
             }
             action={
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => restore(item)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => restore(item)}
+                >
                   Restore
                 </Button>
                 <Button

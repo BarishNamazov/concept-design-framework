@@ -14,7 +14,7 @@ import {
 } from "@/components/forum/states";
 import { useQuery } from "@/hooks/use-query";
 import { useAuth } from "@/lib/auth";
-import { loadRootIndex, loadUserOverview } from "@/lib/loaders";
+import { loadPostConversationIndex, loadUserOverview } from "@/lib/loaders";
 import { count } from "@/lib/format";
 
 export default function UserPage({
@@ -27,7 +27,12 @@ export default function UserPage({
   const isSelf = me ? String(me.user) === user : false;
 
   const overview = useQuery(() => loadUserOverview(user), [user]);
-  const index = useQuery<Record<string, string>>(() => loadRootIndex(), []);
+  const postIds = overview.data?.postIds ?? [];
+  const postIndexKey = postIds.join("\u0000");
+  const index = useQuery<Record<string, string>>(
+    postIds.length > 0 ? () => loadPostConversationIndex(postIds) : null,
+    [postIndexKey],
+  );
 
   if (overview.loading && !overview.data)
     return (
@@ -43,12 +48,17 @@ export default function UserPage({
     );
   if (!overview.data) return null;
 
-  const { profile, postIds } = overview.data;
+  const { profile } = overview.data;
 
   return (
     <PageContainer>
       <header className="mb-8 flex flex-col items-start gap-5 border-b border-border pb-8 sm:flex-row sm:items-center">
-        <UserAvatar user={user} name={profile.displayName} avatar={profile.avatar} className="size-20 text-2xl" />
+        <UserAvatar
+          user={user}
+          name={profile.displayName}
+          avatar={profile.avatar}
+          className="size-20 text-2xl"
+        />
         <div className="min-w-0 flex-1">
           <h1 className="font-display text-3xl font-semibold tracking-tight">
             {profile.displayName}
@@ -89,6 +99,7 @@ export default function UserPage({
               key={item}
               item={item}
               conversation={index.data?.[item] ?? null}
+              showTitle={false}
             />
           ))}
         </div>

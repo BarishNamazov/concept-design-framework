@@ -13,22 +13,48 @@ import { PostPreview } from "@/components/forum/post-preview";
 import { SubscribeButton } from "@/components/forum/subscribe-button";
 import { TagEditor } from "@/components/forum/tag-editor";
 import { UnreadBanner } from "@/components/forum/unread-banner";
-import {
-  ErrorState,
-  LoadingState,
-} from "@/components/forum/states";
+import { ErrorState, LoadingState } from "@/components/forum/states";
+import { useHashTargetHighlight } from "@/hooks/use-hash-target-highlight";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { loadThreadPage, type ThreadPage } from "@/lib/loaders";
 import { count, titleFromContent } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { ThreadNode } from "@/lib/models";
 
-/** Indentation step per reply depth, capped so deep threads stay readable. */
-function indentFor(depth: number): string {
-  const level = Math.min(depth, 6);
-  if (level === 0) return "";
-  return "border-l-2 border-border/60 pl-3 sm:pl-5";
+interface ThreadBranch {
+  node: ThreadNode;
+  children: ThreadBranch[];
+}
+
+function nodeKey(node: ThreadNode): string {
+  return String(node.node);
+}
+
+function parentKey(node: ThreadNode): string | null {
+  return node.parent == null ? null : String(node.parent);
+}
+
+function buildThreadTree(nodes: ThreadNode[]): ThreadBranch[] {
+  const branches = new Map<string, ThreadBranch>();
+
+  for (const node of nodes) {
+    branches.set(nodeKey(node), { node, children: [] });
+  }
+
+  const roots: ThreadBranch[] = [];
+  for (const node of nodes) {
+    const branch = branches.get(nodeKey(node));
+    if (!branch) continue;
+
+    const parent = parentKey(node);
+    const parentBranch = parent ? branches.get(parent) : null;
+    if (parentBranch) parentBranch.children.push(branch);
+    else roots.push(branch);
+  }
+
+  return roots;
 }
 
 export function ThreadView({ conversation }: { conversation: string }) {
@@ -45,6 +71,13 @@ export function ThreadView({ conversation }: { conversation: string }) {
     () => api.pins.forScope({ scope: conversation }),
     [conversation],
   );
+  const hashTargetVersion =
+    data?.nodes.map((node) => String(node.item)).join("\u0000") ?? "";
+
+  useHashTargetHighlight({
+    enabled: !!data,
+    deps: [conversation, hashTargetVersion],
+  });
 
   if (loading && !data) return <LoadingState label="Loading discussion…" />;
   if (error) return <ErrorState message={error} onRetry={refetch} />;
@@ -57,6 +90,7 @@ export function ThreadView({ conversation }: { conversation: string }) {
   const replyCount = Math.max(0, nodes.length - 1);
   const subscriberCount = subscribers.data?.subscribers.length ?? 0;
   const pinnedItems = pinned.data?.pinned ?? [];
+  const threadTree = buildThreadTree(nodes);
 
   function refetchAll() {
     refetch();
@@ -103,7 +137,10 @@ export function ThreadView({ conversation }: { conversation: string }) {
       <header className="mb-6 border-b border-border pb-5">
         <div className="mb-2 flex flex-wrap items-center gap-2">
           {category ? (
-            <CategoryBadge id={String(category.category)} name={category.name} />
+            <CategoryBadge
+              id={String(category.category)}
+              name={category.name}
+            />
           ) : null}
           {locked ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
@@ -170,7 +207,7 @@ export function ThreadView({ conversation }: { conversation: string }) {
             <Pin className="size-3.5" />
             Pinned
           </h2>
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             {pinnedItems.map((p) => (
               <PostPreview
                 key={String(p.item)}
@@ -182,22 +219,22 @@ export function ThreadView({ conversation }: { conversation: string }) {
         </section>
       ) : null}
 
-      <div className="space-y-4">
-        {nodes.map((node) => (
-          <div key={String(node.node)} className={cn(indentFor(node.depth))}>
-            <PostCard
-              node={node}
-              isRoot={node.depth === 0}
-              questionId={questionId}
-              rootAuthorId={rootAuthorId}
-              acceptedAnswer={acceptedAnswer}
-              locked={locked}
-              scope={conversation}
-              onChanged={refetchAll}
-            />
-          </div>
+      <ol className="thread-tree" aria-label="Discussion thread">
+        {threadTree.map((branch) => (
+          <ThreadBranchView
+            key={nodeKey(branch.node)}
+            branch={branch}
+            level={0}
+            rootNodeId={String(root.node)}
+            questionId={questionId}
+            rootAuthorId={rootAuthorId}
+            acceptedAnswer={acceptedAnswer}
+            locked={locked}
+            scope={conversation}
+            onChanged={refetchAll}
+          />
         ))}
-      </div>
+      </ol>
 
       <section className="mt-8 border-t border-border pt-6">
         {locked ? (
@@ -215,7 +252,10 @@ export function ThreadView({ conversation }: { conversation: string }) {
           </>
         ) : (
           <p className="rounded-lg border border-border bg-muted/40 p-4 text-center text-sm text-muted-foreground">
-            <Link href="/login" className="font-medium text-primary hover:underline">
+            <Link
+              href="/login"
+              className="font-medium text-primary hover:underline"
+            >
               Sign in
             </Link>{" "}
             to join the conversation.
@@ -223,5 +263,71 @@ export function ThreadView({ conversation }: { conversation: string }) {
         )}
       </section>
     </PageContainer>
+  );
+}
+
+function ThreadBranchView({
+  branch,
+  level,
+  rootNodeId,
+  questionId,
+  rootAuthorId,
+  acceptedAnswer,
+  locked,
+  scope,
+  onChanged,
+}: {
+  branch: ThreadBranch;
+  level: number;
+  rootNodeId: string;
+  questionId: string;
+  rootAuthorId: string;
+  acceptedAnswer: string | null;
+  locked: boolean;
+  scope: string;
+  onChanged: () => void;
+}) {
+  const isRoot = nodeKey(branch.node) === rootNodeId;
+  const hasChildren = branch.children.length > 0;
+
+  return (
+    <li className={cn("thread-branch", level > 0 && "thread-branch--child")}>
+      <div className="thread-branch-content">
+        <PostCard
+          node={branch.node}
+          isRoot={isRoot}
+          questionId={questionId}
+          rootAuthorId={rootAuthorId}
+          acceptedAnswer={acceptedAnswer}
+          locked={locked}
+          scope={scope}
+          onChanged={onChanged}
+        />
+      </div>
+
+      {hasChildren ? (
+        <ol
+          className={cn(
+            "thread-children",
+            level >= 5 && "thread-children--compact",
+          )}
+        >
+          {branch.children.map((child) => (
+            <ThreadBranchView
+              key={nodeKey(child.node)}
+              branch={child}
+              level={level + 1}
+              rootNodeId={rootNodeId}
+              questionId={questionId}
+              rootAuthorId={rootAuthorId}
+              acceptedAnswer={acceptedAnswer}
+              locked={locked}
+              scope={scope}
+              onChanged={onChanged}
+            />
+          ))}
+        </ol>
+      ) : null}
+    </li>
   );
 }

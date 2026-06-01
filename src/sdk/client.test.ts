@@ -154,6 +154,7 @@ describe("thread & post flows", () => {
     expect(view.post.rendered).toContain("<h1>");
 
     // Two replies under the root node.
+    await Bun.sleep(2);
     const reply1 = ok(
       await api.threads.reply({
         session,
@@ -161,6 +162,7 @@ describe("thread & post flows", () => {
         content: "first reply",
       }),
     );
+    await Bun.sleep(2);
     const reply2 = ok(
       await api.threads.reply({
         session,
@@ -168,6 +170,9 @@ describe("thread & post flows", () => {
         content: "second reply",
       }),
     );
+
+    const replyLocation = ok(await api.threads.forItem({ item: reply1.post }));
+    expect(replyLocation.conversation).toBe(root.conversation);
 
     const thread = ok(
       await api.threads.get({ conversation: root.conversation }),
@@ -193,6 +198,11 @@ describe("thread & post flows", () => {
     // byAuthor lists this author's posts (root + 2 replies = 3).
     const listed = ok(await api.posts.byAuthor({ author: user }));
     expect(listed.posts.length).toBe(3);
+    expect(listed.posts.map((p) => p.post)).toEqual([
+      reply2.post,
+      reply1.post,
+      root.post,
+    ]);
 
     // Delete cascades; byAuthor for a fresh author is an empty array.
     ok(await api.posts.delete({ session, post: reply1.post }));

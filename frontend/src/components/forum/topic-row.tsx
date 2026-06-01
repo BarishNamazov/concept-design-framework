@@ -3,15 +3,15 @@
 import { CheckCircle2, Lock, MessageSquare } from "lucide-react";
 import { Link } from "@/components/link";
 import { UserAvatar } from "@/components/forum/user-avatar";
-import { CategoryBadge } from "@/components/forum/badges";
+import { CategoryBadge, TagBadge } from "@/components/forum/badges";
 import { useProfile } from "@/lib/profiles";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { enrichTopic } from "@/lib/loaders";
 import type { ConversationSummary } from "@/lib/models";
 import {
+  bodyExcerpt,
   count,
-  excerpt,
   relativeTime,
   titleFromContent,
 } from "@/lib/format";
@@ -52,7 +52,7 @@ export function TopicRow({
   );
 
   const title = titleFromContent(summary.post.content);
-  const preview = excerpt(summary.post.content);
+  const preview = bodyExcerpt(summary.post.content);
 
   return (
     <article
@@ -91,7 +91,7 @@ export function TopicRow({
           </div>
 
           {preview ? (
-            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+            <p className="mt-2 line-clamp-2 border-l border-primary/30 pl-3 text-[0.925rem] leading-6 text-foreground/70">
               {preview}
             </p>
           ) : null}
@@ -103,7 +103,14 @@ export function TopicRow({
                 name={data.category.name}
               />
             ) : null}
-            <span className="inline-flex items-center gap-1.5">
+            {data?.tags.map((tag) => (
+              <TagBadge
+                key={String(tag.tag)}
+                id={String(tag.tag)}
+                name={tag.name}
+              />
+            ))}
+            <span className="inline-flex min-h-6 items-center gap-1.5">
               <UserAvatar
                 user={author}
                 name={authorProfile?.displayName}
@@ -112,7 +119,7 @@ export function TopicRow({
               />
               <Link
                 href={`/u/${author}`}
-                className="font-medium text-foreground/80 hover:text-primary"
+                className="inline-flex items-center font-medium leading-none text-foreground/80 hover:text-primary"
               >
                 {authorProfile?.displayName ?? "…"}
               </Link>

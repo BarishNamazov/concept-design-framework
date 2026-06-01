@@ -57,7 +57,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         </h1>
       </div>
       <Card>
-        <form onSubmit={onSubmit}>
+        <form onSubmit={onSubmit} className="flex flex-col gap-6">
           <CardHeader>
             <CardTitle>{isRegister ? "Create your account" : "Your account"}</CardTitle>
             <CardDescription>
@@ -66,8 +66,8 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
                 : "Enter your handle and password to continue."}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
+          <CardContent className="flex flex-col gap-5">
+            <div className="flex flex-col gap-2.5">
               <Label htmlFor="username">Username</Label>
               <Input
                 id="username"
@@ -79,7 +79,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               />
             </div>
             {isRegister ? (
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2.5">
                 <Label htmlFor="displayName">Display name</Label>
                 <Input
                   id="displayName"
@@ -90,7 +90,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
                 />
               </div>
             ) : null}
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2.5">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"

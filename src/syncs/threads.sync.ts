@@ -6,6 +6,7 @@
  *   POST /threads/reply  { session, parent, content }   -> { post, node }
  *   POST /threads/get    { conversation }               -> { thread }
  *   POST /threads/list   {}                              -> { conversations }
+ *   POST /threads/forItem { item }                       -> { conversation }
  *   POST /posts/get      { post }                       -> { post }
  *   POST /posts/edit     { session, post, content }     -> { post }
  *   POST /posts/delete   { session, post }              -> { post }
@@ -65,6 +66,11 @@ type ThreadReplyOutput = Prettify<
 >;
 type ThreadGetOutput = { thread: ThreadNode[] };
 type ThreadListOutput = { conversations: ConversationSummary[] };
+type ThreadForItemOutput = {
+  conversation:
+    | QueryRow<typeof Conversing, "_getConversation">["conversation"]
+    | null;
+};
 type PostGetOutput = { post: PostView };
 type PostEditOutput = ActionOk<typeof Posting, "edit">;
 type PostDeleteOutput = ActionOk<typeof Posting, "delete">;
@@ -306,6 +312,43 @@ const threadGet = defineEndpoint(
         then: Actions(Respond<ThreadGetOutput>({ thread })),
       }),
     ),
+  }),
+);
+
+// --- threads/forItem: resolve any post item back to its conversation ---
+
+const threadForItem = defineEndpoint(
+  "/threads/forItem",
+  ({ Sync, Actions, Request, Respond }) => ({
+    ThreadForItemResponse: Sync(({ item, node, conversation, trashed }) => ({
+      when: Actions(Request({ item })),
+      where: async (frames) => {
+        const [base] = frames;
+        if (base === undefined) return frames;
+
+        let placed = (await frames.query(
+          Conversing._getNodeByItem,
+          { item },
+          { node },
+        )) as typeof frames;
+        if (placed.length === 0) {
+          return frames.map(($) => ({ ...$, [conversation]: null }));
+        }
+
+        placed = await placed.query(Trashing._isTrashed, { item }, { trashed });
+        placed = placed.filter(($) => $[trashed] === false);
+        if (placed.length === 0) {
+          return frames.map(($) => ({ ...$, [conversation]: null }));
+        }
+
+        return await placed.query(
+          Conversing._getConversation,
+          { node },
+          { conversation },
+        );
+      },
+      then: Actions(Respond<ThreadForItemOutput>({ conversation })),
+    })),
   }),
 );
 
@@ -622,11 +665,12 @@ const threadList = defineEndpoint(
 const postsByAuthor = defineEndpoint(
   "/posts/byAuthor",
   ({ Sync, Actions, Request, Respond }) => ({
-    PostsByAuthorResponse: Sync(({ author, post, trashed, posts }) => ({
+    PostsByAuthorResponse: Sync(({ author, post, order, trashed, posts }) => ({
       when: Actions(Request({ author })),
       where: async (frames) => {
         const [base] = frames;
         frames = await frames.query(Posting._getByAuthor, { author }, { post });
+        frames = frames.map(($, index) => ({ ...$, [order]: index }));
         // Omit soft-deleted posts from the author's public post list.
         frames = await frames.query(
           Trashing._isTrashed,
@@ -634,6 +678,13 @@ const postsByAuthor = defineEndpoint(
           { trashed },
         );
         frames = frames.filter(($) => $[trashed] === false);
+        frames = frames
+          .sort((a, b) => Number(a[order]) - Number(b[order]))
+          .map(($) => {
+            const next = { ...$ };
+            delete next[order];
+            return next;
+          });
         return frames.aggregate(base, [post], posts);
       },
       then: Actions(Respond<PostsByAuthorOutput>({ posts })),
@@ -646,6 +697,7 @@ export const threadsApi = {
   reply: threadReply,
   get: threadGet,
   list: threadList,
+  forItem: threadForItem,
 };
 
 export const postsApi = {

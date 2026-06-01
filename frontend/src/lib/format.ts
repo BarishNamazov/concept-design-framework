@@ -102,6 +102,14 @@ export function excerpt(content: string, max = 180): string {
   return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
 }
 
+/** Plain-text excerpt from the body after the title line. */
+export function bodyExcerpt(content: string, max = 180): string {
+  const lines = content.split("\n");
+  const titleLine = lines.findIndex((line) => line.trim().length > 0);
+  if (titleLine === -1) return "";
+  return excerpt(lines.slice(titleLine + 1).join("\n"), max);
+}
+
 /** Pluralize a count with its noun: `count(1, "reply")` → "1 reply". */
 export function count(n: number, noun: string, plural?: string): string {
   return `${n} ${n === 1 ? noun : plural ?? `${noun}s`}`;

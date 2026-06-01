@@ -26,6 +26,7 @@ export interface FeedTopic {
   summary: ConversationSummary;
   stats: ThreadStats;
   category: Category | null;
+  tags: Tag[];
   locked: boolean;
 }
 
@@ -75,15 +76,18 @@ export async function enrichTopic(
   summary: ConversationSummary,
 ): Promise<FeedTopic> {
   const conversation = String(summary.conversation);
-  const [stats, category, lock] = await Promise.all([
+  const item = String(summary.item);
+  const [stats, category, tagsRes, lock] = await Promise.all([
     loadThreadStats(conversation),
-    loadItemCategory(String(summary.item)),
+    loadItemCategory(item),
+    api.tags.forTarget({ target: item }),
     api.locks.isLocked({ target: conversation }),
   ]);
   return {
     summary,
     stats,
     category,
+    tags: unwrap(tagsRes).tags,
     locked: !("error" in lock) && lock.locked,
   };
 }
@@ -115,7 +119,9 @@ export interface ThreadPage {
   acceptedAnswer: string | null;
 }
 
-export async function loadThreadPage(conversation: string): Promise<ThreadPage> {
+export async function loadThreadPage(
+  conversation: string,
+): Promise<ThreadPage> {
   const nodes = await loadThread(conversation);
   const root = nodes[0];
   if (!root) throw new ForumError("Conversation not found");
@@ -136,23 +142,31 @@ export async function loadThreadPage(conversation: string): Promise<ThreadPage> 
     acceptedAnswer:
       "error" in resolution
         ? null
-        : (resolution.resolution[0]?.answer
-            ? String(resolution.resolution[0].answer)
-            : null),
+        : resolution.resolution[0]?.answer
+          ? String(resolution.resolution[0].answer)
+          : null,
   };
 }
 
 /**
- * Map each conversation's *root post id* to its conversation id, derived from
- * the feed. Many list endpoints (bookmarks, category items, tag targets, a
- * user's posts) return bare post ids; this lets the UI link a root post back to
- * its thread. Non-root posts simply won't resolve (and render without a link).
+ * Map bare post ids to their conversation ids. Many list endpoints (bookmarks,
+ * category items, tag targets, a user's posts) return only post ids, but every
+ * preview should link back into its thread whether the post is a root or reply.
  */
-export async function loadRootIndex(): Promise<Record<string, string>> {
-  const conversations = await loadFeed();
+export async function loadPostConversationIndex(
+  items: string[],
+): Promise<Record<string, string>> {
+  const uniqueItems = [...new Set(items)];
+  const entries = await Promise.all(
+    uniqueItems.map(async (item) => {
+      const { conversation } = unwrap(await api.threads.forItem({ item }));
+      return [item, conversation ? String(conversation) : null] as const;
+    }),
+  );
+
   const index: Record<string, string> = {};
-  for (const summary of conversations) {
-    index[String(summary.item)] = String(summary.conversation);
+  for (const [item, conversation] of entries) {
+    if (conversation) index[item] = conversation;
   }
   return index;
 }

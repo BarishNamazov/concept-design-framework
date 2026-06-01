@@ -11,7 +11,7 @@ import {
 } from "@/components/forum/states";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
-import { loadRootIndex } from "@/lib/loaders";
+import { loadPostConversationIndex } from "@/lib/loaders";
 
 export default function TagPage({
   params,
@@ -24,7 +24,16 @@ export default function TagPage({
     () => api.tags.targets({ tag }),
     [tag],
   );
-  const index = useQuery<Record<string, string>>(() => loadRootIndex(), []);
+  const targetItems = (targets.data?.targets ?? []).map(({ target }) =>
+    String(target),
+  );
+  const targetIndexKey = targetItems.join("\u0000");
+  const index = useQuery<Record<string, string>>(
+    targetItems.length > 0
+      ? () => loadPostConversationIndex(targetItems)
+      : null,
+    [targetIndexKey],
+  );
 
   return (
     <PageContainer>

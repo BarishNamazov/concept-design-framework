@@ -11,7 +11,7 @@ import {
 } from "@/components/forum/states";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
-import { loadRootIndex } from "@/lib/loaders";
+import { loadPostConversationIndex } from "@/lib/loaders";
 import type { Category } from "@/lib/models";
 
 export default function CategoryPage({
@@ -29,7 +29,16 @@ export default function CategoryPage({
     () => api.categories.items({ category }),
     [category],
   );
-  const index = useQuery<Record<string, string>>(() => loadRootIndex(), []);
+  const categoryItems = (items.data?.items ?? []).map(({ item }) =>
+    String(item),
+  );
+  const categoryIndexKey = categoryItems.join("\u0000");
+  const index = useQuery<Record<string, string>>(
+    categoryItems.length > 0
+      ? () => loadPostConversationIndex(categoryItems)
+      : null,
+    [categoryIndexKey],
+  );
 
   const meta = categories.data?.categories.find(
     (c) => String(c.category) === category,

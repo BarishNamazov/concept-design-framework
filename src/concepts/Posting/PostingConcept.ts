@@ -170,14 +170,17 @@ export default class PostingConcept {
    *
    * **requires** true
    *
-   * **effects** returns every Post whose author is `author`
+   * **effects** returns every Post whose author is `author`, newest first
    */
   async _getByAuthor({
     author,
   }: {
     author: Author;
   }): Promise<{ post: Post }[]> {
-    const docs = await this.posts.find({ author }).toArray();
+    const docs = await this.posts
+      .find({ author })
+      .sort({ createdAt: -1, _id: -1 })
+      .toArray();
     return docs.map((doc) => ({ post: doc._id }));
   }
 
