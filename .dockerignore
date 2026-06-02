@@ -1,0 +1,12 @@
+.git
+.env
+.env.*
+.DS_Store
+**/.DS_Store
+node_modules
+frontend
+design
+docs
+coverage
+dist
+*.log
