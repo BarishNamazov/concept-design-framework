@@ -1,7 +1,4 @@
-import type { Metadata } from "next";
-import { AuthForm } from "@/components/forum/auth-form";
-
-export const metadata: Metadata = { title: "Sign in" };
+import { AuthForm } from "@/components/app/auth-form";
 
 export default function LoginPage() {
   return <AuthForm mode="login" />;

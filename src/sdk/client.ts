@@ -5,13 +5,13 @@
  * inferred from a contract type parameter**. This module is entirely generic and
  * app-agnostic: it is never edited when endpoints are added or changed. The
  * concrete binding to an app contract happens at the call site, e.g.
- * `createClient<ForumApi>()`.
+ * `createClient<AppApi>()`.
  *
  * Two equivalent calling styles are supported, both terminating in a single
  * `POST {baseUrl}{path}` request:
  *
  * ```ts
- * const api = createClient<ForumApi>();
+ * const api = createClient<AppApi>();
  *
  * // grouped — property access mirrors the path segments
  * await api.auth.login({ username, password });
@@ -224,7 +224,7 @@ function makeProxy(
  * (`client["/auth/login"](...)`) styles, each fully inferred from `C`.
  *
  * Callers pass their app contract type explicitly, e.g.
- * `createClient<ForumApi>()`.
+ * `createClient<AppApi>()`.
  */
 export function createClient<C extends ContractShape>(
   options: ClientOptions = {},

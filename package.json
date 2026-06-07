@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "A forum application built with concept design, running on Bun.",
+  "description": "A concept-design application template with authentication, profiles, and role-based authorization.",
   "scripts": {
     "start": "bun run src/main.ts",
     "example-client": "bun run example-client/server.ts",

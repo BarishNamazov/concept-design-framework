@@ -53,12 +53,12 @@ Requesting.request({
 ```
 
 The `path` parameter does not include the base URL. Syncs match
-`"/threads/create"`, not `"/api/threads/create"`.
+`"/auth/login"`, not `"/api/auth/login"`.
 
 The HTTP request then waits for a synchronization to call:
 
 ```ts
-Requesting.respond({ request, post, conversation, node });
+Requesting.respond({ request, user, session });
 ```
 
 The response fields are returned as the HTTP JSON body.
@@ -69,25 +69,26 @@ The response fields are returned as the HTTP JSON body.
 endpoint syncs are declared with the typed Requesting helper:
 
 ```ts
-const createThread = defineEndpoint("/threads/create", ({
+const authLogin = defineEndpoint("/auth/login", ({
   Sync,
   Actions,
   Request,
   Respond,
 }) => ({
-  ThreadCreateRequest: Sync(({ session, content, user }) => ({
-    when: Actions(Request({ session, content })),
-    where: async (frames) =>
-      await frames.query(Sessioning._getUser, { session }, { user }),
-    then: Actions([Posting.create, { author: user, content }]),
+  LoginRequest: Sync(({ username, password }) => ({
+    when: Actions(Request({ username, password })),
+    then: Actions([
+      Authenticating.authenticate,
+      { username, password },
+    ]),
   })),
 
-  ThreadCreateResponse: Sync(({ post, conversation, node }) => ({
+  LoginResponse: Sync(({ user, session }) => ({
     when: Actions(
-      [Posting.create, {}, { post }],
-      [Conversing.start, {}, { conversation, node }],
+      [Authenticating.authenticate, {}, { user }],
+      [Sessioning.start, {}, { session }],
     ),
-    then: Actions(Respond<CreateThreadOutput>({ post, conversation, node })),
+    then: Actions(Respond<LoginOutput>({ user, session })),
   })),
 }));
 ```
@@ -96,6 +97,4 @@ The helper emits normal engine action patterns for runtime behavior and records
 endpoint input/output types for the SDK contract. Each endpoint sync is
 request-scoped automatically; `Request(...)` is only needed when the sync reads
 HTTP body fields, and `Respond(...)`/`Fail(...)` bind the request id implicitly.
-See
-[`src/syncs/app.ts`](../../syncs/app.ts) and the
-[HTTP API](../../../docs/ARCHITECTURE.md#http-api-and-endpoint-set) for the forum endpoint set.
+See [`src/syncs/app.ts`](../../syncs/app.ts) for the full endpoint set.

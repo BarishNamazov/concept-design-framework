@@ -174,9 +174,9 @@ describe("role synchronizations", () => {
 });
 
 /**
- * Establish the very first forum administrator. The role gate stays open until
- * someone holds the `"administer"` capability in the `"forum"` context, so the
- * first operator can grant the role to themselves; afterwards the forum is
+ * Establish the very first app administrator. The role gate stays open until
+ * someone holds the `"administer"` capability in the `"app"` context, so the
+ * first operator can grant the role to themselves; afterwards the app is
  * "claimed" and enforcement applies.
  */
 async function establishAdmin(
@@ -191,7 +191,7 @@ async function establishAdmin(
   await app.send("/roles/grant", {
     session: admin.session,
     user: admin.user,
-    context: "forum",
+    context: "app",
     role: "administrator",
   });
   return admin;
@@ -205,10 +205,10 @@ describe("role administration authorization", () => {
       displayName: "role_auto_admin",
     });
 
-    for (const capability of ["administer", "moderate", "pin"]) {
+    for (const capability of ["administer"]) {
       const can = await app.send("/roles/can", {
         user: first.user,
-        context: "forum",
+        context: "app",
         capability,
       });
       expect(can.allowed).toBe(true);
@@ -221,7 +221,7 @@ describe("role administration authorization", () => {
     });
     const canAdmin = await app.send("/roles/can", {
       user: second.user,
-      context: "forum",
+      context: "app",
       capability: "administer",
     });
     expect(canAdmin.allowed).toBe(false);
@@ -236,7 +236,7 @@ describe("role administration authorization", () => {
 
     const before = await app.send("/roles/can", {
       user: created.user,
-      context: "forum",
+      context: "app",
       capability: "administer",
     });
     expect(before.allowed).toBe(false);
@@ -249,7 +249,7 @@ describe("role administration authorization", () => {
 
     const after = await app.send("/roles/can", {
       user: created.user,
-      context: "forum",
+      context: "app",
       capability: "administer",
     });
     expect(after.allowed).toBe(true);
@@ -260,7 +260,7 @@ describe("role administration authorization", () => {
 
     const can = await app.send("/roles/can", {
       user: admin.user,
-      context: "forum",
+      context: "app",
       capability: "administer",
     });
     expect(can.allowed).toBe(true);
@@ -282,7 +282,7 @@ describe("role administration authorization", () => {
     const granted = await app.send("/roles/grant", {
       session: attacker.session,
       user: attacker.user,
-      context: "forum",
+      context: "app",
       role: "administrator",
     });
     expect(granted.error).toBe("Not authorized to manage roles.");
@@ -291,13 +291,13 @@ describe("role administration authorization", () => {
     // The escalation did not take effect.
     const can = await app.send("/roles/can", {
       user: attacker.user,
-      context: "forum",
+      context: "app",
       capability: "administer",
     });
     expect(can.allowed).toBe(false);
   });
 
-  test("an administrator can grant and revoke roles after the forum is claimed", async () => {
+  test("an administrator can grant and revoke roles after the app is claimed", async () => {
     const admin = await establishAdmin("role_admin_ok");
     const member = await registerAndLogin("role_admin_member");
 
@@ -332,7 +332,7 @@ describe("role administration authorization", () => {
     const res = await app.send("/roles/revoke", {
       session: attacker.session,
       user: admin.user,
-      context: "forum",
+      context: "app",
       role: "administrator",
     });
     expect(res.error).toBe("Not authorized to manage roles.");
@@ -340,7 +340,7 @@ describe("role administration authorization", () => {
     // The administrator's own grant survived the attempt.
     const can = await app.send("/roles/can", {
       user: admin.user,
-      context: "forum",
+      context: "app",
       capability: "administer",
     });
     expect(can.allowed).toBe(true);

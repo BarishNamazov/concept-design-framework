@@ -22,11 +22,7 @@ import {
   type QueryRow,
 } from "@concepts/Requesting/api.ts";
 import { actions, type Frames, type Sync } from "@engine";
-import {
-  ADMIN_CAPABILITY,
-  FORUM_CONTEXT,
-  MODERATE_CAPABILITY,
-} from "./authorization.ts";
+import { ADMIN_CAPABILITY, APP_CONTEXT } from "./authorization.ts";
 
 type RegisterOutput = ActionOk<typeof Authenticating, "register">;
 type LoginOutput = Prettify<
@@ -42,15 +38,10 @@ type MeOutput = Prettify<
 type ChangePasswordOutput = ActionOk<typeof Authenticating, "changePassword">;
 
 const ADMIN_ROLE_NAME = "administrator";
-const PIN_CAPABILITY = "pin";
-const INITIAL_ADMIN_CAPABILITIES = [
-  ADMIN_CAPABILITY,
-  MODERATE_CAPABILITY,
-  PIN_CAPABILITY,
-];
+const INITIAL_ADMIN_CAPABILITIES = [ADMIN_CAPABILITY];
 
-/** Keep only bootstrap frames: exactly one user exists and no admin has claimed the forum. */
-async function onlySoleUserInUnclaimedForum(
+/** Keep only bootstrap frames: exactly one user exists and no admin has claimed the app. */
+async function onlySoleUserInUnclaimedApp(
   frames: Frames,
   {
     count,
@@ -63,7 +54,7 @@ async function onlySoleUserInUnclaimedForum(
   frames = await frames.query(Authenticating._getUserCount, {}, { count });
   frames = await frames.query(
     Roling._hasCapabilityHolder,
-    { context: FORUM_CONTEXT, capability: ADMIN_CAPABILITY },
+    { context: APP_CONTEXT, capability: ADMIN_CAPABILITY },
     { present },
   );
   return frames.filter(($) => $[count] === 1 && $[present] === false);
@@ -82,7 +73,7 @@ async function existingInitialAdminRole(
     role: symbol;
   },
 ): Promise<Frames> {
-  frames = await onlySoleUserInUnclaimedForum(frames, { count, present });
+  frames = await onlySoleUserInUnclaimedApp(frames, { count, present });
   return await frames.query(
     Roling._getRoleByName,
     { name: ADMIN_ROLE_NAME },
@@ -109,11 +100,10 @@ const register = defineEndpoint(
       then: Actions([Profiling.createProfile, { user, displayName }]),
     })),
 
-    // First registration defines the forum administrator role.
+    // First registration defines the app administrator role.
     RegisterDefinesInitialAdminRole: Sync(({ user, count, present }) => ({
       when: Actions([Authenticating.register, {}, { user }]),
-      where: (frames) =>
-        onlySoleUserInUnclaimedForum(frames, { count, present }),
+      where: (frames) => onlySoleUserInUnclaimedApp(frames, { count, present }),
       then: Actions([
         Roling.defineRole,
         { name: ADMIN_ROLE_NAME, capabilities: INITIAL_ADMIN_CAPABILITIES },
@@ -126,7 +116,7 @@ const register = defineEndpoint(
         [Authenticating.register, {}, { user }],
         [Roling.defineRole, { name: ADMIN_ROLE_NAME }, { role }],
       ),
-      then: Actions([Roling.grant, { user, context: FORUM_CONTEXT, role }]),
+      then: Actions([Roling.grant, { user, context: APP_CONTEXT, role }]),
     })),
 
     // If the role already exists without a holder, grant it to that first user.
@@ -135,7 +125,7 @@ const register = defineEndpoint(
         when: Actions([Authenticating.register, {}, { user }]),
         where: (frames) =>
           existingInitialAdminRole(frames, { count, present, role }),
-        then: Actions([Roling.grant, { user, context: FORUM_CONTEXT, role }]),
+        then: Actions([Roling.grant, { user, context: APP_CONTEXT, role }]),
       }),
     ),
 
@@ -164,8 +154,7 @@ const login = defineEndpoint(
     // First login backfills the administrator role for a sole pre-existing user.
     LoginDefinesInitialAdminRole: Sync(({ user, count, present }) => ({
       when: Actions([Authenticating.authenticate, {}, { user }]),
-      where: (frames) =>
-        onlySoleUserInUnclaimedForum(frames, { count, present }),
+      where: (frames) => onlySoleUserInUnclaimedApp(frames, { count, present }),
       then: Actions([
         Roling.defineRole,
         { name: ADMIN_ROLE_NAME, capabilities: INITIAL_ADMIN_CAPABILITIES },
@@ -178,7 +167,7 @@ const login = defineEndpoint(
         [Authenticating.authenticate, {}, { user }],
         [Roling.defineRole, { name: ADMIN_ROLE_NAME }, { role }],
       ),
-      then: Actions([Roling.grant, { user, context: FORUM_CONTEXT, role }]),
+      then: Actions([Roling.grant, { user, context: APP_CONTEXT, role }]),
     })),
 
     // If the role already exists without a holder, login grants it to the sole user.
@@ -187,7 +176,7 @@ const login = defineEndpoint(
         when: Actions([Authenticating.authenticate, {}, { user }]),
         where: (frames) =>
           existingInitialAdminRole(frames, { count, present, role }),
-        then: Actions([Roling.grant, { user, context: FORUM_CONTEXT, role }]),
+        then: Actions([Roling.grant, { user, context: APP_CONTEXT, role }]),
       }),
     ),
 
@@ -303,7 +292,7 @@ export const authApi = {
 
 // --- global session guard ---
 
-// "A request bearing an inactive session is rejected" is a forum-wide invariant,
+// "A request bearing an inactive session is rejected" is an app-wide invariant,
 // not per-endpoint behavior, so it lives here as a single app sync rather than a
 // copy of `*InvalidSession` inside every endpoint. Like the LoginStartsSession
 // note above, it is registered beside syncMap(api) (see syncs/app.ts) instead of

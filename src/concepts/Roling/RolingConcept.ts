@@ -174,7 +174,7 @@ export default class RolingConcept {
    * in the given `context` references a Role whose capabilities include the
    * given `capability` — i.e. at least one user already holds that capability
    * there. Used by syncs to detect whether a context has been "claimed" (e.g.
-   * whether the forum already has an administrator) so the very first such
+   * whether the app already has an administrator) so the very first such
    * grant can bootstrap before enforcement begins.
    */
   async _hasCapabilityHolder({

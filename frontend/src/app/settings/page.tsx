@@ -2,163 +2,85 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { PageContainer, PageHeader } from "@/components/forum/page";
-import { RequireAuth } from "@/components/forum/require-auth";
-import { UserAvatar } from "@/components/forum/user-avatar";
+import { RequireAuth } from "@/components/app/require-auth";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
-function ProfileSettings() {
-  const { session, me, refresh } = useAuth();
-  const [displayName, setDisplayName] = useState(me?.profile.displayName ?? "");
-  const [bio, setBio] = useState(me?.profile.bio ?? "");
-  const [avatar, setAvatar] = useState(me?.profile.avatar ?? "");
-  const [busy, setBusy] = useState(false);
-
-  async function save() {
-    if (!session) return;
-    setBusy(true);
-    const results = await Promise.all([
-      api.profiles.setDisplayName({ session, displayName: displayName.trim() }),
-      api.profiles.setBio({ session, bio }),
-      api.profiles.setAvatar({ session, avatar: avatar.trim() }),
-    ]);
-    setBusy(false);
-    const failed = results.find((r) => "error" in r);
-    if (failed && "error" in failed) {
-      toast.error(failed.error);
-    } else {
-      toast.success("Profile saved");
-      await refresh();
-    }
-  }
-
-  return (
-    <section className="rounded-xl border border-border bg-card p-5 sm:p-6">
-      <h2 className="mb-4 font-display text-xl font-semibold">Profile</h2>
-      <div className="flex items-center gap-4">
-        <UserAvatar
-          user={me ? String(me.user) : "me"}
-          name={displayName}
-          avatar={avatar}
-          className="size-16"
-        />
-        <div className="text-sm text-muted-foreground">
-          Your avatar is shown across the forum. Paste an image URL below.
-        </div>
-      </div>
-      <div className="mt-5 space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="displayName">Display name</Label>
-          <Input
-            id="displayName"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="avatar">Avatar URL</Label>
-          <Input
-            id="avatar"
-            value={avatar}
-            onChange={(e) => setAvatar(e.target.value)}
-            placeholder="https://…"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="bio">Bio</Label>
-          <Textarea
-            id="bio"
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            rows={4}
-            placeholder="Tell the community a little about yourself."
-          />
-        </div>
-        <Button onClick={save} disabled={busy}>
-          Save profile
-        </Button>
-      </div>
-    </section>
-  );
-}
-
-function PasswordSettings() {
-  const { session } = useAuth();
-  const [oldPassword, setOld] = useState("");
-  const [newPassword, setNew] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function change() {
-    if (!session || !oldPassword || !newPassword) return;
-    setBusy(true);
-    const result = await api.auth.changePassword({
-      session,
-      oldPassword,
-      newPassword,
-    });
-    setBusy(false);
-    if ("error" in result) {
-      toast.error(result.error);
-    } else {
-      toast.success("Password changed");
-      setOld("");
-      setNew("");
-    }
-  }
-
-  return (
-    <section className="rounded-xl border border-border bg-card p-5 sm:p-6">
-      <h2 className="mb-4 font-display text-xl font-semibold">Password</h2>
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="old">Current password</Label>
-          <Input
-            id="old"
-            type="password"
-            value={oldPassword}
-            onChange={(e) => setOld(e.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="new">New password</Label>
-          <Input
-            id="new"
-            type="password"
-            value={newPassword}
-            onChange={(e) => setNew(e.target.value)}
-          />
-        </div>
-        <Button
-          onClick={change}
-          disabled={busy || !oldPassword || !newPassword}
-          variant="outline"
-        >
-          Change password
-        </Button>
-      </div>
-    </section>
-  );
-}
-
 export default function SettingsPage() {
+  const { user } = useAuth();
+  const [displayName, setDisplayName] = useState(
+    user?.profile.displayName ?? "",
+  );
+  const [bio, setBio] = useState(user?.profile.bio ?? "");
+  const [avatar, setAvatar] = useState(user?.profile.avatar ?? "");
+  const [busy, setBusy] = useState(false);
+
+  if (!user) return null;
+
+  async function saveProfile() {
+    setBusy(true);
+    try {
+      const { api } = await import("@/lib/api");
+      await api.profiles.setDisplayName({ session: user.session, displayName });
+      await api.profiles.setBio({ session: user.session, bio });
+      await api.profiles.setAvatar({ session: user.session, avatar });
+      toast.success("Profile updated.");
+    } catch {
+      toast.error("Something went wrong.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <RequireAuth>
-      <PageContainer width="narrow">
-        <PageHeader
-          eyebrow="Account"
-          title="Settings"
-          description="Manage how you appear and how you sign in."
-        />
-        <div className="space-y-6">
-          <ProfileSettings />
-          <PasswordSettings />
-        </div>
-      </PageContainer>
+      <div className="mx-auto max-w-md py-10">
+        <h1 className="mb-6 text-2xl font-semibold">Settings</h1>
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile</CardTitle>
+            <CardDescription>Update your public profile.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-5">
+            <div className="flex flex-col gap-2.5">
+              <Label htmlFor="displayName">Display name</Label>
+              <Input
+                id="displayName"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-2.5">
+              <Label htmlFor="bio">Bio</Label>
+              <Input
+                id="bio"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-2.5">
+              <Label htmlFor="avatar">Avatar URL</Label>
+              <Input
+                id="avatar"
+                value={avatar}
+                onChange={(e) => setAvatar(e.target.value)}
+              />
+            </div>
+            <Button onClick={saveProfile} disabled={busy}>
+              {busy ? "Saving..." : "Save"}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </RequireAuth>
   );
 }

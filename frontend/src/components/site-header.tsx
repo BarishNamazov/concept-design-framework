@@ -1,21 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { usePathname } from "next/navigation";
-import {
-  Bell,
-  Bookmark,
-  LayoutGrid,
-  LogOut,
-  Menu,
-  PenLine,
-  Settings,
-  Shield,
-  Sparkles,
-  User,
-  Wrench,
-} from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
+import { UserAvatar } from "@/components/app/user-avatar";
 import { Link } from "@/components/link";
+import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,68 +13,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ModeToggle } from "@/components/mode-toggle";
-import { UserAvatar } from "@/components/forum/user-avatar";
-import { NotificationBell } from "@/components/forum/notification-bell";
 import { useAuth } from "@/lib/auth";
-import { cn } from "@/lib/utils";
-
-const NAV = [
-  { href: "/", label: "Latest", icon: Sparkles },
-  { href: "/categories", label: "Categories", icon: LayoutGrid },
-];
 
 export function SiteHeader() {
-  const { me, loading, can, logout } = useAuth();
-  const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href);
+  const { user, loading, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/65">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6">
         <Link href="/" className="group flex items-center gap-2.5">
-          <span className="flex size-9 items-center justify-center rounded-md bg-primary font-display text-lg font-semibold text-primary-foreground shadow-sm">
-            C
+          <span className="flex size-9 items-center justify-center rounded-md bg-primary font-semibold text-primary-foreground shadow-sm">
+            A
           </span>
-          <span className="hidden font-display text-xl font-semibold tracking-tight sm:inline">
-            Commons
-          </span>
+          <span className="font-semibold tracking-tight sm:inline">App</span>
         </Link>
 
-        <nav className="ml-2 hidden items-center gap-1 md:flex">
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-                isActive(item.href) && "bg-muted text-foreground",
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
         <div className="ml-auto flex items-center gap-1.5">
-          <Button
-            asChild
-            size="sm"
-            className="hidden gap-1.5 sm:inline-flex"
-          >
-            <Link href="/new">
-              <PenLine className="size-4" />
-              New topic
-            </Link>
-          </Button>
-
-          {me ? <NotificationBell /> : null}
           <ModeToggle />
 
-          {loading ? null : me ? (
+          {loading ? null : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -94,52 +39,24 @@ export function SiteHeader() {
                   className="rounded-full outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label="Account menu"
                 >
-                  <UserAvatar
-                    user={String(me.user)}
-                    name={me.profile.displayName}
-                    avatar={me.profile.avatar}
-                  />
+                  <UserAvatar user={user} />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel className="flex flex-col">
                   <span className="font-semibold">
-                    {me.profile.displayName}
+                    {user.profile.displayName || user.username}
                   </span>
                   <span className="text-xs font-normal text-muted-foreground">
-                    @{me.username}
+                    @{user.username}
                   </span>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href={`/u/${me.user}`}>
-                    <User className="size-4" /> Profile
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/bookmarks">
-                    <Bookmark className="size-4" /> Bookmarks
-                  </Link>
-                </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/settings">
                     <Settings className="size-4" /> Settings
                   </Link>
                 </DropdownMenuItem>
-                {can.moderate ? (
-                  <DropdownMenuItem asChild>
-                    <Link href="/moderation">
-                      <Wrench className="size-4" /> Moderation
-                    </Link>
-                  </DropdownMenuItem>
-                ) : null}
-                {can.administer ? (
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin">
-                      <Shield className="size-4" /> Admin
-                    </Link>
-                  </DropdownMenuItem>
-                ) : null}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => logout()}>
                   <LogOut className="size-4" /> Sign out
@@ -147,7 +64,7 @@ export function SiteHeader() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <div className="hidden items-center gap-1.5 sm:flex">
+            <div className="flex items-center gap-1.5">
               <Button asChild variant="ghost" size="sm">
                 <Link href="/login">Sign in</Link>
               </Button>
@@ -156,60 +73,8 @@ export function SiteHeader() {
               </Button>
             </div>
           )}
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            aria-label="Menu"
-            onClick={() => setMobileOpen((v) => !v)}
-          >
-            <Menu className="size-5" />
-          </Button>
         </div>
       </div>
-
-      {mobileOpen ? (
-        <nav className="border-t border-border bg-background px-4 py-3 md:hidden">
-          <div className="flex flex-col gap-1">
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
-              >
-                <item.icon className="size-4" /> {item.label}
-              </Link>
-            ))}
-            <Link
-              href="/new"
-              onClick={() => setMobileOpen(false)}
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
-            >
-              <PenLine className="size-4" /> New topic
-            </Link>
-            {!me ? (
-              <>
-                <Link
-                  href="/login"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
-                >
-                  <User className="size-4" /> Sign in
-                </Link>
-                <Link
-                  href="/register"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
-                >
-                  <Bell className="size-4" /> Join
-                </Link>
-              </>
-            ) : null}
-          </div>
-        </nav>
-      ) : null}
     </header>
   );
 }

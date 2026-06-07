@@ -1,138 +1,110 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import { api, unwrap } from "@/lib/api";
-import type { Me } from "@/lib/models";
+import { createContext, useContext, useEffect, useState } from "react";
+import { api } from "@/lib/api";
 
-const SESSION_KEY = "forum.session";
+export interface User {
+  user: string;
+  username: string;
+  session: string;
+  profile: {
+    displayName: string;
+    bio: string;
+    avatar: string;
+  };
+}
 
-/** The global Roling context every forum-wide capability is scoped to. */
-export const FORUM_CONTEXT = "forum";
-
-export interface AuthState {
-  /** The opaque session token, or null when signed out. */
-  session: string | null;
-  /** The signed-in user's identity + profile, or null. */
-  me: Me | null;
-  /** True until the initial session restore resolves. */
+interface AuthState {
+  user: User | null;
   loading: boolean;
-  /** Forum-wide capability flags, resolved from Roling. */
-  can: { administer: boolean; moderate: boolean; pin: boolean };
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<string | null>;
   register: (
     username: string,
     password: string,
     displayName: string,
-  ) => Promise<void>;
+  ) => Promise<string | null>;
   logout: () => Promise<void>;
-  /** Re-reads `/auth/me` (e.g. after editing your own profile). */
   refresh: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthState | null>(null);
+const AuthContext = createContext<AuthState | undefined>(undefined);
 
-async function resolveCapabilities(user: string) {
-  const caps = ["administer", "moderate", "pin"] as const;
-  const results = await Promise.all(
-    caps.map((capability) =>
-      api.roles.can({ user, context: FORUM_CONTEXT, capability }),
-    ),
-  );
-  return {
-    administer: !("error" in results[0]) && results[0].allowed,
-    moderate: !("error" in results[1]) && results[1].allowed,
-    pin: !("error" in results[2]) && results[2].allowed,
-  };
-}
+const SESSION_KEY = "session";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<string | null>(null);
-  const [me, setMe] = useState<Me | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [can, setCan] = useState({
-    administer: false,
-    moderate: false,
-    pin: false,
-  });
 
-  const hydrate = useCallback(async (token: string) => {
-    const result = await api.auth.me({ session: token });
-    if ("error" in result) {
-      localStorage.removeItem(SESSION_KEY);
-      setSession(null);
-      setMe(null);
-      setCan({ administer: false, moderate: false, pin: false });
-      return;
-    }
-    setSession(token);
-    setMe(result);
-    localStorage.setItem(SESSION_KEY, token);
-    setCan(await resolveCapabilities(String(result.user)));
-  }, []);
+  const resolveMe = async (session: string) => {
+    const result = await api.auth.me({ session });
+    if ("error" in result) return null;
+    const { user: userId, username, profile } = result;
+    return { user: userId, username, session, profile };
+  };
 
-  useEffect(() => {
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem(SESSION_KEY)
-        : null;
-    if (!token) {
+  const refresh = async () => {
+    const session = localStorage.getItem(SESSION_KEY);
+    if (!session) {
+      setUser(null);
       setLoading(false);
       return;
     }
-    hydrate(token).finally(() => setLoading(false));
-  }, [hydrate]);
+    const u = await resolveMe(session);
+    if (u) {
+      setUser(u);
+    } else {
+      localStorage.removeItem(SESSION_KEY);
+      setUser(null);
+    }
+    setLoading(false);
+  };
 
-  const login = useCallback(
-    async (username: string, password: string) => {
-      const { session: token } = unwrap(
-        await api.auth.login({ username, password }),
-      );
-      await hydrate(String(token));
-    },
-    [hydrate],
-  );
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only session check
+  useEffect(() => {
+    refresh();
+  }, []);
 
-  const register = useCallback(
-    async (username: string, password: string, displayName: string) => {
-      unwrap(await api.auth.register({ username, password, displayName }));
-      const { session: token } = unwrap(
-        await api.auth.login({ username, password }),
-      );
-      await hydrate(String(token));
-    },
-    [hydrate],
-  );
+  const login = async (username: string, password: string) => {
+    const res = await api.auth.login({ username, password });
+    if ("error" in res) return res.error;
+    localStorage.setItem(SESSION_KEY, res.session);
+    const u = await resolveMe(res.session);
+    setUser(u);
+    return null;
+  };
 
-  const logout = useCallback(async () => {
-    if (session) await api.auth.logout({ session });
+  const register = async (
+    username: string,
+    password: string,
+    displayName: string,
+  ) => {
+    const res = await api.auth.register({ username, password, displayName });
+    if ("error" in res) return res.error;
+    const loginRes = await api.auth.login({ username, password });
+    if ("error" in loginRes) return loginRes.error;
+    localStorage.setItem(SESSION_KEY, loginRes.session);
+    const u = await resolveMe(loginRes.session);
+    setUser(u);
+    return null;
+  };
+
+  const logout = async () => {
+    if (user) {
+      await api.auth.logout({ session: user.session });
+    }
     localStorage.removeItem(SESSION_KEY);
-    setSession(null);
-    setMe(null);
-    setCan({ administer: false, moderate: false, pin: false });
-  }, [session]);
+    setUser(null);
+  };
 
-  const refresh = useCallback(async () => {
-    if (session) await hydrate(session);
-  }, [session, hydrate]);
-
-  const value = useMemo<AuthState>(
-    () => ({ session, me, loading, can, login, register, logout, refresh }),
-    [session, me, loading, can, login, register, logout, refresh],
+  return (
+    <AuthContext value={{ user, loading, login, register, logout, refresh }}>
+      {children}
+    </AuthContext>
   );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-/** Access the auth state. Must be used under {@link AuthProvider}. */
-export function useAuth(): AuthState {
+export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within <AuthProvider>");
+  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
   return ctx;
 }

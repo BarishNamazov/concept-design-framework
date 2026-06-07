@@ -1,33 +1,24 @@
 /**
- * Shared authorization helpers for the privileged "admin" endpoints.
+ * Shared authorization helpers for privileged endpoints.
  *
- * Several concepts expose globally privileged operations — managing roles,
- * locking threads, trashing content, and curating categories. Authorizing each
- * one by hand (resolve the session, check a capability, fail otherwise) is the
- * same dance the flag and pin syncs already perform inline; these helpers
- * capture it once so every privileged endpoint enforces it identically.
- *
- * Authority lives in the global {@link FORUM_CONTEXT} Roling context: a user may
+ * Authority lives in the global {@link APP_CONTEXT} Roling context: a user may
  * perform a privileged action when they hold the required capability there.
  *
- * **Bootstrap.** A brand-new forum has no administrators, so demanding the
+ * **Bootstrap.** A brand-new app has no administrators, so demanding the
  * capability up front would lock everyone out forever. Auth syncs automatically
  * grant the sole registered user an administrator role; until someone holds the
- * {@link ADMIN_CAPABILITY} in the forum context the gate also stays *open* for
- * manual recovery. The moment an administrator exists the forum is "claimed"
+ * {@link ADMIN_CAPABILITY} in the app context the gate also stays *open* for
+ * manual recovery. The moment an administrator exists the app is "claimed"
  * and enforcement kicks in for good.
  */
 import { Roling, Sessioning } from "@concepts";
 import type { Frame, Frames } from "@engine";
 
-/** The global Roling context that authorizes forum-wide privileged actions. */
-export const FORUM_CONTEXT = "forum";
+/** The global Roling context that authorizes app-wide privileged actions. */
+export const APP_CONTEXT = "app";
 
-/** Capability for structural administration (roles, categories). */
+/** Capability for structural administration (e.g. managing roles). */
 export const ADMIN_CAPABILITY = "administer";
-
-/** Capability for moderation (locking, trashing, assigning categories). */
-export const MODERATE_CAPABILITY = "moderate";
 
 /** Logic variables a capability gate binds while resolving its decision. */
 export interface CapabilityGateVars {
@@ -35,9 +26,9 @@ export interface CapabilityGateVars {
   session: symbol;
   /** Bound to the session's user. */
   user: symbol;
-  /** Bound to whether `user` holds `capability` in the forum context. */
+  /** Bound to whether `user` holds `capability` in the app context. */
   allowed: symbol;
-  /** Bound to whether the forum already has an administrator (is "claimed"). */
+  /** Bound to whether the app already has an administrator (is "claimed"). */
   present: symbol;
   /** The capability this endpoint requires. */
   capability: string;
@@ -45,7 +36,7 @@ export interface CapabilityGateVars {
 
 /**
  * Resolve the acting user and the two booleans the gate decides on: whether the
- * user holds the required `capability`, and whether the forum has already been
+ * user holds the required `capability`, and whether the app has already been
  * claimed by an administrator.
  */
 async function resolveCapability(
@@ -59,12 +50,12 @@ async function resolveCapability(
   );
   frames = await frames.query(
     Roling._hasCapability,
-    { user: vars.user, context: FORUM_CONTEXT, capability: vars.capability },
+    { user: vars.user, context: APP_CONTEXT, capability: vars.capability },
     { allowed: vars.allowed },
   );
   frames = await frames.query(
     Roling._hasCapabilityHolder,
-    { context: FORUM_CONTEXT, capability: ADMIN_CAPABILITY },
+    { context: APP_CONTEXT, capability: ADMIN_CAPABILITY },
     { present: vars.present },
   );
   return frames;
@@ -72,7 +63,7 @@ async function resolveCapability(
 
 /**
  * Keep only the frames permitted to perform the action: the user holds the
- * capability, or the forum is still unclaimed (bootstrap). Use in the `where` of
+ * capability, or the app is still unclaimed (bootstrap). Use in the `where` of
  * the success branch of a privileged endpoint.
  */
 export async function authorizeCapable(
@@ -86,7 +77,7 @@ export async function authorizeCapable(
 }
 
 /**
- * Keep only the frames that must be rejected: the forum is claimed *and* the
+ * Keep only the frames that must be rejected: the app is claimed *and* the
  * user lacks the capability. Use in the `where` of a "forbidden" sync that
  * fails the request.
  */

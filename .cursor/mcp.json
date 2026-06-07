@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "shadcn": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "shadcn@latest", "mcp"],
+      "tools": ["*"]
+    },
+    "next-devtools": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "next-devtools-mcp@latest"],
+      "tools": ["*"]
+    }
+  }
+}

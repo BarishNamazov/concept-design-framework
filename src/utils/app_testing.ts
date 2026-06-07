@@ -78,7 +78,7 @@ async function boot(): Promise<TestApp> {
     instance: { ip: "127.0.0.1", port, portGeneration: false },
   });
   process.env.MONGODB_URL = server.getUri();
-  process.env.DB_NAME = "forum-test";
+  process.env.DB_NAME = "app-test";
   process.env.REQUESTING_SAVE_RESPONSES = "false";
 
   const { Logging } = await import("@engine");

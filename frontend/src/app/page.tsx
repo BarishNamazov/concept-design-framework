@@ -1,136 +1,34 @@
 "use client";
 
-import { MessagesSquare, PenLine } from "lucide-react";
-import { Link } from "@/components/link";
-import { Button } from "@/components/ui/button";
-import { CategoryDot } from "@/components/forum/badges";
-import { TopicRow } from "@/components/forum/topic-row";
-import {
-  EmptyState,
-  ErrorState,
-  LoadingState,
-} from "@/components/forum/states";
-import { useQuery } from "@/hooks/use-query";
-import { loadFeed } from "@/lib/loaders";
-import { api } from "@/lib/api";
-import type { Category } from "@/lib/models";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 
-function CategoriesCard() {
-  const { data } = useQuery<{ categories: Category[] }>(
-    () => api.categories.list({}),
-    [],
-  );
-  const categories = data?.categories ?? [];
-
-  return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <p className="eyebrow">Categories</p>
-        <Link
-          href="/categories"
-          className="text-xs font-medium text-primary hover:underline"
-        >
-          All
-        </Link>
-      </div>
-      {categories.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No categories yet.</p>
-      ) : (
-        <ul className="space-y-0.5">
-          {categories.slice(0, 8).map((c) => (
-            <li key={String(c.category)}>
-              <Link
-                href={`/c/${c.category}`}
-                className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-              >
-                <CategoryDot id={String(c.category)} />
-                <span className="truncate font-medium">{c.name}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function WelcomeCard() {
-  const { me } = useAuth();
-  if (me) return null;
-  return (
-    <div className="rounded-xl border border-primary/20 bg-primary/5 p-5">
-      <h3 className="font-display text-lg font-semibold tracking-tight">
-        Welcome to the Commons
-      </h3>
-      <p className="mt-1.5 text-sm text-muted-foreground">
-        A quiet reading room for long-form discussion. Sign in to post, reply,
-        react, and follow conversations.
-      </p>
-      <div className="mt-4 flex gap-2">
-        <Button asChild size="sm">
-          <Link href="/register">Create account</Link>
-        </Button>
-        <Button asChild size="sm" variant="outline">
-          <Link href="/login">Sign in</Link>
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 export default function HomePage() {
-  const { data, loading, error, refetch } = useQuery(() => loadFeed(), []);
+  const { user, loading } = useAuth();
 
   return (
-    <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-6 sm:px-6 lg:grid-cols-[1fr_18rem] lg:py-10">
-      <section className="min-w-0">
-        <div className="mb-5 flex items-end justify-between border-b border-border pb-4">
-          <div>
-            <p className="eyebrow">The latest</p>
-            <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-              Conversations
-            </h1>
-          </div>
-          <Button asChild size="sm" className="gap-1.5">
-            <Link href="/new">
-              <PenLine className="size-4" /> New topic
-            </Link>
-          </Button>
+    <div className="flex flex-col items-center justify-center py-20">
+      <h1 className="text-4xl font-bold tracking-tight">Welcome</h1>
+      <p className="mt-4 text-lg text-muted-foreground">
+        Concept-design application template with authentication, profiles, and
+        role-based authorization.
+      </p>
+      {!loading && !user ? (
+        <div className="mt-8 flex gap-4">
+          <Link
+            href="/login"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            Sign in
+          </Link>
+          <Link
+            href="/register"
+            className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted"
+          >
+            Create account
+          </Link>
         </div>
-
-        {loading && !data ? (
-          <LoadingState label="Gathering the latest…" />
-        ) : error ? (
-          <ErrorState message={error} onRetry={refetch} />
-        ) : data && data.length > 0 ? (
-          <div className="-mx-3">
-            {data.map((summary, i) => (
-              <TopicRow
-                key={String(summary.conversation)}
-                summary={summary}
-                index={i}
-              />
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            icon={MessagesSquare}
-            title="No conversations yet"
-            description="Be the first to start a topic and get the room talking."
-            action={
-              <Button asChild size="sm">
-                <Link href="/new">Start a topic</Link>
-              </Button>
-            }
-          />
-        )}
-      </section>
-
-      <aside className="space-y-5 lg:sticky lg:top-20 lg:self-start">
-        <WelcomeCard />
-        <CategoriesCard />
-      </aside>
+      ) : null}
     </div>
   );
 }

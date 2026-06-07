@@ -1,47 +1,26 @@
 import type { Metadata } from "next";
-import { Fraunces, Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { Providers } from "./providers";
 import { SiteHeader } from "@/components/site-header";
-
-const hanken = Hanken_Grotesk({
-  variable: "--font-hanken",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  display: "swap",
-  axes: ["opsz", "SOFT", "WONK"],
-});
-
-const jetbrains = JetBrains_Mono({
-  variable: "--font-jetbrains",
-  subsets: ["latin"],
-  display: "swap",
-});
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: { default: "Commons — a reading room", template: "%s · Commons" },
-  description:
-    "A warm, editorial discussion forum built on concept design.",
+  title: "Concept App",
+  description: "A concept-design application template.",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className={`${hanken.variable} ${fraunces.variable} ${jetbrains.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
+    <html lang="en" suppressHydrationWarning>
+      <body>
         <Providers>
           <SiteHeader />
-          <main className="flex-1">{children}</main>
+          <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+            {children}
+          </main>
         </Providers>
       </body>
     </html>

@@ -175,7 +175,7 @@ describe("Roling", () => {
   });
 
   test("_hasCapabilityHolder reports whether a context has a capability holder", async () => {
-    const c = context("forum");
+    const c = context("app");
     const { role: adminRole } = ok(
       await Roling.defineRole({
         name: "administrator",
