@@ -6,10 +6,10 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 /**
- * Read-tracking for a conversation (Unread concept). Marks the opening post
- * seen on open, exposes the set of post ids that are new since the last visit
- * (so individual posts can be highlighted), the new-post count, and a one-tap
- * "mark all read". Fetch once per thread and share the result.
+ * Read-tracking for a conversation (Unread concept). Marks all posts in the
+ * conversation as seen on open, exposes the set of post ids that are new since
+ * the last visit (so individual posts can be highlighted), the new-post count,
+ * and a one-tap "mark all read". Fetch once per thread and share the result.
  */
 export function useUnread(conversation: string, rootItem: string) {
   const { session } = useAuth();
@@ -22,11 +22,19 @@ export function useUnread(conversation: string, rootItem: string) {
     [session, conversation],
   );
 
-  // Opening the topic marks the root post as seen.
+  const refetchList = list.refetch;
+  const refetchCount = count.refetch;
+
+  // Opening the topic marks all posts in the conversation as seen.
   useEffect(() => {
     if (!session || !rootItem) return;
-    void api.unread.markSeen({ session, item: rootItem });
-  }, [session, rootItem]);
+    void api.unread
+      .markAllSeen({ session, scope: conversation })
+      .then(() => {
+        refetchList();
+        refetchCount();
+      });
+  }, [session, rootItem, conversation, refetchList, refetchCount]);
 
   const unreadItems = useMemo(() => {
     const items = list.data?.items ?? [];
