@@ -142,7 +142,7 @@ export function Composer({
           </Button>
         ))}
         <span className="ml-auto pr-1 text-xs text-muted-foreground">
-          Markdown · ⌘↵ to post
+          ⌘↵ to post
         </span>
       </div>
       <Textarea
