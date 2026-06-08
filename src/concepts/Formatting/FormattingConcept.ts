@@ -22,9 +22,28 @@ interface TargetDoc {
   updatedAt: Date;
 }
 
+/**
+ * Replaces `@username` with `[@username](/u/username)` so marked renders them
+ * as clickable links. Mentions inside fenced or inline code blocks are left
+ * untouched.
+ */
+function linkMentions(source: string): string {
+  const segments = source.split(/(```[\s\S]*?```|`[^`\n]+`)/g);
+  return segments
+    .map((seg, i) => {
+      if (i % 2 === 1) return seg;
+      return seg.replace(
+        /(?<![a-zA-Z0-9_])@([a-zA-Z0-9_]+)\b/g,
+        "[@$1](/u/$1)",
+      );
+    })
+    .join("");
+}
+
 /** Renders raw markdown to sanitized HTML, synchronously and deterministically. */
 function render(source: string): string {
-  const html = marked.parse(source, { async: false }) as string;
+  const processed = linkMentions(source);
+  const html = marked.parse(processed, { async: false }) as string;
   return sanitizeHtml(html);
 }
 

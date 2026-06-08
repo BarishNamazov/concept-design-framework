@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
 import { Bold, Code, Italic, Link2, List, Quote } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
+import { MentionAutocomplete } from "@/components/forum/mention-autocomplete";
+import { Spinner } from "@/components/forum/states";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Spinner } from "@/components/forum/states";
-import { MentionAutocomplete } from "@/components/forum/mention-autocomplete";
 import { cn } from "@/lib/utils";
 
 interface ComposerProps {
@@ -21,7 +21,11 @@ interface ComposerProps {
 
 type Wrap = { before: string; after?: string; block?: boolean };
 
-const TOOLS: { icon: React.ComponentType<{ className?: string }>; label: string; wrap: Wrap }[] = [
+const TOOLS: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  wrap: Wrap;
+}[] = [
   { icon: Bold, label: "Bold", wrap: { before: "**", after: "**" } },
   { icon: Italic, label: "Italic", wrap: { before: "_", after: "_" } },
   { icon: Link2, label: "Link", wrap: { before: "[", after: "](url)" } },
@@ -58,8 +62,8 @@ export function Composer({
     const pos = el.selectionStart;
     const before = el.value.slice(0, pos);
     const match = before.match(/(?:^|\s)@([a-zA-Z0-9_]*)$/);
-    if (match && match[1].length >= 1) {
-      mentionStartRef.current = match.index! + match[0].indexOf("@");
+    if (match && match.index !== undefined && match[1].length >= 1) {
+      mentionStartRef.current = match.index + match[0].indexOf("@");
       setMentionQuery(match[1]);
     } else {
       mentionStartRef.current = -1;
@@ -179,11 +183,22 @@ export function Composer({
       ) : null}
       <div className="flex items-center justify-end gap-2 border-t border-border px-3 py-2.5">
         {onCancel ? (
-          <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={busy}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onCancel}
+            disabled={busy}
+          >
             Cancel
           </Button>
         ) : null}
-        <Button type="button" size="sm" onClick={submit} disabled={busy || !value.trim()}>
+        <Button
+          type="button"
+          size="sm"
+          onClick={submit}
+          disabled={busy || !value.trim()}
+        >
           {busy ? <Spinner className="size-4" /> : null}
           {submitLabel}
         </Button>

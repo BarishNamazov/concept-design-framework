@@ -88,4 +88,84 @@ describe("Formatting", () => {
     expect(await Formatting._getSource({ target })).toEqual([]);
     expect(await Formatting._getDocument({ target })).toEqual([]);
   });
+
+  describe("@mention linking", () => {
+    test("converts @username to a clickable link", async () => {
+      const target = id();
+      const { rendered } = ok(
+        await Formatting.setSource({ target, source: "Hey @alice!" }),
+      );
+      expect(rendered).toContain('<a href="/u/alice"');
+      expect(rendered).toContain("@alice");
+    });
+
+    test("converts multiple mentions", async () => {
+      const target = id();
+      const { rendered } = ok(
+        await Formatting.setSource({
+          target,
+          source: "@bob and @charlie check this out",
+        }),
+      );
+      expect(rendered).toContain('<a href="/u/bob"');
+      expect(rendered).toContain('<a href="/u/charlie"');
+    });
+
+    test("preserves mention at start of line", async () => {
+      const target = id();
+      const { rendered } = ok(
+        await Formatting.setSource({
+          target,
+          source: "@alice what do you think?",
+        }),
+      );
+      expect(rendered).toContain('<a href="/u/alice"');
+    });
+
+    test("does not convert mentions inside fenced code blocks", async () => {
+      const target = id();
+      const { rendered } = ok(
+        await Formatting.setSource({
+          target,
+          source: "```\n@alice is a username\n```",
+        }),
+      );
+      expect(rendered).not.toContain('<a href="/u/alice"');
+    });
+
+    test("does not convert mentions inside inline code", async () => {
+      const target = id();
+      const { rendered } = ok(
+        await Formatting.setSource({
+          target,
+          source: "Use `@username` to mention someone.",
+        }),
+      );
+      expect(rendered).not.toContain('<a href="/u/username"');
+    });
+
+    test("mentions work alongside other markdown", async () => {
+      const target = id();
+      const { rendered } = ok(
+        await Formatting.setSource({
+          target,
+          source: "**@alice** replied to your post.",
+        }),
+      );
+      expect(rendered).toContain('<a href="/u/alice"');
+      expect(rendered).toContain("<strong");
+    });
+
+    test("sanitization still strips dangerous content after mention linking", async () => {
+      const target = id();
+      const { rendered } = ok(
+        await Formatting.setSource({
+          target,
+          source: '<img src="x" onerror="alert(1)"> @alice',
+        }),
+      );
+      expect(rendered).not.toContain("onerror");
+      expect(rendered).toContain('<a href="/u/alice"');
+    });
+  });
 });

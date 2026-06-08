@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { UserAvatar } from "@/components/forum/user-avatar";
 import { Spinner } from "@/components/forum/states";
+import { UserAvatar } from "@/components/forum/user-avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -60,6 +60,7 @@ export function MentionAutocomplete({
           setResults([]);
         } else {
           setResults(result.users);
+          setCursor(0);
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Search failed");
@@ -71,10 +72,6 @@ export function MentionAutocomplete({
 
     return () => clearTimeout(debounceRef.current);
   }, [query, session]);
-
-  useEffect(() => {
-    setCursor(0);
-  }, [results]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {

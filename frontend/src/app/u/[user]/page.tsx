@@ -1,22 +1,50 @@
 "use client";
 
-import { use } from "react";
 import { Settings, Shield } from "lucide-react";
-import { Link } from "@/components/link";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { use } from "react";
 import { PageContainer } from "@/components/forum/page";
-import { UserAvatar } from "@/components/forum/user-avatar";
 import { PostPreview } from "@/components/forum/post-preview";
 import {
   EmptyState,
   ErrorState,
   LoadingState,
 } from "@/components/forum/states";
+import { UserAvatar } from "@/components/forum/user-avatar";
+import { Link } from "@/components/link";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useQuery } from "@/hooks/use-query";
+import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { loadPostConversationIndex, loadUserOverview, loadUserRoles } from "@/lib/loaders";
 import { count } from "@/lib/format";
+import {
+  loadPostConversationIndex,
+  loadUserOverview,
+  loadUserRoles,
+} from "@/lib/loaders";
+
+/**
+ * Resolve a route param that may be a username (no hyphens, alphanumeric) or a
+ * user ID (UUID with hyphens). Returns the resolved user ID.
+ */
+function useResolvedUser(raw: string): {
+  userId: string | null;
+  loading: boolean;
+  error: string | null;
+} {
+  const isId = raw.includes("-");
+  const resolve = useQuery<{ user: string }>(
+    isId ? null : () => api.auth.resolve({ username: raw }),
+    [raw, isId],
+  );
+  if (isId) return { userId: raw, loading: false, error: null };
+  if (resolve.loading) return { userId: null, loading: true, error: null };
+  if (resolve.error)
+    return { userId: null, loading: false, error: resolve.error };
+  if (!resolve.data || "error" in resolve.data)
+    return { userId: null, loading: false, error: `User "${raw}" not found.` };
+  return { userId: resolve.data.user, loading: false, error: null };
+}
 
 export default function UserPage({
   params,
@@ -24,17 +52,39 @@ export default function UserPage({
   params: Promise<{ user: string }>;
 }) {
   const { user } = use(params);
+  const {
+    userId,
+    loading: resolving,
+    error: resolveError,
+  } = useResolvedUser(user);
   const { me } = useAuth();
-  const isSelf = me ? String(me.user) === user : false;
 
-  const overview = useQuery(() => loadUserOverview(user), [user]);
-  const roles = useQuery(() => loadUserRoles(user), [user]);
+  const overview = useQuery(userId ? () => loadUserOverview(userId) : null, [
+    userId,
+  ]);
+  const roles = useQuery(userId ? () => loadUserRoles(userId) : null, [userId]);
   const postIds = overview.data?.postIds ?? [];
   const postIndexKey = postIds.join("\u0000");
   const index = useQuery<Record<string, string>>(
     postIds.length > 0 ? () => loadPostConversationIndex(postIds) : null,
     [postIndexKey],
   );
+
+  if (resolving)
+    return (
+      <PageContainer>
+        <LoadingState label="Looking up user…" />
+      </PageContainer>
+    );
+  if (resolveError)
+    return (
+      <PageContainer>
+        <ErrorState message={resolveError} />
+      </PageContainer>
+    );
+  if (!userId) return null;
+
+  const isSelf = me ? String(me.user) === userId : false;
 
   if (overview.loading && !overview.data)
     return (
@@ -56,7 +106,7 @@ export default function UserPage({
     <PageContainer>
       <header className="mb-8 flex flex-col items-start gap-5 border-b border-border pb-8 sm:flex-row sm:items-center">
         <UserAvatar
-          user={user}
+          user={userId}
           name={profile.displayName}
           avatar={profile.avatar}
           className="size-20 text-2xl"
@@ -76,9 +126,9 @@ export default function UserPage({
           )}
           {roles.data && roles.data.length > 0 ? (
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {roles.data.map((role, i) => (
+              {roles.data.map((role) => (
                 <Badge
-                  key={`${role.name}-${i}`}
+                  key={role.name}
                   variant="secondary"
                   className="gap-1 capitalize"
                 >
