@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
+import type { KeyboardEvent, MouseEvent } from "react";
+import { useRouter } from "next/navigation";
 import { Bell, Check, CheckCheck, X } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "@/components/link";
@@ -14,6 +16,7 @@ import {
 } from "@/components/forum/states";
 import { UserAvatar } from "@/components/forum/user-avatar";
 import { UserName } from "@/components/forum/user-name";
+import { notifyHashTargetNavigation } from "@/hooks/use-hash-target-highlight";
 import { useQuery } from "@/hooks/use-query";
 import { api, isApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -34,8 +37,49 @@ function actionText(kind: string): string {
   }
 }
 
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    target.closest(
+      'a, button, input, textarea, select, summary, [role="button"], [role="menuitem"]',
+    ) !== null
+  );
+}
+
+function renderExcerptWithMentions(content: string) {
+  const text = excerpt(content);
+  const parts: (string | { username: string })[] = [];
+  let lastIndex = 0;
+
+  for (const match of text.matchAll(/@[a-zA-Z0-9_]+/g)) {
+    if (match.index! > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index!));
+    }
+    parts.push({ username: match[0].slice(1) });
+    lastIndex = match.index! + match[0].length;
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.map((part, i) =>
+    typeof part === "string" ? (
+      <Fragment key={i}>{part}</Fragment>
+    ) : (
+      <Link
+        key={i}
+        href={`/u/${part.username}`}
+        className="font-medium text-primary hover:underline"
+      >
+        @{part.username}
+      </Link>
+    ),
+  );
+}
+
 function Notifications() {
   const { session } = useAuth();
+  const router = useRouter();
   const { data, error, loading, refetch } = useQuery<{
     notifications: Notification[];
   }>(session ? () => api.notifications.list({ session }) : null, [session]);
@@ -143,7 +187,7 @@ function Notifications() {
                     </span>
                   </p>
                   <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground/80">
-                    {excerpt(post!.content)}
+                    {renderExcerptWithMentions(post!.content)}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {relativeTime(n.createdAt)}
@@ -163,7 +207,7 @@ function Notifications() {
                     </span>
                   </p>
                   <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground/80">
-                    {excerpt(post.content)}
+                    {renderExcerptWithMentions(post.content)}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {relativeTime(n.createdAt)}
@@ -191,6 +235,29 @@ function Notifications() {
                 </div>
               </div>
             );
+            const href = links[id];
+            const postId = String(n.link ?? "");
+
+            function handleClick(e: MouseEvent<HTMLElement>) {
+              if (isInteractiveTarget(e.target)) return;
+              if (!n.read) markRead(id);
+              if (href) {
+                router.push(href);
+                notifyHashTargetNavigation(`post-${postId}`);
+              }
+            }
+
+            function handleKeyDown(e: KeyboardEvent<HTMLElement>) {
+              if (isInteractiveTarget(e.target)) return;
+              if (e.key !== "Enter" && e.key !== " ") return;
+              e.preventDefault();
+              if (!n.read) markRead(id);
+              if (href) {
+                router.push(href);
+                notifyHashTargetNavigation(`post-${postId}`);
+              }
+            }
+
             return (
               <div
                 key={id}
@@ -199,19 +266,14 @@ function Notifications() {
                   n.read
                     ? "border-border bg-card"
                     : "border-primary/30 bg-primary/5",
+                  href && "cursor-pointer hover:border-primary/40 hover:bg-muted/25",
                 )}
+                role={href ? "link" : undefined}
+                tabIndex={href ? 0 : undefined}
+                onClick={handleClick}
+                onKeyDown={handleKeyDown}
               >
-                {links[id] ? (
-                  <Link
-                    href={links[id]!}
-                    onClick={() => !n.read && markRead(id)}
-                    className="min-w-0 flex-1"
-                  >
-                    {body}
-                  </Link>
-                ) : (
-                  <div className="min-w-0 flex-1">{body}</div>
-                )}
+                <div className="min-w-0 flex-1">{body}</div>
                 <div className="flex shrink-0 items-center gap-0.5">
                   {!n.read ? (
                     <Button
