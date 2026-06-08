@@ -98,6 +98,7 @@ type ExpectedPaths =
   | "/tags/remove"
   | "/tags/targets"
   | "/tags/forTarget"
+  | "/tags/list"
   | "/unread/list"
   | "/unread/count"
   | "/unread/markSeen"

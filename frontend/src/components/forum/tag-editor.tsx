@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Tag as TagIcon, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Loader2, Plus, Tag as TagIcon, X } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "@/components/link";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { Tag } from "@/lib/models";
@@ -29,6 +30,46 @@ export function TagEditor({
   const { session } = useAuth();
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [tagsLoading, setTagsLoading] = useState(false);
+  const [applyingTag, setApplyingTag] = useState<string | null>(null);
+
+  const appliedIds = new Set(tags.map((t) => String(t.tag)));
+  const availableTags = allTags.filter(
+    (t) => !appliedIds.has(String(t.tag)),
+  );
+
+  const fetchTags = useCallback(async () => {
+    setTagsLoading(true);
+    const result = await api.tags.list({});
+    setTagsLoading(false);
+    if ("error" in result) {
+      toast.error(result.error);
+      return;
+    }
+    setAllTags(result.tags);
+  }, []);
+
+  useEffect(() => {
+    if (open) fetchTags();
+  }, [open, fetchTags]);
+
+  async function applyExisting(tag: Tag) {
+    if (!session) return;
+    setApplyingTag(String(tag.tag));
+    const applied = await api.tags.add({
+      session,
+      target,
+      tag: String(tag.tag),
+    });
+    setApplyingTag(null);
+    if ("error" in applied) toast.error(applied.error);
+    else {
+      setName("");
+      onChanged();
+    }
+  }
 
   async function add() {
     const trimmed = name.trim();
@@ -86,7 +127,7 @@ export function TagEditor({
       ))}
 
       {session ? (
-        <Popover>
+        <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
@@ -98,6 +139,35 @@ export function TagEditor({
             </Button>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-64">
+            {tagsLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="size-4 animate-spin text-muted-foreground" />
+              </div>
+            ) : availableTags.length > 0 ? (
+              <ScrollArea className="max-h-40 mb-3">
+                <div className="space-y-1">
+                  {availableTags.map((tag) => (
+                    <button
+                      key={String(tag.tag)}
+                      type="button"
+                      onClick={() => applyExisting(tag)}
+                      disabled={applyingTag === String(tag.tag)}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted disabled:opacity-50"
+                    >
+                      <span className="truncate font-medium">
+                        #{tag.name}
+                      </span>
+                      {applyingTag === String(tag.tag) ? (
+                        <Loader2 className="size-3 shrink-0 animate-spin text-muted-foreground" />
+                      ) : (
+                        <Plus className="size-3 shrink-0 text-muted-foreground" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
+            ) : null}
+
             <div className="flex items-center gap-2">
               <Input
                 value={name}
@@ -117,7 +187,7 @@ export function TagEditor({
               </Button>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
-              Press Enter to create &amp; apply the tag.
+              Type to create a new tag, or pick one above.
             </p>
           </PopoverContent>
         </Popover>

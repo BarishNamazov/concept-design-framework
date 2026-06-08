@@ -7,6 +7,7 @@
  *   POST /tags/remove    { session, target, tag }  -> { target }
  *   POST /tags/targets   { tag }                   -> { targets }
  *   POST /tags/forTarget { target }                -> { tags }
+ *   POST /tags/list      {}                        -> { tags }
  */
 import { Sessioning, Tagging } from "@concepts";
 import {
@@ -20,6 +21,7 @@ type TagAddOutput = ActionOk<typeof Tagging, "addTag">;
 type TagRemoveOutput = ActionOk<typeof Tagging, "removeTag">;
 type TagTargetsOutput = { targets: QueryRow<typeof Tagging, "_getTargets">[] };
 type TagForTargetOutput = { tags: QueryRow<typeof Tagging, "_getTags">[] };
+type TagListOutput = { tags: QueryRow<typeof Tagging, "_getAllTags">[] };
 
 // --- create ---
 
@@ -131,10 +133,32 @@ const forTarget = defineEndpoint(
   }),
 );
 
+// --- list: public ---
+
+const tagList = defineEndpoint(
+  "/tags/list",
+  ({ Sync, Actions, Request, Respond }) => ({
+    TagListResponse: Sync(({ tag, name, tags }) => ({
+      when: Actions(Request()),
+      where: async (frames) => {
+        const [base] = frames;
+        frames = await frames.query(
+          Tagging._getAllTags,
+          {},
+          { tag, name },
+        );
+        return frames.aggregate(base, [tag, name], tags);
+      },
+      then: Actions(Respond<TagListOutput>({ tags })),
+    })),
+  }),
+);
+
 export const tagsApi = {
   create,
   add,
   remove,
   targets: tagTargets,
   forTarget,
+  list: tagList,
 };
