@@ -8,7 +8,7 @@
  *   POST /roles/forUser { user, context }                -> { roles }
  *   POST /roles/can     { user, context, capability }    -> { allowed }
  */
-import { Roling } from "@concepts";
+import { Authenticating, Roling } from "@concepts";
 import {
   type ActionOk,
   defineEndpoint,
@@ -25,6 +25,8 @@ type RoleGrantOutput = ActionOk<typeof Roling, "grant">;
 type RoleRevokeOutput = ActionOk<typeof Roling, "revoke">;
 type RolesForUserOutput = { roles: QueryRow<typeof Roling, "_getRoles">[] };
 type RoleCanOutput = QueryRow<typeof Roling, "_hasCapability">;
+type RoleGetOutput = QueryRow<typeof Roling, "_getRoleDetail">;
+type RoleListOutput = { roles: QueryRow<typeof Roling, "_listRoles">[] };
 
 // --- define ---
 
@@ -87,9 +89,17 @@ const grant = defineEndpoint(
             present,
             capability: ADMIN_CAPABILITY,
           });
-          // Allow grants to reference a role by its human-readable name as well
-          // as by its id; resolve names to ids, leaving ids (and unknown values)
-          // untouched so the grant action can validate existence.
+          // Resolve username references to user ids (leave ids untouched).
+          const resolvedUsers = await Promise.all(
+            frames.map(async ($) => {
+              const rows = await Authenticating._getByUsername({
+                username: $[user] as string,
+              });
+              return rows.length > 0 ? rows[0].user : ($[user] as string);
+            }),
+          );
+          frames = frames.map(($, i) => ({ ...$, [user]: resolvedUsers[i] }));
+          // Resolve role name references to role ids (leave ids untouched).
           const resolved = await Promise.all(
             frames.map(async ($) => {
               const rows = await Roling._getRoleByName({
@@ -182,6 +192,16 @@ const forUser = defineEndpoint(
     RolesForUserResponse: Sync(({ user, context, role, roles }) => ({
       when: Actions(Request({ user, context })),
       where: async (frames) => {
+        // Resolve username references to user ids (leave ids untouched).
+        const resolvedUsers = await Promise.all(
+          frames.map(async ($) => {
+            const rows = await Authenticating._getByUsername({
+              username: $[user] as string,
+            });
+            return rows.length > 0 ? rows[0].user : ($[user] as string);
+          }),
+        );
+        frames = frames.map(($, i) => ({ ...$, [user]: resolvedUsers[i] }));
         const [base] = frames;
         frames = await frames.query(
           Roling._getRoles,
@@ -213,10 +233,51 @@ const can = defineEndpoint(
   }),
 );
 
+// --- get: public role detail by id ---
+
+const get = defineEndpoint(
+  "/roles/get",
+  ({ Sync, Actions, Request, Respond }) => ({
+    RoleGetResponse: Sync(({ role, name, capabilities }) => ({
+      when: Actions(Request({ role })),
+      where: async (frames) =>
+        await frames.query(
+          Roling._getRoleDetail,
+          { role },
+          { name, capabilities },
+        ),
+      then: Actions(Respond<RoleGetOutput>({ name, capabilities })),
+    })),
+  }),
+);
+
+// --- list: public list of all defined roles ---
+
+const list = defineEndpoint(
+  "/roles/list",
+  ({ Sync, Actions, Request, Respond }) => ({
+    RoleListResponse: Sync(({ role, name, capabilities, roles }) => ({
+      when: Actions(Request({})),
+      where: async (frames) => {
+        const [base] = frames;
+        frames = await frames.query(
+          Roling._listRoles,
+          {},
+          { role, name, capabilities },
+        );
+        return frames.aggregate(base, [role, name, capabilities], roles);
+      },
+      then: Actions(Respond<RoleListOutput>({ roles })),
+    })),
+  }),
+);
+
 export const rolesApi = {
   define,
   grant,
   revoke,
   forUser,
   can,
+  get,
+  list,
 };

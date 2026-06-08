@@ -1,9 +1,10 @@
 "use client";
 
 import { use } from "react";
-import { Settings } from "lucide-react";
+import { Settings, Shield } from "lucide-react";
 import { Link } from "@/components/link";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/forum/page";
 import { UserAvatar } from "@/components/forum/user-avatar";
 import { PostPreview } from "@/components/forum/post-preview";
@@ -14,7 +15,7 @@ import {
 } from "@/components/forum/states";
 import { useQuery } from "@/hooks/use-query";
 import { useAuth } from "@/lib/auth";
-import { loadPostConversationIndex, loadUserOverview } from "@/lib/loaders";
+import { loadPostConversationIndex, loadUserOverview, loadUserRoles } from "@/lib/loaders";
 import { count } from "@/lib/format";
 
 export default function UserPage({
@@ -27,6 +28,7 @@ export default function UserPage({
   const isSelf = me ? String(me.user) === user : false;
 
   const overview = useQuery(() => loadUserOverview(user), [user]);
+  const roles = useQuery(() => loadUserRoles(user), [user]);
   const postIds = overview.data?.postIds ?? [];
   const postIndexKey = postIds.join("\u0000");
   const index = useQuery<Record<string, string>>(
@@ -72,6 +74,20 @@ export default function UserPage({
               No bio yet.
             </p>
           )}
+          {roles.data && roles.data.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {roles.data.map((role, i) => (
+                <Badge
+                  key={`${role.name}-${i}`}
+                  variant="secondary"
+                  className="gap-1 capitalize"
+                >
+                  <Shield className="size-3" />
+                  {role.name}
+                </Badge>
+              ))}
+            </div>
+          ) : null}
           <p className="mt-2 text-sm text-muted-foreground">
             {count(postIds.length, "post")}
           </p>

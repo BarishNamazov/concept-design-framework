@@ -293,12 +293,33 @@ const changePassword = defineEndpoint(
   }),
 );
 
+// --- resolve: public lookup of a user id by username ---
+
+type ResolveOutput = QueryRow<typeof Authenticating, "_getByUsername">;
+
+const resolve = defineEndpoint(
+  "/auth/resolve",
+  ({ Sync, Actions, Request, Respond }) => ({
+    ResolveResponse: Sync(({ username, user }) => ({
+      when: Actions(Request({ username })),
+      where: async (frames) =>
+        await frames.query(
+          Authenticating._getByUsername,
+          { username },
+          { user },
+        ),
+      then: Actions(Respond<ResolveOutput>({ user })),
+    })),
+  }),
+);
+
 export const authApi = {
   register,
   login,
   logout,
   me,
   changePassword,
+  resolve,
 };
 
 // --- global session guard ---
