@@ -247,6 +247,22 @@ export default class RolingConcept {
   }
 
   /**
+   * _getRoleDetail (role: Role): (name: String, capabilities: set of String)
+   *
+   * **requires** true
+   *
+   * **effects** returns the Role name and capabilities for the given role id
+   */
+  async _getRoleDetail({
+    role,
+  }: {
+    role: Role;
+  }): Promise<{ name: string; capabilities: string[] }[]> {
+    const doc = await this.roles.findOne({ _id: role });
+    return doc === null ? [] : [{ name: doc.name, capabilities: doc.capabilities }];
+  }
+
+  /**
    * _getCapabilities (role: Role): (capability: String)
    *
    * **requires** true
@@ -263,5 +279,27 @@ export default class RolingConcept {
       return [];
     }
     return doc.capabilities.map((capability) => ({ capability }));
+  }
+
+  /**
+   * _listRoles (): (role: Role, name: String, capabilities: set of String)
+   *
+   * **requires** true
+   *
+   * **effects** returns every defined Role with its name and capabilities
+   *
+   * The empty _params parameter exists for sync-engine query compatibility
+   * (frames.query always passes a bound input object, even for parameterless
+   * queries).
+   */
+  async _listRoles(_params?: Record<string, never>): Promise<
+    { role: Role; name: string; capabilities: string[] }[]
+  > {
+    const docs = await this.roles.find().toArray();
+    return docs.map((doc) => ({
+      role: doc._id,
+      name: doc.name,
+      capabilities: doc.capabilities,
+    }));
   }
 }

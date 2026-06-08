@@ -5,10 +5,12 @@
  * on any error envelope so callers (and `useQuery`) get one clean happy path.
  */
 import { api, ForumError, unwrap } from "@/lib/api";
+import { FORUM_CONTEXT } from "@/lib/auth";
 import type {
   Category,
   ConversationSummary,
   Profile,
+  RoleDetail,
   Tag,
   ThreadNode,
 } from "@/lib/models";
@@ -169,4 +171,17 @@ export async function loadPostConversationIndex(
     if (conversation) index[item] = conversation;
   }
   return index;
+}
+
+/** A user's granted roles with names and capabilities, for profile display. */
+export async function loadUserRoles(user: string): Promise<RoleDetail[]> {
+  const { roles } = unwrap(
+    await api.roles.forUser({ user, context: FORUM_CONTEXT }),
+  );
+  const details = await Promise.all(
+    roles.map(async (r) =>
+      unwrap(await api.roles.get({ role: String(r.role) })),
+    ),
+  );
+  return details;
 }

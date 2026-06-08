@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { FolderPlus, Shield, Trash2, UserCog } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { FolderPlus, List, Shield, Trash2, UserCog } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,10 +18,14 @@ import {
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { FORUM_CONTEXT, useAuth } from "@/lib/auth";
-import type { Category, RoleRow } from "@/lib/models";
+import type { Category, RoleDetail, RoleRow, RoleSummary } from "@/lib/models";
 import { shortId } from "@/lib/format";
 
-const CAPABILITIES = ["administer", "moderate", "pin"] as const;
+const CAPABILITY_INFO: Record<string, string> = {
+  administer: "Full administrative access — manage roles, categories, and forum configuration.",
+  moderate: "Content moderation — lock threads, trash posts, and manage categories.",
+  pin: "Pin threads to the top of category listings.",
+};
 
 function CategoryAdmin() {
   const { session } = useAuth();
@@ -135,6 +140,19 @@ function RoleAdmin() {
   const [grantRole, setGrantRole] = useState("");
   const [lookupUser, setLookupUser] = useState("");
   const [queryUser, setQueryUser] = useState<string | null>(null);
+  const [queryUsername, setQueryUsername] = useState<string | null>(null);
+  const [roleDetails, setRoleDetails] = useState<Record<string, RoleDetail>>({});
+  const fetchedRef = useRef<Set<string>>(new Set());
+
+  function resetInspection() {
+    setRoleDetails({});
+    fetchedRef.current.clear();
+  }
+
+  const roleList = useQuery<{ roles: RoleSummary[] }>(
+    () => api.roles.list({}),
+    [],
+  );
 
   const roles = useQuery<{ roles: RoleRow[] }>(
     queryUser
@@ -142,6 +160,21 @@ function RoleAdmin() {
       : null,
     [queryUser],
   );
+
+  useEffect(() => {
+    if (!roles.data) return;
+    Promise.all(
+      roles.data.roles.map(async (r) => {
+        const key = String(r.role);
+        if (fetchedRef.current.has(key)) return;
+        fetchedRef.current.add(key);
+        const result = await api.roles.get({ role: key });
+        if (!("error" in result)) {
+          setRoleDetails((prev) => ({ ...prev, [key]: result }));
+        }
+      }),
+    );
+  }, [roles.data]);
 
   function toggleCap(cap: string) {
     setCaps((prev) =>
@@ -154,7 +187,7 @@ function RoleAdmin() {
     const result = await api.roles.define({
       session,
       name: roleName.trim(),
-      // The inferred contract types `capabilities` as a single string (symbolic
+      // The SDK contract type narrows capabilities to a single string (symbolic
       // frame vars collapse to string), but the backend expects a string[].
       capabilities: caps as unknown as string,
     });
@@ -163,6 +196,7 @@ function RoleAdmin() {
       toast.success(`Role "${roleName.trim()}" defined`);
       setRoleName("");
       setCaps([]);
+      roleList.refetch();
     }
   }
 
@@ -179,7 +213,10 @@ function RoleAdmin() {
       toast.success("Role granted");
       setGrantUser("");
       setGrantRole("");
-      if (queryUser === grantUser.trim()) roles.refetch();
+      if (queryUser === grantUser.trim()) {
+        resetInspection();
+        roles.refetch();
+      }
     }
   }
 
@@ -194,9 +231,12 @@ function RoleAdmin() {
     if ("error" in result) toast.error(result.error);
     else {
       toast.success("Role revoked");
+      resetInspection();
       roles.refetch();
     }
   }
+
+  const CAPABILITIES = Object.keys(CAPABILITY_INFO);
 
   return (
     <div className="space-y-6">
@@ -214,24 +254,30 @@ function RoleAdmin() {
             placeholder="e.g. moderator"
           />
         </div>
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-3">
           <Label>Capabilities</Label>
-          <div className="flex flex-wrap gap-2">
-            {CAPABILITIES.map((cap) => (
-              <button
-                key={cap}
-                type="button"
-                onClick={() => toggleCap(cap)}
-                className={
-                  "rounded-full border px-3 py-1 text-sm capitalize transition-colors " +
-                  (caps.includes(cap)
-                    ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border text-muted-foreground hover:bg-muted")
-                }
-              >
-                {cap}
-              </button>
-            ))}
+          <div className="grid gap-2 sm:grid-cols-3">
+            {CAPABILITIES.map((cap) => {
+              const selected = caps.includes(cap);
+              return (
+                <button
+                  key={cap}
+                  type="button"
+                  onClick={() => toggleCap(cap)}
+                  className={
+                    "rounded-lg border p-3 text-left transition-colors " +
+                    (selected
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border text-muted-foreground hover:bg-muted")
+                  }
+                >
+                  <p className="text-sm font-medium capitalize">{cap}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed opacity-70">
+                    {CAPABILITY_INFO[cap]}
+                  </p>
+                </button>
+              );
+            })}
           </div>
         </div>
         <Button
@@ -250,22 +296,30 @@ function RoleAdmin() {
         </h3>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="grant-user">User ID</Label>
+            <Label htmlFor="grant-user">Username</Label>
             <Input
               id="grant-user"
               value={grantUser}
               onChange={(e) => setGrantUser(e.target.value)}
-              placeholder="user id"
+              placeholder="username"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="grant-role">Role name</Label>
+            <Label htmlFor="grant-role">Role (name or ID)</Label>
             <Input
               id="grant-role"
               value={grantRole}
               onChange={(e) => setGrantRole(e.target.value)}
-              placeholder="role name"
+              placeholder="e.g. moderator"
+              list="grant-role-suggestions"
             />
+            {roleList.data && roleList.data.roles.length > 0 ? (
+              <datalist id="grant-role-suggestions">
+                {roleList.data.roles.map((r) => (
+                  <option key={String(r.role)} value={r.name} />
+                ))}
+              </datalist>
+            ) : null}
           </div>
         </div>
         <Button
@@ -278,6 +332,47 @@ function RoleAdmin() {
       </section>
 
       <section className="rounded-xl border border-border bg-card p-5">
+        <h3 className="mb-4 flex items-center gap-2 font-display text-lg font-semibold">
+          <List className="size-5" />
+          Defined roles
+        </h3>
+        {roleList.loading ? (
+          <LoadingState />
+        ) : !roleList.data || roleList.data.roles.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No roles defined yet. Create one above.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {roleList.data.roles.map((r) => (
+              <div
+                key={String(r.role)}
+                className="flex items-start justify-between gap-3 rounded-lg border border-border px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium capitalize">{r.name}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground font-mono">
+                    {shortId(String(r.role))}
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {r.capabilities.map((cap) => (
+                      <Badge
+                        key={cap}
+                        variant="secondary"
+                        className="text-xs capitalize"
+                      >
+                        {cap}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-border bg-card p-5">
         <h3 className="mb-4 font-display text-lg font-semibold">
           Inspect a user&apos;s roles
         </h3>
@@ -285,11 +380,28 @@ function RoleAdmin() {
           <Input
             value={lookupUser}
             onChange={(e) => setLookupUser(e.target.value)}
-            placeholder="user id"
+            placeholder="username"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const name = lookupUser.trim();
+                if (name) {
+                  setQueryUser(name);
+                  setQueryUsername(name);
+                  resetInspection();
+                }
+              }
+            }}
           />
           <Button
             variant="outline"
-            onClick={() => setQueryUser(lookupUser.trim() || null)}
+            onClick={() => {
+              const name = lookupUser.trim();
+              if (name) {
+                setQueryUser(name);
+                setQueryUsername(name);
+                resetInspection();
+              }
+            }}
             disabled={!lookupUser.trim()}
           >
             Look up
@@ -298,8 +410,8 @@ function RoleAdmin() {
         {queryUser ? (
           <div className="mt-4">
             <p className="mb-2 text-sm text-muted-foreground">
-              Roles for <UserName user={queryUser} className="text-foreground" /> (
-              {shortId(queryUser)})
+              Roles for <UserName user={queryUser} className="text-foreground" />{" "}
+              ({queryUsername ?? shortId(queryUser)})
             </p>
             {roles.loading ? (
               <LoadingState />
@@ -307,22 +419,49 @@ function RoleAdmin() {
               <p className="text-sm text-muted-foreground">No roles in this context.</p>
             ) : (
               <ul className="space-y-2">
-                {roles.data.roles.map((r) => (
-                  <li
-                    key={String(r.role)}
-                    className="flex items-center justify-between rounded-lg border border-border px-3 py-2"
-                  >
-                    <span className="font-mono text-sm">{shortId(String(r.role))}</span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive"
-                      onClick={() => revoke(String(r.role))}
+                {roles.data.roles.map((r) => {
+                  const detail = roleDetails[String(r.role)];
+                  return (
+                    <li
+                      key={String(r.role)}
+                      className="flex items-start justify-between rounded-lg border border-border px-4 py-3"
                     >
-                      Revoke
-                    </Button>
-                  </li>
-                ))}
+                      <div className="min-w-0">
+                        {detail ? (
+                          <>
+                            <p className="font-medium capitalize">{detail.name}</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground font-mono">
+                              {shortId(String(r.role))}
+                            </p>
+                            <div className="mt-1.5 flex flex-wrap gap-1">
+                              {detail.capabilities.map((cap) => (
+                                <Badge
+                                  key={cap}
+                                  variant="secondary"
+                                  className="text-xs capitalize"
+                                >
+                                  {cap}
+                                </Badge>
+                              ))}
+                            </div>
+                          </>
+                        ) : (
+                          <span className="font-mono text-sm">
+                            {shortId(String(r.role))}
+                          </span>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive shrink-0"
+                        onClick={() => revoke(String(r.role))}
+                      >
+                        Revoke
+                      </Button>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
