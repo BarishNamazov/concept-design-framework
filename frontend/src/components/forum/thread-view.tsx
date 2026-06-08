@@ -249,6 +249,7 @@ export function ThreadView({ conversation }: { conversation: string }) {
           <>
             <h2 className="eyebrow mb-3">Add to the discussion</h2>
             <Composer
+              session={session ?? undefined}
               placeholder="Write your reply… Markdown supported."
               submitLabel="Post reply"
               onSubmit={postRootReply}

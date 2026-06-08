@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Bold, Code, Italic, Link2, List, Quote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/forum/states";
+import { MentionAutocomplete } from "@/components/forum/mention-autocomplete";
 import { cn } from "@/lib/utils";
 
 interface ComposerProps {
@@ -13,6 +14,7 @@ interface ComposerProps {
   submitLabel?: string;
   minRows?: number;
   autoFocus?: boolean;
+  session?: string;
   onSubmit: (content: string) => Promise<void> | void;
   onCancel?: () => void;
 }
@@ -39,12 +41,54 @@ export function Composer({
   submitLabel = "Post",
   minRows = 6,
   autoFocus,
+  session,
   onSubmit,
   onCancel,
 }: ComposerProps) {
   const [value, setValue] = useState(initialValue);
   const [busy, setBusy] = useState(false);
   const ref = useRef<HTMLTextAreaElement>(null);
+  const mentionStartRef = useRef<number>(-1);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+
+  /** Scan text before cursor for an active @mention and show the autocomplete. */
+  const detectMention = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const pos = el.selectionStart;
+    const before = el.value.slice(0, pos);
+    const match = before.match(/(?:^|\s)@([a-zA-Z0-9_]*)$/);
+    if (match && match[1].length >= 1) {
+      mentionStartRef.current = match.index! + match[0].indexOf("@");
+      setMentionQuery(match[1]);
+    } else {
+      mentionStartRef.current = -1;
+      setMentionQuery(null);
+    }
+  }, []);
+
+  function handleSelectMention(username: string) {
+    const el = ref.current;
+    if (!el || mentionStartRef.current === -1) return;
+    const pos = el.selectionStart;
+    const before = el.value.slice(0, mentionStartRef.current);
+    const after = el.value.slice(pos);
+    const next = `${before}@${username} ${after}`;
+    setValue(next);
+    mentionStartRef.current = -1;
+    setMentionQuery(null);
+    requestAnimationFrame(() => {
+      el.focus();
+      const caret = before.length + username.length + 2;
+      el.setSelectionRange(caret, caret);
+    });
+  }
+
+  function handleCloseMention() {
+    mentionStartRef.current = -1;
+    setMentionQuery(null);
+    ref.current?.focus();
+  }
 
   function applyWrap(wrap: Wrap) {
     const el = ref.current;
@@ -66,6 +110,7 @@ export function Composer({
 
   async function submit() {
     if (!value.trim() || busy) return;
+    setMentionQuery(null);
     setBusy(true);
     try {
       await onSubmit(value.trim());
@@ -100,11 +145,20 @@ export function Composer({
         ref={ref}
         value={value}
         autoFocus={autoFocus}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => {
+          setValue(e.target.value);
+          requestAnimationFrame(detectMention);
+        }}
+        onKeyUp={detectMention}
+        onSelect={detectMention}
+        onClick={detectMention}
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
             e.preventDefault();
             submit();
+          }
+          if (mentionQuery && (e.key === "Enter" || e.key === "Tab")) {
+            return;
           }
         }}
         placeholder={placeholder}
@@ -113,6 +167,16 @@ export function Composer({
         )}
         style={{ minHeight: `${minRows * 1.5}rem` }}
       />
+      {mentionQuery && session ? (
+        <div className="relative">
+          <MentionAutocomplete
+            query={mentionQuery}
+            session={session}
+            onSelect={handleSelectMention}
+            onClose={handleCloseMention}
+          />
+        </div>
+      ) : null}
       <div className="flex items-center justify-end gap-2 border-t border-border px-3 py-2.5">
         {onCancel ? (
           <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={busy}>

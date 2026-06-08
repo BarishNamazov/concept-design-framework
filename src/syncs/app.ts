@@ -23,6 +23,7 @@ import { tagsApi } from "./tags.sync.ts";
 import { postsApi, threadsApi } from "./threads.sync.ts";
 import { trashApi } from "./trash.sync.ts";
 import { unreadApi } from "./unread.sync.ts";
+import { usersApi } from "./users.sync.ts";
 
 export const api = {
   auth: authApi,
@@ -44,6 +45,7 @@ export const api = {
   bookmarks: bookmarksApi,
   locks: locksApi,
   revisions: revisionsApi,
+  users: usersApi,
 };
 
 export const syncs = {

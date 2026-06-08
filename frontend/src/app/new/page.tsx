@@ -52,6 +52,7 @@ function NewTopicForm() {
         <div className="space-y-2">
           <Label>Opening post</Label>
           <Composer
+            session={session ?? undefined}
             submitLabel="Post topic"
             minRows={10}
             placeholder="Lay out your question or idea. You can mention a post with [[post-id]]."

@@ -202,6 +202,7 @@ export function PostCard({
 
       {editing ? (
         <Composer
+          session={session ?? undefined}
           initialValue={node.post.content}
           submitLabel="Save edit"
           autoFocus
@@ -302,6 +303,7 @@ export function PostCard({
       {replying ? (
         <div className="mt-4">
           <Composer
+            session={session ?? undefined}
             placeholder="Write a reply…"
             submitLabel="Post reply"
             minRows={4}

@@ -202,6 +202,28 @@ export default class AuthenticatingConcept {
   }
 
   /**
+   * _search (query: String): (user: User, username: String)
+   *
+   * **requires** true
+   *
+   * **effects** returns every User whose username starts with `query`
+   * (case-insensitive), up to 10 results sorted alphabetically
+   */
+  async _search({
+    query,
+  }: {
+    query: string;
+  }): Promise<{ user: User; username: string }[]> {
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const docs = await this.users
+      .find({ username: new RegExp(`^${escaped}`, "i") })
+      .limit(10)
+      .sort({ username: 1 })
+      .toArray();
+    return docs.map((doc) => ({ user: doc._id, username: doc.username }));
+  }
+
+  /**
    * _getUserCount (): (count: Number)
    *
    * **requires** true
