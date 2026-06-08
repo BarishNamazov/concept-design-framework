@@ -12,23 +12,25 @@ import {
   ErrorState,
   LoadingState,
 } from "@/components/forum/states";
+import { UserAvatar } from "@/components/forum/user-avatar";
+import { UserName } from "@/components/forum/user-name";
 import { useQuery } from "@/hooks/use-query";
 import { api, isApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { Notification } from "@/lib/models";
-import { relativeTime } from "@/lib/format";
+import type { Notification, PostView } from "@/lib/models";
+import { excerpt, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-function notificationMessage(n: Notification): string {
-  switch (n.kind) {
+function actionText(kind: string): string {
+  switch (kind) {
     case "reply":
-      return "New reply";
+      return "replied to your post";
     case "mention":
-      return "You were mentioned";
+      return "mentioned you";
     case "accepted":
-      return "Your answer was accepted";
+      return "accepted your answer";
     default:
-      return n.kind;
+      return kind;
   }
 }
 
@@ -42,27 +44,37 @@ function Notifications() {
   const unread = notifications.filter((n) => !n.read).length;
 
   const [links, setLinks] = useState<Record<string, string | null>>({});
+  const [posts, setPosts] = useState<Record<string, PostView | null>>({});
 
   useEffect(() => {
     const resolveLinks = async () => {
-      const resolved: Record<string, string | null> = {};
+      const resolvedLinks: Record<string, string | null> = {};
+      const resolvedPosts: Record<string, PostView | null> = {};
       await Promise.all(
         notifications
           .filter((n) => n.link)
           .map(async (n) => {
+            const notificationId = String(n.notification);
             const postId = String(n.link);
             try {
-              const result = await api.threads.forItem({ item: postId });
-              if (isApiError(result)) return;
-              resolved[String(n.notification)] = result.conversation
-                ? `/t/${result.conversation}#post-${postId}`
-                : null;
+              const [convResult, postResult] = await Promise.all([
+                api.threads.forItem({ item: postId }),
+                api.posts.get({ post: postId }),
+              ]);
+              if (!isApiError(convResult) && convResult.conversation) {
+                resolvedLinks[notificationId] =
+                  `/t/${convResult.conversation}#post-${postId}`;
+              }
+              if (!isApiError(postResult)) {
+                resolvedPosts[notificationId] = postResult.post;
+              }
             } catch {
-              // link unresolvable; skip silently
+              // unresolvable; skip silently
             }
           }),
       );
-      setLinks(resolved);
+      setLinks(resolvedLinks);
+      setPosts(resolvedPosts);
     };
     if (notifications.length > 0) resolveLinks();
   }, [data]);
@@ -118,7 +130,47 @@ function Notifications() {
         <div className="space-y-2">
           {notifications.map((n) => {
             const id = String(n.notification);
-            const body = (
+            const post = posts[id];
+            const showAuthor = post && n.kind !== "accepted";
+            const body = showAuthor ? (
+              <div className="flex items-start gap-3">
+                <UserAvatar user={String(post!.author)} className="mt-0.5 size-7 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm">
+                    <UserName user={String(post!.author)} className="text-sm" />{" "}
+                    <span className="text-muted-foreground">
+                      {actionText(n.kind)}
+                    </span>
+                  </p>
+                  <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground/80">
+                    {excerpt(post!.content)}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {relativeTime(n.createdAt)}
+                  </p>
+                </div>
+              </div>
+            ) : post ? (
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <Check className="size-3.5 text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm">
+                    <span className="font-medium text-foreground">
+                      {actionText(n.kind).charAt(0).toUpperCase() +
+                        actionText(n.kind).slice(1)}
+                    </span>
+                  </p>
+                  <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground/80">
+                    {excerpt(post.content)}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {relativeTime(n.createdAt)}
+                  </p>
+                </div>
+              </div>
+            ) : (
               <div className="flex items-start gap-3">
                 <span
                   className={cn(
@@ -129,7 +181,8 @@ function Notifications() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm">
                     <span className="font-medium text-foreground">
-                      {notificationMessage(n)}
+                      {actionText(n.kind).charAt(0).toUpperCase() +
+                        actionText(n.kind).slice(1)}
                     </span>
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
