@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Bell, Check, CheckCheck, X } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "@/components/link";
@@ -12,11 +13,24 @@ import {
   LoadingState,
 } from "@/components/forum/states";
 import { useQuery } from "@/hooks/use-query";
-import { api } from "@/lib/api";
+import { api, isApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { Notification } from "@/lib/models";
 import { relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+function notificationMessage(n: Notification): string {
+  switch (n.kind) {
+    case "reply":
+      return "New reply";
+    case "mention":
+      return "You were mentioned";
+    case "accepted":
+      return "Your answer was accepted";
+    default:
+      return n.kind;
+  }
+}
 
 function Notifications() {
   const { session } = useAuth();
@@ -26,6 +40,32 @@ function Notifications() {
 
   const notifications = data?.notifications ?? [];
   const unread = notifications.filter((n) => !n.read).length;
+
+  const [links, setLinks] = useState<Record<string, string | null>>({});
+
+  useEffect(() => {
+    const resolveLinks = async () => {
+      const resolved: Record<string, string | null> = {};
+      await Promise.all(
+        notifications
+          .filter((n) => n.link)
+          .map(async (n) => {
+            const postId = String(n.link);
+            try {
+              const result = await api.threads.forItem({ item: postId });
+              if (isApiError(result)) return;
+              resolved[String(n.notification)] = result.conversation
+                ? `/t/${result.conversation}#post-${postId}`
+                : null;
+            } catch {
+              // link unresolvable; skip silently
+            }
+          }),
+      );
+      setLinks(resolved);
+    };
+    if (notifications.length > 0) resolveLinks();
+  }, [data]);
 
   async function markRead(notification: string) {
     if (!session) return;
@@ -89,9 +129,8 @@ function Notifications() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm">
                     <span className="font-medium text-foreground">
-                      {n.kind}
-                    </span>{" "}
-                    <span className="text-muted-foreground">{n.subject}</span>
+                      {notificationMessage(n)}
+                    </span>
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {relativeTime(n.createdAt)}
@@ -109,9 +148,9 @@ function Notifications() {
                     : "border-primary/30 bg-primary/5",
                 )}
               >
-                {n.link ? (
+                {links[id] ? (
                   <Link
-                    href={n.link}
+                    href={links[id]!}
                     onClick={() => !n.read && markRead(id)}
                     className="min-w-0 flex-1"
                   >
