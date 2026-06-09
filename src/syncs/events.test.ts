@@ -78,6 +78,29 @@ describe("cross-concept event synchronizations", () => {
     expect(await inboxKinds(carol)).toContain("reply");
   });
 
+  test("a subscribed parent author only gets one notification on reply", async () => {
+    const alice = await signUp("alice");
+    const bob = await signUp("bob");
+
+    const thread = await app.send("/threads/create", {
+      session: alice,
+      content: "Thread by alice.",
+    });
+    await app.send("/subscriptions/subscribe", {
+      session: alice,
+      target: thread.conversation,
+    });
+
+    await app.send("/threads/reply", {
+      session: bob,
+      parent: thread.node,
+      content: "Bob replies.",
+    });
+
+    const kinds = await inboxKinds(alice);
+    expect(kinds.filter((k) => k === "reply")).toHaveLength(1);
+  });
+
   test("an @mention notifies the mentioned user", async () => {
     const alice = await signUp("alice");
     const bob = await signUp("bob");
