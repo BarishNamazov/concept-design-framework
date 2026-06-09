@@ -12,6 +12,7 @@ import {
   ListConcept,
   NotificationConcept,
   RecorderConcept,
+  ThrowingConcept,
 } from "./mocks.ts";
 import { makeSyncs } from "./syncs.ts";
 
@@ -104,5 +105,44 @@ describe("engine: edge cases", () => {
     await Button.clicked({ kind: "fanout" });
     expect(Recorder.order.filter((t) => t.startsWith("v:")).length).toBe(3);
     expect(Recorder.order.filter((t) => t.startsWith("even:")).length).toBe(1);
+  });
+
+  test("a throwing action is caught and normalized to error output", async () => {
+    const Sync = new SyncConcept();
+    Sync.logging = Logging.OFF;
+    const { Throwing } = Sync.instrument({
+      Throwing: new ThrowingConcept(),
+    });
+    const result = await Throwing.explode({});
+    expect(result).toEqual({ error: "kaboom" });
+    expect(Throwing.hit).toBe(true);
+  });
+
+  test("a throwing action does not abort downstream then actions in a chain", async () => {
+    const Sync = new SyncConcept();
+    Sync.logging = Logging.OFF;
+    const { Button, Recorder, Throwing } = Sync.instrument({
+      Button: new ButtonConcept(),
+      Recorder: new RecorderConcept(),
+      Throwing: new ThrowingConcept(),
+    });
+
+    // Register a one-shot sync whose `then` fires two actions; the first throws.
+    // Uses Button.clicked as the trigger (one-shot, no self-loop).
+    Sync.register({
+      ChainWithThrow: ({ kind }: Vars) => ({
+        when: actions([Button.clicked, { kind }, {}]),
+        then: actions(
+          [Throwing.explode, {}],
+          [Recorder.record, { tag: "after-throw" }],
+        ),
+      }),
+    });
+
+    await Button.clicked({ kind: "test" });
+    // If the engine didn't catch the throw from `explode` inside `then`,
+    // the `then` chain would abort before running `record`. The recorder
+    // should still have the "after-throw" entry.
+    expect(Recorder.order).toContain("after-throw");
   });
 });
