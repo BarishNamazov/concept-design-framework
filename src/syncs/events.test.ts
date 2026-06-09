@@ -75,7 +75,7 @@ describe("cross-concept event synchronizations", () => {
       content: "A new reply for watchers.",
     });
 
-    expect(await inboxKinds(carol)).toContain("reply");
+    expect(await inboxKinds(carol)).toContain("followed_reply");
   });
 
   test("a subscribed parent author only gets one notification on reply", async () => {

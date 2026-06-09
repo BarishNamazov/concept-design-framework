@@ -28,6 +28,8 @@ function actionText(kind: string): string {
   switch (kind) {
     case "reply":
       return "replied to your post";
+    case "followed_reply":
+      return "replied in a topic you follow";
     case "mention":
       return "mentioned you";
     case "accepted":

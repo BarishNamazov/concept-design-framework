@@ -116,7 +116,12 @@ export const NotifyWatchersOnReply: Sync = ({
   },
   then: actions([
     Notifying.notify,
-    { recipient: subscriber, kind: "reply", subject: post, link: post },
+    {
+      recipient: subscriber,
+      kind: "followed_reply",
+      subject: post,
+      link: post,
+    },
   ]),
 });
 
