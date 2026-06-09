@@ -226,6 +226,43 @@ describe("thread & post flows", () => {
     });
     expect("error" in res).toBe(true);
   });
+
+  test("list supports sort param and returns lastActivityAt", async () => {
+    const { session } = await makeUser("dave_sort");
+
+    const first = ok(await api.threads.create({ session, content: "first" }));
+    const second = ok(await api.threads.create({ session, content: "second" }));
+
+    // Reply to first so it becomes most recently active.
+    await Bun.sleep(5);
+    ok(
+      await api.threads.reply({
+        session,
+        parent: first.node,
+        content: "bump",
+      }),
+    );
+
+    // Latest sort: second (newer creation) first.
+    const latest = ok(await api.threads.list({ sort: "latest" }));
+    expect(latest.conversations[0].lastActivityAt).toBeDefined();
+    expect(latest.conversations[0].conversation).toBe(second.conversation);
+
+    // Activity sort: first (has a reply) first.
+    const activity = ok(await api.threads.list({ sort: "activity" }));
+    expect(activity.conversations[0].lastActivityAt).toBeDefined();
+    expect(activity.conversations[0].conversation).toBe(first.conversation);
+
+    // The two orders differ.
+    expect(latest.conversations[0].conversation).not.toBe(
+      activity.conversations[0].conversation,
+    );
+
+    // lastActivityAt is a Date string from JSON serialization.
+    const dateStr = activity.conversations[0].lastActivityAt;
+    expect(typeof dateStr).toBe("string");
+    expect(new Date(dateStr as unknown as string).getTime()).not.toBeNaN();
+  });
 });
 
 // --- Reactions -------------------------------------------------------------

@@ -363,16 +363,24 @@ describe("thread list synchronizations", () => {
       content: "reply to first",
     });
 
+    // With sort=latest, second (newer creation) appears first.
+    const byLatest = await app.send("/threads/list", { sort: "latest" });
+    const latestIds = byLatest.conversations.map(
+      (c: { conversation: string }) => c.conversation,
+    );
+    expect(latestIds[0]).toBe(second.conversation);
+
+    // With sort=activity, first (with a reply) appears first.
     const byActivity = await app.send("/threads/list", {
       sort: "activity",
     });
-    const ids = byActivity.conversations.map(
+    const activityIds = byActivity.conversations.map(
       (c: { conversation: string }) => c.conversation,
     );
-    // The first conversation got a reply, so it should appear before the second.
-    expect(ids.indexOf(first.conversation)).toBeLessThan(
-      ids.indexOf(second.conversation),
-    );
+    expect(activityIds[0]).toBe(first.conversation);
+
+    // The two sort modes produce different orders.
+    expect(latestIds).not.toEqual(activityIds);
 
     // Each conversation now includes lastActivityAt.
     expect(byActivity.conversations[0].lastActivityAt).toBeDefined();
