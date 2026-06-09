@@ -37,7 +37,7 @@ const getProfile = defineEndpoint(
 
 const setDisplayName = defineEndpoint(
   "/profiles/setDisplayName",
-  ({ Sync, Actions, Request, Respond }) => ({
+  ({ Sync, Actions, Request, Respond, Fail }) => ({
     SetDisplayNameResponse: Sync(({ session, displayName, user }) => ({
       when: Actions(Request({ session, displayName })),
       where: async (frames) =>
@@ -49,6 +49,11 @@ const setDisplayName = defineEndpoint(
       when: Actions([Profiling.setDisplayName, {}, { user }]),
       then: Actions(Respond<SetDisplayNameOutput>({ user })),
     })),
+
+    SetDisplayNameError: Sync(({ error }) => ({
+      when: Actions([Profiling.setDisplayName, {}, { error }]),
+      then: Actions(Fail(error)),
+    })),
   }),
 );
 
@@ -56,7 +61,7 @@ const setDisplayName = defineEndpoint(
 
 const setBio = defineEndpoint(
   "/profiles/setBio",
-  ({ Sync, Actions, Request, Respond }) => ({
+  ({ Sync, Actions, Request, Respond, Fail }) => ({
     SetBioResponse: Sync(({ session, bio, user }) => ({
       when: Actions(Request({ session, bio })),
       where: async (frames) =>
@@ -68,6 +73,11 @@ const setBio = defineEndpoint(
       when: Actions([Profiling.setBio, {}, { user }]),
       then: Actions(Respond<SetBioOutput>({ user })),
     })),
+
+    SetBioError: Sync(({ error }) => ({
+      when: Actions([Profiling.setBio, {}, { error }]),
+      then: Actions(Fail(error)),
+    })),
   }),
 );
 
@@ -75,7 +85,7 @@ const setBio = defineEndpoint(
 
 const setAvatar = defineEndpoint(
   "/profiles/setAvatar",
-  ({ Sync, Actions, Request, Respond }) => ({
+  ({ Sync, Actions, Request, Respond, Fail }) => ({
     SetAvatarResponse: Sync(({ session, avatar, user }) => ({
       when: Actions(Request({ session, avatar })),
       where: async (frames) =>
@@ -86,6 +96,11 @@ const setAvatar = defineEndpoint(
     SetAvatarRespond: Sync(({ user }) => ({
       when: Actions([Profiling.setAvatar, {}, { user }]),
       then: Actions(Respond<SetAvatarOutput>({ user })),
+    })),
+
+    SetAvatarError: Sync(({ error }) => ({
+      when: Actions([Profiling.setAvatar, {}, { error }]),
+      then: Actions(Fail(error)),
     })),
   }),
 );
