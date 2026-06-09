@@ -328,4 +328,33 @@ describe("category authorization", () => {
     });
     expect(unassigned.item).toBe("p1");
   });
+
+  test("forItem returns categories for a given item", async () => {
+    const { session } = await registerAndLogin("cat_alice");
+
+    const { category } = await app.send("/categories/create", {
+      session,
+      name: "General",
+      description: "General discussion",
+    });
+
+    await app.send("/categories/assign", {
+      session,
+      item: "p1",
+      category,
+    });
+
+    const result = await app.send("/categories/forItem", { item: "p1" });
+    expect(result.category).toBeDefined();
+    expect(result.category).toHaveLength(1);
+    expect(result.category[0].category).toBe(category);
+    expect(result.category[0].name).toBe("General");
+    expect(result.category[0].description).toBe("General discussion");
+  });
+
+  test("forItem returns empty array for unassigned item", async () => {
+    const result = await app.send("/categories/forItem", { item: "nonexistent" });
+    expect(result.category).toBeDefined();
+    expect(result.category).toHaveLength(0);
+  });
 });

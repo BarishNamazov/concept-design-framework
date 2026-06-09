@@ -87,7 +87,7 @@ function parseLinkTargets(content: string): string[] {
 
 const threadCreate = defineEndpoint(
   "/threads/create",
-  ({ Sync, Actions, Request, Respond }) => ({
+  ({ Sync, Actions, Request, Respond, Fail }) => ({
     ThreadCreateRequest: Sync(({ session, content, user }) => ({
       when: Actions(Request({ session, content })),
       where: async (frames) =>
@@ -98,6 +98,11 @@ const threadCreate = defineEndpoint(
     ThreadCreateStartsConversation: Sync(({ post }) => ({
       when: Actions([Posting.create, {}, { post }]),
       then: Actions([Conversing.start, { item: post }]),
+    })),
+
+    ThreadCreateStartsConversationError: Sync(({ error }) => ({
+      when: Actions([Conversing.start, {}, { error }]),
+      then: Actions(Fail(error)),
     })),
 
     ThreadCreateSetsSource: Sync(({ content, post }) => ({
@@ -162,6 +167,11 @@ const threadReply = defineEndpoint(
     ThreadReplyAttaches: Sync(({ parent, post }) => ({
       when: Actions(Request({ parent }), [Posting.create, {}, { post }]),
       then: Actions([Conversing.reply, { item: post, parent }]),
+    })),
+
+    ThreadReplyAttachesError: Sync(({ error }) => ({
+      when: Actions([Conversing.reply, {}, { error }]),
+      then: Actions(Fail(error)),
     })),
 
     ThreadReplySetsSource: Sync(({ content, post }) => ({

@@ -231,7 +231,11 @@ export class SyncConcept {
       const runThen = thenAction as unknown as (
         args: ActionArguments,
       ) => Promise<unknown>;
-      await runThen(thenRecord);
+      try {
+        await runThen(thenRecord);
+      } catch (err) {
+        console.error(`Error in then action ${String(thenAction)}:`, err);
+      }
     }
   }
 
@@ -453,7 +457,14 @@ export class SyncConcept {
           };
 
           Action.invoke(actionRecord);
-          const output = (await action(input)) as Record<string, unknown>;
+          let output: Record<string, unknown>;
+          try {
+            output = (await action(input)) as Record<string, unknown>;
+          } catch (err) {
+            output = {
+              error: err instanceof Error ? err.message : String(err),
+            };
+          }
           Action.invoked({ id, output });
           await synchronize({ ...actionRecord, output });
           return output;
