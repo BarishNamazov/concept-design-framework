@@ -87,3 +87,15 @@ export class RecorderConcept {
     return this.order.map((t) => ({ tag: t }));
   }
 }
+
+/** Concept whose action always throws — used to test engine error resilience. */
+export class ThrowingConcept {
+  public hit = false;
+  explode(_: Empty) {
+    this.hit = true;
+    throw new Error("kaboom");
+  }
+  safe(_: Empty) {
+    return { ok: true };
+  }
+}
