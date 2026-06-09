@@ -80,6 +80,8 @@ export const NotifyWatchersOnReply: Sync = ({
   author,
   post,
   parent,
+  parentItem,
+  parentAuthor,
   conversation,
   subscriber,
 }) => ({
@@ -98,7 +100,19 @@ export const NotifyWatchersOnReply: Sync = ({
       { target: conversation },
       { user: subscriber },
     );
-    return frames.filter(($) => $[subscriber] !== $[author]);
+    frames = await frames.query(
+      Conversing._getItem,
+      { node: parent },
+      { item: parentItem },
+    );
+    frames = await frames.query(
+      Posting._getAuthor,
+      { post: parentItem },
+      { author: parentAuthor },
+    );
+    return frames
+      .filter(($) => $[subscriber] !== $[author])
+      .filter(($) => $[subscriber] !== $[parentAuthor]);
   },
   then: actions([
     Notifying.notify,
