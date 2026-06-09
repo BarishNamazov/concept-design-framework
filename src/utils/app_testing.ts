@@ -93,8 +93,9 @@ async function boot(): Promise<TestApp> {
 
   const send = async (path: string, body: Record<string, unknown> = {}) => {
     const { request } = await Requesting.request({ ...body, path });
-    const [{ response }] = await Requesting._awaitResponse({ request });
-    return response;
+    const [result] = await Requesting._awaitResponse({ request });
+    if ("error" in result) throw new Error(result.error);
+    return result.response;
   };
 
   const reset = async () => {
@@ -149,7 +150,7 @@ export function startTestServer(): Promise<TestServer> {
 async function bootServer(): Promise<TestServer> {
   const app = await setupApp();
   const { startRequestingServer } = await import(
-    "@concepts/Requesting/RequestingConcept.ts"
+    "@concepts/Requesting/server.ts"
   );
   const server = startRequestingServer(app.concepts, { port: 0 });
   sharedHttp = server;

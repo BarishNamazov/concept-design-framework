@@ -1,6 +1,6 @@
 "use client";
 
-import { type KeyboardEvent, type MouseEvent } from "react";
+import type { KeyboardEvent, MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 import { Link } from "@/components/link";

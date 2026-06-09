@@ -45,6 +45,7 @@ export function useHashTargetHighlight({
   const dependencyKey = deps.map((dep) => String(dep)).join("\u0000");
 
   useEffect(() => {
+    void dependencyKey;
     if (!enabled) return;
 
     const pendingTimers = new Set<number>();

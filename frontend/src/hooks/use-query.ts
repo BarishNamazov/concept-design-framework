@@ -29,6 +29,7 @@ export function useQuery<T>(
 
   const refetch = useCallback(() => setNonce((n) => n + 1), []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: callers provide the dependency list that controls loader refreshes; nonce intentionally forces refetch.
   useEffect(() => {
     if (!loader) {
       setLoading(false);
