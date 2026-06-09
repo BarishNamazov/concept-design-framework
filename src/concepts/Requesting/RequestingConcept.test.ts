@@ -4,7 +4,7 @@ import type { ID } from "@utils/types.ts";
 
 /**
  * These tests cover the `RequestingConcept` class (the request/respond/await
- * lifecycle) as well as the Bun-native HTTP server returned by
+ * lifecycle) as well as the Bun-native HTTP adapter returned by
  * `startRequestingServer`.
  *
  * Environment configuration is read at module load time inside
@@ -15,9 +15,10 @@ import type { ID } from "@utils/types.ts";
 process.env.REQUESTING_SAVE_RESPONSES = "false";
 process.env.PORT = "8753";
 
-const { default: RequestingConcept, startRequestingServer } = await import(
+const { default: RequestingConcept } = await import(
   "./RequestingConcept.ts"
 );
+const { startRequestingServer } = await import("./server.ts");
 
 const mongo = await setupTestDb();
 afterAll(() => mongo.stop());
@@ -50,14 +51,18 @@ describe("RequestingConcept lifecycle", () => {
     expect(await awaiting).toEqual([{ response: { done: true } }]);
   });
 
-  test("_awaitResponse for an unknown request throws", async () => {
+  test("_awaitResponse for an unknown request returns an error", async () => {
     const Requesting = new RequestingConcept(mongo.db);
-    await expect(
-      Requesting._awaitResponse({ request: "does-not-exist" as ID }),
-    ).rejects.toThrow(/not pending or does not exist/);
+    expect(
+      await Requesting._awaitResponse({ request: "does-not-exist" as ID }),
+    ).toEqual([
+      {
+        error: expect.stringContaining("not pending or does not exist"),
+      },
+    ]);
   });
 
-  test("_awaitResponse rejects with a timeout when no response arrives", async () => {
+  test("_awaitResponse returns a timeout error when no response arrives", async () => {
     // The timeout is captured at construction, so set it small beforehand.
     const previous = process.env.REQUESTING_TIMEOUT;
     process.env.REQUESTING_TIMEOUT = "50";
@@ -68,9 +73,11 @@ describe("RequestingConcept lifecycle", () => {
     const Requesting = new FreshRequesting(mongo.db);
 
     const { request } = await Requesting.request({ path: "/never" });
-    await expect(Requesting._awaitResponse({ request })).rejects.toThrow(
-      /timed out/,
-    );
+    expect(await Requesting._awaitResponse({ request })).toEqual([
+      {
+        error: expect.stringContaining("timed out"),
+      },
+    ]);
 
     if (previous === undefined) delete process.env.REQUESTING_TIMEOUT;
     else process.env.REQUESTING_TIMEOUT = previous;
