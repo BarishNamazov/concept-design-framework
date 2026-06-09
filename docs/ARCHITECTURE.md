@@ -387,9 +387,9 @@ only through opaque branded `ID` strings.
 
 ## The Requesting server
 
-This document describes the Bun-native HTTP server that turns incoming requests
+This document describes the Bun-native HTTP adapter that turns incoming requests
 into concept actions:
-`src/concepts/Requesting/RequestingConcept.ts`.
+`src/concepts/Requesting/server.ts`.
 
 It complements the concept's own
 [`src/concepts/Requesting/README.md`](../src/concepts/Requesting/README.md),
@@ -407,7 +407,7 @@ synchronizations. It exposes two actions and one query:
 | --- | --- | --- |
 | `request({ path, ... })` | action | Create a `Request`, returning `{ request }`. Triggered by an incoming HTTP request. |
 | `respond({ request, ... })` | action | Attach a response to a pending `Request`; resolves the awaiting HTTP handler. |
-| `_awaitResponse({ request })` | query | Wait up to a timeout for the `Request` response, returning `[{ response }]`. |
+| `_awaitResponse({ request })` | query | Wait up to a timeout for the `Request` response, returning `[{ response }]` or `[{ error }]`. |
 
 `Requesting.requests` is the MongoDB collection that persists request documents
 for logging and auditing. Pending in-flight requests are tracked in memory only,
@@ -431,8 +431,8 @@ const actionPath = pathname.slice(REQUESTING_BASE_URL.length);
 const inputs = { ...body, path: actionPath };
 
 const { request } = await Requesting.request(inputs);
-const responseArray = await Requesting._awaitResponse({ request });
-return json(responseArray[0].response);
+const [result] = await Requesting._awaitResponse({ request });
+return "error" in result ? json({ error: "Request timed out." }, 504) : json(result.response);
 ```
 
 Key points:

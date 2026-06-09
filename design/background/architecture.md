@@ -35,8 +35,8 @@ src/
 
 ## Requesting As The Entrypoint
 
-The HTTP server is provided by the `Requesting` concept. `Requesting` is the
-boundary where HTTP becomes concept actions.
+The HTTP adapter feeds the `Requesting` concept. `Requesting` is the boundary
+where HTTP becomes concept actions.
 
 When a request hits the server, it becomes a `Requesting.request` action. Public
 endpoints are explicit synchronizations; concept methods are not exposed
