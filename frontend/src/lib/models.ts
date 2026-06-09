@@ -26,7 +26,9 @@ export type Me = Output<"/auth/me">;
 /** A public profile (`/profiles/get`). */
 export type Profile = Output<"/profiles/get">["profile"];
 
-export type Reaction = ArrayElement<Output<"/reactions/forTarget">["reactions"]>;
+export type Reaction = ArrayElement<
+  Output<"/reactions/forTarget">["reactions"]
+>;
 export type Tag = ArrayElement<Output<"/tags/forTarget">["tags"]>;
 export type Category = ArrayElement<Output<"/categories/list">["categories"]>;
 export type Notification = ArrayElement<

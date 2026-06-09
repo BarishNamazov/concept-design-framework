@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Bell } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "@/components/link";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";

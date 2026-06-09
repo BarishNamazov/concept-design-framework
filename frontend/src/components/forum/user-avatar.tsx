@@ -1,9 +1,9 @@
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
 import { accentFor, initials } from "@/lib/format";
 import { useProfile } from "@/lib/profiles";
+import { cn } from "@/lib/utils";
 
 interface UserAvatarProps {
   user: string;

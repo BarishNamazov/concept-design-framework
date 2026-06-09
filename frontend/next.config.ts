@@ -1,5 +1,5 @@
-import type { NextConfig } from "next";
 import { join } from "node:path";
+import type { NextConfig } from "next";
 
 /**
  * The forum backend (the Requesting server) runs separately. The browser bundle

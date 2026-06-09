@@ -280,19 +280,25 @@ const items = defineEndpoint(
 const forItem = defineEndpoint(
   "/categories/forItem",
   ({ Sync, Actions, Request, Respond }) => ({
-    CategoryForItemResponse: Sync(({ item, name, description, category, categories }) => ({
-      when: Actions(Request({ item })),
-      where: async (frames) => {
-        const [base] = frames;
-        frames = await frames.query(
-          Categorizing._getCategory,
-          { item },
-          { category, name, description },
-        );
-        return frames.aggregate(base, [category, name, description], categories);
-      },
-      then: Actions(Respond<CategoryForItemOutput>({ category: categories })),
-    })),
+    CategoryForItemResponse: Sync(
+      ({ item, name, description, category, categories }) => ({
+        when: Actions(Request({ item })),
+        where: async (frames) => {
+          const [base] = frames;
+          frames = await frames.query(
+            Categorizing._getCategory,
+            { item },
+            { category, name, description },
+          );
+          return frames.aggregate(
+            base,
+            [category, name, description],
+            categories,
+          );
+        },
+        then: Actions(Respond<CategoryForItemOutput>({ category: categories })),
+      }),
+    ),
   }),
 );
 

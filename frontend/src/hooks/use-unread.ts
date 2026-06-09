@@ -28,12 +28,10 @@ export function useUnread(conversation: string, rootItem: string) {
   // Opening the topic marks all posts in the conversation as seen.
   useEffect(() => {
     if (!session || !rootItem) return;
-    void api.unread
-      .markAllSeen({ session, scope: conversation })
-      .then(() => {
-        refetchList();
-        refetchCount();
-      });
+    void api.unread.markAllSeen({ session, scope: conversation }).then(() => {
+      refetchList();
+      refetchCount();
+    });
   }, [session, rootItem, conversation, refetchList, refetchCount]);
 
   const unreadItems = useMemo(() => {

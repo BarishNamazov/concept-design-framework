@@ -1,8 +1,8 @@
 "use client";
 
 import { Link } from "@/components/link";
-import { cn } from "@/lib/utils";
 import { useProfile } from "@/lib/profiles";
+import { cn } from "@/lib/utils";
 
 /** A user's display name as a link to their profile, resolved from the cache. */
 export function UserName({

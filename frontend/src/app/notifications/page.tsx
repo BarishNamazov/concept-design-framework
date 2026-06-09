@@ -1,12 +1,10 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
-import type { KeyboardEvent, MouseEvent } from "react";
-import { useRouter } from "next/navigation";
 import { Bell, Check, CheckCheck, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import type { KeyboardEvent, MouseEvent } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Link } from "@/components/link";
-import { Button } from "@/components/ui/button";
 import { PageContainer, PageHeader } from "@/components/forum/page";
 import { RequireAuth } from "@/components/forum/require-auth";
 import {
@@ -16,12 +14,14 @@ import {
 } from "@/components/forum/states";
 import { UserAvatar } from "@/components/forum/user-avatar";
 import { UserName } from "@/components/forum/user-name";
+import { Link } from "@/components/link";
+import { Button } from "@/components/ui/button";
 import { notifyHashTargetNavigation } from "@/hooks/use-hash-target-highlight";
 import { useQuery } from "@/hooks/use-query";
 import { api, isApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { Notification, PostView } from "@/lib/models";
 import { excerpt, relativeTime } from "@/lib/format";
+import type { Notification, PostView } from "@/lib/models";
 import { cn } from "@/lib/utils";
 
 function actionText(kind: string): string {
@@ -66,7 +66,10 @@ function renderExcerptWithMentions(content: string) {
     lastIndex = index + match[0].length;
   }
   if (lastIndex < text.length) {
-    parts.push({ key: `text-${lastIndex}-${text.length}`, value: text.slice(lastIndex) });
+    parts.push({
+      key: `text-${lastIndex}-${text.length}`,
+      value: text.slice(lastIndex),
+    });
   }
 
   return parts.map((part) =>
@@ -160,7 +163,12 @@ function Notifications() {
         description="Replies, mentions, and updates on topics you follow."
         actions={
           unread > 0 ? (
-            <Button variant="outline" size="sm" onClick={markAll} className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={markAll}
+              className="gap-2"
+            >
               <CheckCheck className="size-4" />
               Mark all read
             </Button>
@@ -182,65 +190,72 @@ function Notifications() {
           {notifications.map((n) => {
             const id = String(n.notification);
             const post = posts[id];
-            const body = post && n.kind !== "accepted" ? (
-              <div className="flex items-start gap-3">
-                <UserAvatar user={String(post.author)} className="mt-0.5 size-7 shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm">
-                    <UserName user={String(post.author)} className="text-sm" />{" "}
-                    <span className="text-muted-foreground">
-                      {actionText(n.kind)}
-                    </span>
-                  </p>
-                  <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground/80">
-                    {renderExcerptWithMentions(post.content)}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {relativeTime(n.createdAt)}
-                  </p>
+            const body =
+              post && n.kind !== "accepted" ? (
+                <div className="flex items-start gap-3">
+                  <UserAvatar
+                    user={String(post.author)}
+                    className="mt-0.5 size-7 shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm">
+                      <UserName
+                        user={String(post.author)}
+                        className="text-sm"
+                      />{" "}
+                      <span className="text-muted-foreground">
+                        {actionText(n.kind)}
+                      </span>
+                    </p>
+                    <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground/80">
+                      {renderExcerptWithMentions(post.content)}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {relativeTime(n.createdAt)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ) : post ? (
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <Check className="size-3.5 text-primary" />
+              ) : post ? (
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                    <Check className="size-3.5 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm">
+                      <span className="font-medium text-foreground">
+                        {actionText(n.kind).charAt(0).toUpperCase() +
+                          actionText(n.kind).slice(1)}
+                      </span>
+                    </p>
+                    <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground/80">
+                      {renderExcerptWithMentions(post.content)}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {relativeTime(n.createdAt)}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm">
-                    <span className="font-medium text-foreground">
-                      {actionText(n.kind).charAt(0).toUpperCase() +
-                        actionText(n.kind).slice(1)}
-                    </span>
-                  </p>
-                  <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground/80">
-                    {renderExcerptWithMentions(post.content)}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {relativeTime(n.createdAt)}
-                  </p>
+              ) : (
+                <div className="flex items-start gap-3">
+                  <span
+                    className={cn(
+                      "mt-1.5 size-2 shrink-0 rounded-full",
+                      n.read ? "bg-transparent" : "bg-primary",
+                    )}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm">
+                      <span className="font-medium text-foreground">
+                        {actionText(n.kind).charAt(0).toUpperCase() +
+                          actionText(n.kind).slice(1)}
+                      </span>
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {relativeTime(n.createdAt)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="flex items-start gap-3">
-                <span
-                  className={cn(
-                    "mt-1.5 size-2 shrink-0 rounded-full",
-                    n.read ? "bg-transparent" : "bg-primary",
-                  )}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm">
-                    <span className="font-medium text-foreground">
-                      {actionText(n.kind).charAt(0).toUpperCase() +
-                        actionText(n.kind).slice(1)}
-                    </span>
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {relativeTime(n.createdAt)}
-                  </p>
-                </div>
-              </div>
-            );
+              );
             const href = links[id];
             const postId = String(n.link ?? "");
 
@@ -273,7 +288,8 @@ function Notifications() {
                   n.read
                     ? "border-border bg-card"
                     : "border-primary/30 bg-primary/5",
-                  href && "cursor-pointer hover:border-primary/40 hover:bg-muted/25",
+                  href &&
+                    "cursor-pointer hover:border-primary/40 hover:bg-muted/25",
                 )}
                 role={href ? "link" : "button"}
                 tabIndex={0}

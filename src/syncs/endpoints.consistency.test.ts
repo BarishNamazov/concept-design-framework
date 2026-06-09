@@ -1,5 +1,4 @@
 import { beforeAll, expect, test } from "bun:test";
-import type { EmptyInput } from "@concepts/Requesting/api.ts";
 import type { ActionPattern, Sync } from "@engine";
 import { setupApp, type TestApp } from "@utils/app_testing.ts";
 import type { ID } from "@utils/types.ts";
@@ -175,7 +174,7 @@ type _RegisterInput = Expect<
   >
 >;
 type _ThreadListInput = Expect<
-  Equal<ForumApi["/threads/list"]["input"], EmptyInput>
+  Equal<ForumApi["/threads/list"]["input"], { sort: string }>
 >;
 type _ThreadCreateOutput = Expect<
   Equal<

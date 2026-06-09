@@ -2,27 +2,27 @@
 
 import { Lock, LockOpen, MessageSquare, Pin, Users } from "lucide-react";
 import { toast } from "sonner";
-import { Link } from "@/components/link";
-import { Button } from "@/components/ui/button";
 import { CategoryBadge } from "@/components/forum/badges";
 import { CategoryAssign } from "@/components/forum/category-assign";
 import { Composer } from "@/components/forum/composer";
 import { PageContainer } from "@/components/forum/page";
 import { PostCard } from "@/components/forum/post-card";
 import { PostPreview } from "@/components/forum/post-preview";
+import { ErrorState, LoadingState } from "@/components/forum/states";
 import { SubscribeButton } from "@/components/forum/subscribe-button";
 import { TagEditor } from "@/components/forum/tag-editor";
 import { UnreadBanner } from "@/components/forum/unread-banner";
-import { ErrorState, LoadingState } from "@/components/forum/states";
+import { Link } from "@/components/link";
+import { Button } from "@/components/ui/button";
 import { useHashTargetHighlight } from "@/hooks/use-hash-target-highlight";
 import { useQuery } from "@/hooks/use-query";
 import { useUnread } from "@/hooks/use-unread";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { loadThreadPage, type ThreadPage } from "@/lib/loaders";
 import { count, titleFromContent } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { loadThreadPage, type ThreadPage } from "@/lib/loaders";
 import type { ThreadNode } from "@/lib/models";
+import { cn } from "@/lib/utils";
 
 interface ThreadBranch {
   node: ThreadNode;

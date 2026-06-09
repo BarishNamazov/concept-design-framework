@@ -199,7 +199,7 @@ describe("trashed posts are hidden from reads", () => {
     const visible = await createThread(author.session, "still here");
     const doomed = await createThread(author.session, "goodbye");
 
-    const before = await app.send("/threads/list", {});
+    const before = await app.send("/threads/list", { sort: "latest" });
     expect(
       before.conversations.map(($: { conversation: string }) => $.conversation),
     ).toContain(doomed.conversation);
@@ -209,7 +209,7 @@ describe("trashed posts are hidden from reads", () => {
       item: doomed.post,
     });
 
-    const after = await app.send("/threads/list", {});
+    const after = await app.send("/threads/list", { sort: "latest" });
     const ids = after.conversations.map(
       ($: { conversation: string }) => $.conversation,
     );
@@ -220,7 +220,7 @@ describe("trashed posts are hidden from reads", () => {
       session: admin.session,
       item: doomed.post,
     });
-    const restored = await app.send("/threads/list", {});
+    const restored = await app.send("/threads/list", { sort: "latest" });
     expect(
       restored.conversations.map(
         ($: { conversation: string }) => $.conversation,

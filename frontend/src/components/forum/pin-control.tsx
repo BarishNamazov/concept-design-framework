@@ -86,7 +86,10 @@ export function PinControl({
         variant="ghost"
         size="sm"
         onClick={pinned ? unpin : pin}
-        className={cn("gap-1.5 text-muted-foreground", pinned && "text-primary")}
+        className={cn(
+          "gap-1.5 text-muted-foreground",
+          pinned && "text-primary",
+        )}
       >
         {pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}
         {pinned ? "Unpin" : "Pin"}

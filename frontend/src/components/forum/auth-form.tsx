@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Spinner } from "@/components/forum/states";
 import { Link } from "@/components/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/forum/states";
 import { useAuth } from "@/lib/auth";
 
 /** Shared sign-in / join form. `mode` switches copy and the submit handler. */
@@ -51,7 +51,9 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   return (
     <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md flex-col justify-center px-4 py-10">
       <div className="mb-8 text-center">
-        <p className="eyebrow">{isRegister ? "Pull up a chair" : "Welcome back"}</p>
+        <p className="eyebrow">
+          {isRegister ? "Pull up a chair" : "Welcome back"}
+        </p>
         <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight">
           {isRegister ? "Join the Commons" : "Sign in"}
         </h1>
@@ -59,7 +61,9 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       <Card>
         <form onSubmit={onSubmit} className="flex flex-col gap-6">
           <CardHeader>
-            <CardTitle>{isRegister ? "Create your account" : "Your account"}</CardTitle>
+            <CardTitle>
+              {isRegister ? "Create your account" : "Your account"}
+            </CardTitle>
             <CardDescription>
               {isRegister
                 ? "Choose a handle and a name fellow readers will see."
@@ -112,14 +116,20 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               {isRegister ? (
                 <>
                   Already have an account?{" "}
-                  <Link href="/login" className="font-medium text-primary hover:underline">
+                  <Link
+                    href="/login"
+                    className="font-medium text-primary hover:underline"
+                  >
                     Sign in
                   </Link>
                 </>
               ) : (
                 <>
                   New here?{" "}
-                  <Link href="/register" className="font-medium text-primary hover:underline">
+                  <Link
+                    href="/register"
+                    className="font-medium text-primary hover:underline"
+                  >
                     Create an account
                   </Link>
                 </>

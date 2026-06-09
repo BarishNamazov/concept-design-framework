@@ -15,9 +15,7 @@ import type { ID } from "@utils/types.ts";
 process.env.REQUESTING_SAVE_RESPONSES = "false";
 process.env.PORT = "8753";
 
-const { default: RequestingConcept } = await import(
-  "./RequestingConcept.ts"
-);
+const { default: RequestingConcept } = await import("./RequestingConcept.ts");
 const { startRequestingServer } = await import("./server.ts");
 
 const mongo = await setupTestDb();

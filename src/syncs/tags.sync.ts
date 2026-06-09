@@ -142,11 +142,7 @@ const tagList = defineEndpoint(
       when: Actions(Request()),
       where: async (frames) => {
         const [base] = frames;
-        frames = await frames.query(
-          Tagging._getAllTags,
-          {},
-          { tag, name },
-        );
+        frames = await frames.query(Tagging._getAllTags, {}, { tag, name });
         return frames.aggregate(base, [tag, name], tags);
       },
       then: Actions(Respond<TagListOutput>({ tags })),

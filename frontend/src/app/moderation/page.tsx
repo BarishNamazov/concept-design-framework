@@ -2,20 +2,21 @@
 
 import { Flag, Lock, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { Link } from "@/components/link";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageContainer, PageHeader } from "@/components/forum/page";
 import { PostPreview } from "@/components/forum/post-preview";
-import { UserName } from "@/components/forum/user-name";
 import {
   EmptyState,
   ErrorState,
   LoadingState,
 } from "@/components/forum/states";
+import { UserName } from "@/components/forum/user-name";
+import { Link } from "@/components/link";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { relativeTime, shortId } from "@/lib/format";
 import { loadPostConversationIndex } from "@/lib/loaders";
 import type {
   Flag as FlagModel,
@@ -23,7 +24,6 @@ import type {
   OpenFlag,
   TrashedItem,
 } from "@/lib/models";
-import { relativeTime, shortId } from "@/lib/format";
 
 function FlagDetails({ target }: { target: string }) {
   const { data } = useQuery<{ flags: FlagModel[] }>(

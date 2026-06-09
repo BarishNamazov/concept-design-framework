@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Fraunces, Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { Providers } from "./providers";
 import { SiteHeader } from "@/components/site-header";
+import { Providers } from "./providers";
 
 const hanken = Hanken_Grotesk({
   variable: "--font-hanken",
@@ -25,8 +25,7 @@ const jetbrains = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: { default: "Commons — a reading room", template: "%s · Commons" },
-  description:
-    "A warm, editorial discussion forum built on concept design.",
+  description: "A warm, editorial discussion forum built on concept design.",
 };
 
 export default function RootLayout({

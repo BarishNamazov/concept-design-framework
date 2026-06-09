@@ -152,7 +152,9 @@ export default class RequestingConcept {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const timeoutPromise = new Promise<AwaitResponseResult>((resolve) => {
       timeoutId = setTimeout(() => {
-        resolve({ error: `Request ${request} timed out after ${this.timeout}ms` });
+        resolve({
+          error: `Request ${request} timed out after ${this.timeout}ms`,
+        });
       }, this.timeout);
     });
 

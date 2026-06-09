@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { History } from "lucide-react";
+import { useState } from "react";
+import { LoadingState } from "@/components/forum/states";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +12,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LoadingState } from "@/components/forum/states";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { fullTime, relativeTime } from "@/lib/format";

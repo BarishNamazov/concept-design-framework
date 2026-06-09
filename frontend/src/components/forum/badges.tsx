@@ -4,7 +4,13 @@ import { accentFor } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /** A small colored dot keyed to a category id (Discourse-style). */
-export function CategoryDot({ id, className }: { id: string; className?: string }) {
+export function CategoryDot({
+  id,
+  className,
+}: {
+  id: string;
+  className?: string;
+}) {
   return (
     <span
       className={cn("inline-block size-2.5 rounded-[3px]", className)}

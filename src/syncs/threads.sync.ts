@@ -567,24 +567,36 @@ const postDelete = defineEndpoint(
 
 const threadList = defineEndpoint(
   "/threads/list",
-  ({ Sync, Actions, Respond }) => ({
+  ({ Sync, Actions, Request, Respond }) => ({
     ThreadListResponse: Sync(
       ({
+        sort,
         conversation,
         root,
         item,
         createdAt,
+        lastActivityAt,
         trashed,
         post,
         conversations,
       }) => ({
-        when: Actions(),
+        when: Actions(Request({ sort })),
         where: async (frames) => {
           const [base] = frames;
+          const byActivity = base[sort] === "activity";
+          const query = byActivity
+            ? Conversing._getConversationsByLastActivity
+            : Conversing._getConversations;
           frames = await frames.query(
-            Conversing._getConversations,
+            query,
             {},
-            { conversation, root, item, createdAt },
+            {
+              conversation,
+              root,
+              item,
+              createdAt,
+              lastActivityAt,
+            },
           );
           // Hide conversations whose root post has been soft-deleted.
           frames = await frames.query(
@@ -600,18 +612,19 @@ const threadList = defineEndpoint(
           );
           frames = frames.aggregate(
             base,
-            [conversation, root, item, createdAt, post],
+            [conversation, root, item, createdAt, lastActivityAt, post],
             conversations,
           );
           return frames.map(($) => ({
             ...$,
-            [conversations]: ($[conversations] as { createdAt: Date }[])
+            [conversations]: (
+              $[conversations] as { createdAt: Date; lastActivityAt: Date }[]
+            )
               .slice()
-              .sort(
-                (a, b) =>
-                  new Date(b.createdAt).getTime() -
-                  new Date(a.createdAt).getTime(),
-              ),
+              .sort((a, b) => {
+                const key = byActivity ? "lastActivityAt" : "createdAt";
+                return new Date(b[key]).getTime() - new Date(a[key]).getTime();
+              }),
           }));
         },
         then: Actions(Respond<ThreadListOutput>({ conversations })),

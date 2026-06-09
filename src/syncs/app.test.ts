@@ -301,7 +301,7 @@ describe("thread / post synchronizations", () => {
 
 describe("thread list synchronizations", () => {
   test("list with no conversations returns an empty feed", async () => {
-    const res = await app.send("/threads/list", {});
+    const res = await app.send("/threads/list", { sort: "latest" });
     expect(res.conversations).toEqual([]);
   });
 
@@ -324,7 +324,7 @@ describe("thread list synchronizations", () => {
       content: "a reply",
     });
 
-    const res = await app.send("/threads/list", {});
+    const res = await app.send("/threads/list", { sort: "latest" });
     expect(res.conversations).toHaveLength(2);
 
     // Newest-first: the second conversation comes before the first.
@@ -338,6 +338,44 @@ describe("thread list synchronizations", () => {
     expect(oldest.conversation).toBe(first.conversation);
     expect(oldest.item).toBe(first.post);
     expect(oldest.post.content).toBe("first topic");
+  });
+
+  test("list with sort=activity returns conversations by last activity", async () => {
+    const { session } = await registerAndLogin("la_alice");
+    const { session: bob } = await registerAndLogin("la_bob");
+
+    const first = await app.send("/threads/create", {
+      session,
+      content: "first created",
+    });
+    const second = await app.send("/threads/create", {
+      session,
+      content: "second created",
+    });
+
+    // Ensure distinct timestamps so the reply's bump is observable.
+    await new Promise((r) => setTimeout(r, 10));
+
+    // Reply to the older (first) thread so it becomes most recently active.
+    await app.send("/threads/reply", {
+      session: bob,
+      parent: first.node,
+      content: "reply to first",
+    });
+
+    const byActivity = await app.send("/threads/list", {
+      sort: "activity",
+    });
+    const ids = byActivity.conversations.map(
+      (c: { conversation: string }) => c.conversation,
+    );
+    // The first conversation got a reply, so it should appear before the second.
+    expect(ids.indexOf(first.conversation)).toBeLessThan(
+      ids.indexOf(second.conversation),
+    );
+
+    // Each conversation now includes lastActivityAt.
+    expect(byActivity.conversations[0].lastActivityAt).toBeDefined();
   });
 });
 
