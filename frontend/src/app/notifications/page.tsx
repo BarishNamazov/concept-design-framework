@@ -48,30 +48,35 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
 
 function renderExcerptWithMentions(content: string) {
   const text = excerpt(content);
-  const parts: (string | { username: string })[] = [];
+  const parts: { key: string; value: string | { username: string } }[] = [];
   let lastIndex = 0;
 
   for (const match of text.matchAll(/@[a-zA-Z0-9_]+/g)) {
-    if (match.index! > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index!));
+    const index = match.index ?? 0;
+    if (index > lastIndex) {
+      parts.push({
+        key: `text-${lastIndex}-${index}`,
+        value: text.slice(lastIndex, index),
+      });
     }
-    parts.push({ username: match[0].slice(1) });
-    lastIndex = match.index! + match[0].length;
+    const username = match[0].slice(1);
+    parts.push({ key: `mention-${index}-${username}`, value: { username } });
+    lastIndex = index + match[0].length;
   }
   if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
+    parts.push({ key: `text-${lastIndex}-${text.length}`, value: text.slice(lastIndex) });
   }
 
-  return parts.map((part, i) =>
-    typeof part === "string" ? (
-      <Fragment key={i}>{part}</Fragment>
+  return parts.map((part) =>
+    typeof part.value === "string" ? (
+      <Fragment key={part.key}>{part.value}</Fragment>
     ) : (
       <Link
-        key={i}
-        href={`/u/${part.username}`}
+        key={part.key}
+        href={`/u/${part.value.username}`}
         className="font-medium text-primary hover:underline"
       >
-        @{part.username}
+        @{part.value.username}
       </Link>
     ),
   );
@@ -121,7 +126,7 @@ function Notifications() {
       setPosts(resolvedPosts);
     };
     if (notifications.length > 0) resolveLinks();
-  }, [data]);
+  }, [notifications]);
 
   async function markRead(notification: string) {
     if (!session) return;
@@ -175,19 +180,18 @@ function Notifications() {
           {notifications.map((n) => {
             const id = String(n.notification);
             const post = posts[id];
-            const showAuthor = post && n.kind !== "accepted";
-            const body = showAuthor ? (
+            const body = post && n.kind !== "accepted" ? (
               <div className="flex items-start gap-3">
-                <UserAvatar user={String(post!.author)} className="mt-0.5 size-7 shrink-0" />
+                <UserAvatar user={String(post.author)} className="mt-0.5 size-7 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm">
-                    <UserName user={String(post!.author)} className="text-sm" />{" "}
+                    <UserName user={String(post.author)} className="text-sm" />{" "}
                     <span className="text-muted-foreground">
                       {actionText(n.kind)}
                     </span>
                   </p>
                   <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground/80">
-                    {renderExcerptWithMentions(post!.content)}
+                    {renderExcerptWithMentions(post.content)}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {relativeTime(n.createdAt)}
@@ -259,6 +263,7 @@ function Notifications() {
             }
 
             return (
+              // biome-ignore lint/a11y/noStaticElementInteractions: row click opens the linked post while nested buttons keep their own actions.
               <div
                 key={id}
                 className={cn(
@@ -268,8 +273,8 @@ function Notifications() {
                     : "border-primary/30 bg-primary/5",
                   href && "cursor-pointer hover:border-primary/40 hover:bg-muted/25",
                 )}
-                role={href ? "link" : undefined}
-                tabIndex={href ? 0 : undefined}
+                role={href ? "link" : "button"}
+                tabIndex={0}
                 onClick={handleClick}
                 onKeyDown={handleKeyDown}
               >

@@ -15,7 +15,7 @@ export function RenderedMarkdown({
   return (
     <div
       className={cn("prose-forum", className)}
-      // eslint-disable-next-line react/no-danger -- HTML is sanitized server-side by Formatting.
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: HTML is sanitized server-side by Formatting.
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
