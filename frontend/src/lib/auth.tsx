@@ -79,9 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem(SESSION_KEY)
-        : null;
+      typeof window !== "undefined" ? localStorage.getItem(SESSION_KEY) : null;
     if (!token) {
       setLoading(false);
       return;

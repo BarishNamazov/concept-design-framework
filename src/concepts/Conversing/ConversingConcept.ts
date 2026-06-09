@@ -11,11 +11,13 @@ type Node = ID;
  * a set of Conversations with
  *   a root Node
  *   a createdAt DateTime
+ *   a lastActivityAt DateTime
  */
 interface ConversationDoc {
   _id: Conversation;
   root: Node;
   createdAt: Date;
+  lastActivityAt: Date;
 }
 
 /**
@@ -92,6 +94,7 @@ export default class ConversingConcept {
       _id: conversation,
       root: node,
       createdAt: now,
+      lastActivityAt: now,
     });
     return { conversation, node };
   }
@@ -122,14 +125,19 @@ export default class ConversingConcept {
       return { error: "Item is already placed in a conversation." };
     }
     const node = freshID() as Node;
+    const now = new Date();
     await this.nodes.insertOne({
       _id: node,
       conversation: parentDoc.conversation,
       item,
       parent,
       depth: parentDoc.depth + 1,
-      createdAt: new Date(),
+      createdAt: now,
     });
+    await this.conversations.updateOne(
+      { _id: parentDoc.conversation },
+      { $set: { lastActivityAt: now } },
+    );
     return { node };
   }
 
@@ -167,13 +175,13 @@ export default class ConversingConcept {
   }
 
   /**
-   * _getConversations (): (conversation: {conversation: Conversation, root: Node, item: Item, createdAt: DateTime})
+   * _getConversations (): (conversation: {conversation: Conversation, root: Node, item: Item, createdAt: DateTime, lastActivityAt: DateTime})
    *
    * **requires** true
    *
    * **effects** returns every Conversation with its id, its root Node, the Item
-   * placed at the root, and its `createdAt`, ordered by `createdAt` descending
-   * (newest first)
+   * placed at the root, its `createdAt`, and its `lastActivityAt` (defaulting to
+   * `createdAt` when absent), ordered by `createdAt` descending (newest first)
    */
   async _getConversations(): Promise<
     {
@@ -181,6 +189,7 @@ export default class ConversingConcept {
       root: Node;
       item: Item;
       createdAt: Date;
+      lastActivityAt: Date;
     }[]
   > {
     const convos = await this.conversations
@@ -198,6 +207,45 @@ export default class ConversingConcept {
       root: c.root,
       item: itemByNode.get(c.root) as Item,
       createdAt: c.createdAt,
+      lastActivityAt: c.lastActivityAt ?? c.createdAt,
+    }));
+  }
+
+  /**
+   * _getConversationsByLastActivity (): (conversation: {conversation: Conversation, root: Node, item: Item, createdAt: DateTime, lastActivityAt: DateTime})
+   *
+   * **requires** true
+   *
+   * **effects** returns every Conversation with its id, its root Node, the Item
+   * placed at the root, its `createdAt`, and its `lastActivityAt` (defaulting to
+   * `createdAt` when absent), ordered by `lastActivityAt` descending (most
+   * recently active first)
+   */
+  async _getConversationsByLastActivity(): Promise<
+    {
+      conversation: Conversation;
+      root: Node;
+      item: Item;
+      createdAt: Date;
+      lastActivityAt: Date;
+    }[]
+  > {
+    const convos = await this.conversations
+      .find({})
+      .sort({ lastActivityAt: -1, _id: -1 })
+      .toArray();
+    const roots = await this.nodes
+      .find({
+        _id: { $in: convos.map((c) => c.root) },
+      })
+      .toArray();
+    const itemByNode = new Map(roots.map((n) => [n._id, n.item]));
+    return convos.map((c) => ({
+      conversation: c._id,
+      root: c.root,
+      item: itemByNode.get(c.root) as Item,
+      createdAt: c.createdAt,
+      lastActivityAt: c.lastActivityAt ?? c.createdAt,
     }));
   }
 

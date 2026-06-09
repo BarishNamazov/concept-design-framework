@@ -154,4 +154,73 @@ describe("Conversing", () => {
     expect(await Conversing._getParent({ node: root.node })).toEqual([]);
     expect(await Conversing._getAncestors({ node: root.node })).toEqual([]);
   });
+
+  test("start sets lastActivityAt equal to createdAt", async () => {
+    const root = ok(await Conversing.start({ item: item("la-root") }));
+    const convos = await Conversing._getConversations();
+    const convo = convos.find((c) => c.conversation === root.conversation);
+    expect(convo).toBeDefined();
+    expect(convo?.lastActivityAt).toEqual(convo?.createdAt);
+  });
+
+  test("_getConversations includes lastActivityAt for every row", async () => {
+    ok(await Conversing.start({ item: item("la-a") }));
+    ok(await Conversing.start({ item: item("la-b") }));
+    const convos = await Conversing._getConversations();
+    expect(convos.length).toBeGreaterThanOrEqual(2);
+    for (const c of convos) {
+      expect(c.lastActivityAt).toBeInstanceOf(Date);
+    }
+  });
+
+  test("a reply bumps lastActivityAt on the conversation", async () => {
+    const root = ok(await Conversing.start({ item: item("bump-root") }));
+    const before = (await Conversing._getConversations()).find(
+      (c) => c.conversation === root.conversation,
+    );
+    if (!before) throw new Error("expected conversation to exist");
+    // Pause so the bump produces a distinct later timestamp.
+    await new Promise((r) => setTimeout(r, 10));
+    ok(await Conversing.reply({ item: item("bump-1"), parent: root.node }));
+    const after = (await Conversing._getConversations()).find(
+      (c) => c.conversation === root.conversation,
+    );
+    if (!after) throw new Error("expected conversation to exist");
+    expect(after.lastActivityAt.getTime()).toBeGreaterThan(
+      before.lastActivityAt.getTime(),
+    );
+  });
+
+  test("a deep reply bumps lastActivityAt on the root conversation", async () => {
+    const root = ok(await Conversing.start({ item: item("deep-root") }));
+    const r1 = ok(
+      await Conversing.reply({ item: item("deep-1"), parent: root.node }),
+    );
+    const before = (await Conversing._getConversations()).find(
+      (c) => c.conversation === root.conversation,
+    );
+    if (!before) throw new Error("expected conversation to exist");
+    await new Promise((r) => setTimeout(r, 10));
+    ok(await Conversing.reply({ item: item("deep-2"), parent: r1.node }));
+    const after = (await Conversing._getConversations()).find(
+      (c) => c.conversation === root.conversation,
+    );
+    if (!after) throw new Error("expected conversation to exist");
+    expect(after.lastActivityAt.getTime()).toBeGreaterThan(
+      before.lastActivityAt.getTime(),
+    );
+  });
+
+  test("_getConversationsByLastActivity returns rows sorted by lastActivityAt descending", async () => {
+    const a = ok(await Conversing.start({ item: item("sort-a") }));
+    const b = ok(await Conversing.start({ item: item("sort-b") }));
+    // Reply to a so it becomes the most recently active.
+    await new Promise((r) => setTimeout(r, 10));
+    ok(await Conversing.reply({ item: item("sort-a-1"), parent: a.node }));
+    const byActivity = await Conversing._getConversationsByLastActivity();
+    const ids = byActivity.map((c) => c.conversation);
+    expect(ids.indexOf(a.conversation)).toBeLessThan(
+      ids.indexOf(b.conversation),
+    );
+  });
 });

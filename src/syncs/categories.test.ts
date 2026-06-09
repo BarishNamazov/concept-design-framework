@@ -353,7 +353,9 @@ describe("category authorization", () => {
   });
 
   test("forItem returns empty array for unassigned item", async () => {
-    const result = await app.send("/categories/forItem", { item: "nonexistent" });
+    const result = await app.send("/categories/forItem", {
+      item: "nonexistent",
+    });
     expect(result.category).toBeDefined();
     expect(result.category).toHaveLength(0);
   });

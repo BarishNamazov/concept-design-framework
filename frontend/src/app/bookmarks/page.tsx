@@ -2,21 +2,21 @@
 
 import { Bookmark } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { PageContainer, PageHeader } from "@/components/forum/page";
-import { RequireAuth } from "@/components/forum/require-auth";
 import { PostPreview } from "@/components/forum/post-preview";
+import { RequireAuth } from "@/components/forum/require-auth";
 import {
   EmptyState,
   ErrorState,
   LoadingState,
 } from "@/components/forum/states";
+import { Button } from "@/components/ui/button";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { relativeTime } from "@/lib/format";
 import { loadPostConversationIndex } from "@/lib/loaders";
 import type { Bookmark as BookmarkModel } from "@/lib/models";
-import { relativeTime } from "@/lib/format";
 
 function Bookmarks() {
   const { session } = useAuth();

@@ -1,29 +1,28 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { FolderPlus, List, Shield, Trash2, UserCog } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { CategoryDot } from "@/components/forum/badges";
+import { PageContainer, PageHeader } from "@/components/forum/page";
+import { EmptyState, LoadingState } from "@/components/forum/states";
+import { UserName } from "@/components/forum/user-name";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PageContainer, PageHeader } from "@/components/forum/page";
-import { CategoryDot } from "@/components/forum/badges";
-import { UserName } from "@/components/forum/user-name";
-import {
-  EmptyState,
-  LoadingState,
-} from "@/components/forum/states";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { FORUM_CONTEXT, useAuth } from "@/lib/auth";
-import type { Category, RoleDetail, RoleRow, RoleSummary } from "@/lib/models";
 import { shortId } from "@/lib/format";
+import type { Category, RoleDetail, RoleRow, RoleSummary } from "@/lib/models";
 
 const CAPABILITY_INFO: Record<string, string> = {
-  administer: "Full administrative access — manage roles, categories, and forum configuration.",
-  moderate: "Content moderation — lock threads, trash posts, and manage categories.",
+  administer:
+    "Full administrative access — manage roles, categories, and forum configuration.",
+  moderate:
+    "Content moderation — lock threads, trash posts, and manage categories.",
   pin: "Pin threads to the top of category listings.",
 };
 
@@ -97,7 +96,10 @@ function CategoryAdmin() {
       <section>
         <h3 className="eyebrow mb-3">Existing categories</h3>
         {!data || data.categories.length === 0 ? (
-          <EmptyState title="No categories" description="Create your first category above." />
+          <EmptyState
+            title="No categories"
+            description="Create your first category above."
+          />
         ) : (
           <div className="divide-y divide-border rounded-xl border border-border bg-card">
             {data.categories.map((category) => (
@@ -106,7 +108,10 @@ function CategoryAdmin() {
                 className="flex items-center justify-between gap-3 p-4"
               >
                 <div className="flex items-center gap-2.5">
-                  <CategoryDot id={String(category.category)} className="size-3.5" />
+                  <CategoryDot
+                    id={String(category.category)}
+                    className="size-3.5"
+                  />
                   <div>
                     <p className="font-medium">{category.name}</p>
                     <p className="text-sm text-muted-foreground">
@@ -141,7 +146,9 @@ function RoleAdmin() {
   const [lookupUser, setLookupUser] = useState("");
   const [queryUser, setQueryUser] = useState<string | null>(null);
   const [queryUsername, setQueryUsername] = useState<string | null>(null);
-  const [roleDetails, setRoleDetails] = useState<Record<string, RoleDetail>>({});
+  const [roleDetails, setRoleDetails] = useState<Record<string, RoleDetail>>(
+    {},
+  );
   const fetchedRef = useRef<Set<string>>(new Set());
 
   function resetInspection() {
@@ -410,13 +417,16 @@ function RoleAdmin() {
         {queryUser ? (
           <div className="mt-4">
             <p className="mb-2 text-sm text-muted-foreground">
-              Roles for <UserName user={queryUser} className="text-foreground" />{" "}
-              ({queryUsername ?? shortId(queryUser)})
+              Roles for{" "}
+              <UserName user={queryUser} className="text-foreground" /> (
+              {queryUsername ?? shortId(queryUser)})
             </p>
             {roles.loading ? (
               <LoadingState />
             ) : !roles.data || roles.data.roles.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No roles in this context.</p>
+              <p className="text-sm text-muted-foreground">
+                No roles in this context.
+              </p>
             ) : (
               <ul className="space-y-2">
                 {roles.data.roles.map((r) => {
@@ -429,7 +439,9 @@ function RoleAdmin() {
                       <div className="min-w-0">
                         {detail ? (
                           <>
-                            <p className="font-medium capitalize">{detail.name}</p>
+                            <p className="font-medium capitalize">
+                              {detail.name}
+                            </p>
                             <p className="mt-0.5 text-xs text-muted-foreground font-mono">
                               {shortId(String(r.role))}
                             </p>

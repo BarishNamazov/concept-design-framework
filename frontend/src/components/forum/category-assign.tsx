@@ -2,6 +2,7 @@
 
 import { FolderCog } from "lucide-react";
 import { toast } from "sonner";
+import { CategoryDot } from "@/components/forum/badges";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,7 +12,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CategoryDot } from "@/components/forum/badges";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";

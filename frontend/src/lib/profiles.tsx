@@ -55,9 +55,12 @@ export function ProfilesProvider({ children }: { children: React.ReactNode }) {
 }
 
 /** Resolve (and lazily fetch) a single user's profile by id. */
-export function useProfile(user: string | null | undefined): Profile | undefined {
+export function useProfile(
+  user: string | null | undefined,
+): Profile | undefined {
   const ctx = useContext(ProfilesContext);
-  if (!ctx) throw new Error("useProfile must be used within <ProfilesProvider>");
+  if (!ctx)
+    throw new Error("useProfile must be used within <ProfilesProvider>");
   const { get, ensure } = ctx;
   if (user) ensure(user);
   return user ? get(user) : undefined;

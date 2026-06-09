@@ -170,8 +170,12 @@
     background-image:
       radial-gradient(oklch(0.62 0.05 60 / 0.025) 0.5px, transparent 0.5px),
       radial-gradient(oklch(0.62 0.05 60 / 0.02) 0.5px, transparent 0.5px);
-    background-size: 18px 18px, 32px 32px;
-    background-position: 0 0, 9px 16px;
+    background-size:
+      18px 18px,
+      32px 32px;
+    background-position:
+      0 0,
+      9px 16px;
   }
 
   .dark body {
@@ -180,7 +184,10 @@
       radial-gradient(oklch(0.9 0.02 80 / 0.014) 0.5px, transparent 0.5px);
   }
 
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     font-family: var(--font-display);
     font-optical-sizing: auto;
   }
@@ -199,17 +206,33 @@
   .prose-forum h3 {
     @apply font-display font-semibold tracking-tight text-foreground;
   }
-  .prose-forum h1 { @apply text-2xl mt-7; }
-  .prose-forum h2 { @apply text-xl mt-6; }
-  .prose-forum h3 { @apply text-lg mt-5; }
-  .prose-forum p { @apply leading-7; }
+  .prose-forum h1 {
+    @apply text-2xl mt-7;
+  }
+  .prose-forum h2 {
+    @apply text-xl mt-6;
+  }
+  .prose-forum h3 {
+    @apply text-lg mt-5;
+  }
+  .prose-forum p {
+    @apply leading-7;
+  }
   .prose-forum a {
     @apply font-medium text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary;
   }
-  .prose-forum strong { @apply font-semibold text-foreground; }
-  .prose-forum em { @apply italic; }
-  .prose-forum ul { @apply list-disc pl-5 space-y-1.5; }
-  .prose-forum ol { @apply list-decimal pl-5 space-y-1.5; }
+  .prose-forum strong {
+    @apply font-semibold text-foreground;
+  }
+  .prose-forum em {
+    @apply italic;
+  }
+  .prose-forum ul {
+    @apply list-disc pl-5 space-y-1.5;
+  }
+  .prose-forum ol {
+    @apply list-decimal pl-5 space-y-1.5;
+  }
   .prose-forum blockquote {
     @apply border-l-2 border-primary/40 pl-4 italic text-muted-foreground;
   }
@@ -219,12 +242,22 @@
   .prose-forum pre {
     @apply overflow-x-auto rounded-lg border bg-muted/60 p-4 font-mono text-sm;
   }
-  .prose-forum pre code { @apply bg-transparent p-0; }
-  .prose-forum img { @apply rounded-lg border max-w-full; }
-  .prose-forum hr { @apply border-border; }
-  .prose-forum table { @apply w-full border-collapse text-sm; }
+  .prose-forum pre code {
+    @apply bg-transparent p-0;
+  }
+  .prose-forum img {
+    @apply rounded-lg border max-w-full;
+  }
+  .prose-forum hr {
+    @apply border-border;
+  }
+  .prose-forum table {
+    @apply w-full border-collapse text-sm;
+  }
   .prose-forum th,
-  .prose-forum td { @apply border px-3 py-1.5 text-left; }
+  .prose-forum td {
+    @apply border px-3 py-1.5 text-left;
+  }
 
   /* Hairline section label, broadsheet style. */
   .eyebrow {
@@ -339,8 +372,14 @@
 
 /* Subtle staggered entrance for feed rows / thread posts. */
 @keyframes rise {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .animate-rise {
   animation: rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;

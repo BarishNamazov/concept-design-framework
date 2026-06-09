@@ -1,18 +1,18 @@
 "use client";
 
-import type { KeyboardEvent, MouseEvent } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
-import { Link } from "@/components/link";
+import { useRouter } from "next/navigation";
+import type { KeyboardEvent, MouseEvent } from "react";
+import { RenderedMarkdown } from "@/components/forum/rendered-markdown";
 import { UserAvatar } from "@/components/forum/user-avatar";
 import { UserName } from "@/components/forum/user-name";
-import { RenderedMarkdown } from "@/components/forum/rendered-markdown";
+import { Link } from "@/components/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { notifyHashTargetNavigation } from "@/hooks/use-hash-target-highlight";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
-import type { PostView } from "@/lib/models";
 import { relativeTime, titleFromContent } from "@/lib/format";
+import type { PostView } from "@/lib/models";
 import { cn } from "@/lib/utils";
 
 function isInteractiveTarget(target: EventTarget | null): boolean {

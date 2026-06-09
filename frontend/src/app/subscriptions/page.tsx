@@ -2,8 +2,6 @@
 
 import { Bell, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
-import { Link } from "@/components/link";
-import { Button } from "@/components/ui/button";
 import { PageContainer, PageHeader } from "@/components/forum/page";
 import { RequireAuth } from "@/components/forum/require-auth";
 import {
@@ -11,12 +9,14 @@ import {
   ErrorState,
   LoadingState,
 } from "@/components/forum/states";
+import { Link } from "@/components/link";
+import { Button } from "@/components/ui/button";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { relativeTime, shortId, titleFromContent } from "@/lib/format";
 import { loadFeed } from "@/lib/loaders";
 import type { ConversationSummary, Subscription } from "@/lib/models";
-import { relativeTime, shortId, titleFromContent } from "@/lib/format";
 
 function Subscriptions() {
   const { session } = useAuth();
@@ -26,7 +26,8 @@ function Subscriptions() {
   const feed = useQuery<ConversationSummary[]>(() => loadFeed(), []);
 
   const byConversation = new Map<string, ConversationSummary>();
-  for (const s of feed.data ?? []) byConversation.set(String(s.conversation), s);
+  for (const s of feed.data ?? [])
+    byConversation.set(String(s.conversation), s);
 
   async function unsubscribe(target: string) {
     if (!session) return;

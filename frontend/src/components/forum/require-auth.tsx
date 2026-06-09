@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth";
+import { useEffect } from "react";
 import { LoadingState } from "@/components/forum/states";
+import { useAuth } from "@/lib/auth";
 
 /**
  * Gates its children behind an active session. While the session is restoring

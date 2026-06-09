@@ -259,7 +259,9 @@ export default class RolingConcept {
     role: Role;
   }): Promise<{ name: string; capabilities: string[] }[]> {
     const doc = await this.roles.findOne({ _id: role });
-    return doc === null ? [] : [{ name: doc.name, capabilities: doc.capabilities }];
+    return doc === null
+      ? []
+      : [{ name: doc.name, capabilities: doc.capabilities }];
   }
 
   /**
@@ -292,9 +294,9 @@ export default class RolingConcept {
    * (frames.query always passes a bound input object, even for parameterless
    * queries).
    */
-  async _listRoles(_params?: Record<string, never>): Promise<
-    { role: Role; name: string; capabilities: string[] }[]
-  > {
+  async _listRoles(
+    _params?: Record<string, never>,
+  ): Promise<{ role: Role; name: string; capabilities: string[] }[]> {
     const docs = await this.roles.find().toArray();
     return docs.map((doc) => ({
       role: doc._id,

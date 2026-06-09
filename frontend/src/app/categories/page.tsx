@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import { FolderOpen, FolderPlus, Loader2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { Link } from "@/components/link";
-import { PageContainer, PageHeader } from "@/components/forum/page";
 import { CategoryDot } from "@/components/forum/badges";
+import { PageContainer, PageHeader } from "@/components/forum/page";
 import {
   EmptyState,
   ErrorState,
   LoadingState,
 } from "@/components/forum/states";
+import { Link } from "@/components/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,9 +86,7 @@ export default function CategoriesPage() {
             onClick={create}
             disabled={creating || !name.trim()}
           >
-            {creating ? (
-              <Loader2 className="size-4 mr-2 animate-spin" />
-            ) : null}
+            {creating ? <Loader2 className="size-4 mr-2 animate-spin" /> : null}
             Create category
           </Button>
         </section>
@@ -113,7 +111,10 @@ export default function CategoriesPage() {
               className="group rounded-xl border border-border bg-card p-5 shadow-sm transition-colors hover:border-primary/40"
             >
               <div className="mb-2 flex items-center gap-2.5">
-                <CategoryDot id={String(category.category)} className="size-3.5" />
+                <CategoryDot
+                  id={String(category.category)}
+                  className="size-3.5"
+                />
                 <h2 className="font-display text-xl font-semibold group-hover:text-primary">
                   {category.name}
                 </h2>

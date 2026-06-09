@@ -1,20 +1,21 @@
 "use client";
 
 import { MessagesSquare, PenLine } from "lucide-react";
-import { Link } from "@/components/link";
-import { Button } from "@/components/ui/button";
+import { useCallback, useState } from "react";
 import { CategoryDot } from "@/components/forum/badges";
-import { TopicRow } from "@/components/forum/topic-row";
 import {
   EmptyState,
   ErrorState,
   LoadingState,
 } from "@/components/forum/states";
+import { TopicRow } from "@/components/forum/topic-row";
+import { Link } from "@/components/link";
+import { Button } from "@/components/ui/button";
 import { useQuery } from "@/hooks/use-query";
-import { loadFeed } from "@/lib/loaders";
 import { api } from "@/lib/api";
-import type { Category } from "@/lib/models";
 import { useAuth } from "@/lib/auth";
+import { loadFeed } from "@/lib/loaders";
+import type { Category } from "@/lib/models";
 
 function CategoriesCard() {
   const { data } = useQuery<{ categories: Category[] }>(
@@ -80,17 +81,46 @@ function WelcomeCard() {
 }
 
 export default function HomePage() {
-  const { data, loading, error, refetch } = useQuery(() => loadFeed(), []);
+  const [sort, setSort] = useState<"latest" | "activity">("latest");
+  const { data, loading, error, refetch } = useQuery(
+    useCallback(() => loadFeed(sort), [sort]),
+    [sort],
+  );
 
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-6 sm:px-6 lg:grid-cols-[1fr_18rem] lg:py-10">
       <section className="min-w-0">
         <div className="mb-5 flex items-end justify-between border-b border-border pb-4">
           <div>
-            <p className="eyebrow">The latest</p>
             <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
               Conversations
             </h1>
+            <div className="mt-2 inline-flex rounded-lg bg-muted p-0.5">
+              <button
+                type="button"
+                aria-pressed={sort === "latest"}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  sort === "latest"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                onClick={() => setSort("latest")}
+              >
+                Latest
+              </button>
+              <button
+                type="button"
+                aria-pressed={sort === "activity"}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  sort === "activity"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                onClick={() => setSort("activity")}
+              >
+                Activity
+              </button>
+            </div>
           </div>
           <Button asChild size="sm" className="gap-1.5">
             <Link href="/new">

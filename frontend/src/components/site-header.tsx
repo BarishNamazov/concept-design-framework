@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { usePathname } from "next/navigation";
 import {
   Bell,
   Bookmark,
@@ -15,7 +13,12 @@ import {
   User,
   Wrench,
 } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { NotificationBell } from "@/components/forum/notification-bell";
+import { UserAvatar } from "@/components/forum/user-avatar";
 import { Link } from "@/components/link";
+import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,9 +28,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ModeToggle } from "@/components/mode-toggle";
-import { UserAvatar } from "@/components/forum/user-avatar";
-import { NotificationBell } from "@/components/forum/notification-bell";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -72,11 +72,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="ml-auto flex items-center gap-1.5">
-          <Button
-            asChild
-            size="sm"
-            className="hidden gap-1.5 sm:inline-flex"
-          >
+          <Button asChild size="sm" className="hidden gap-1.5 sm:inline-flex">
             <Link href="/new">
               <PenLine className="size-4" />
               New topic

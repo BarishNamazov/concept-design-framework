@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { Loader2, Plus, Tag as TagIcon, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Link } from "@/components/link";
 import { Badge } from "@/components/ui/badge";
@@ -36,9 +36,7 @@ export function TagEditor({
   const [applyingTag, setApplyingTag] = useState<string | null>(null);
 
   const appliedIds = new Set(tags.map((t) => String(t.tag)));
-  const availableTags = allTags.filter(
-    (t) => !appliedIds.has(String(t.tag)),
-  );
+  const availableTags = allTags.filter((t) => !appliedIds.has(String(t.tag)));
 
   const fetchTags = useCallback(async () => {
     setTagsLoading(true);
@@ -154,9 +152,7 @@ export function TagEditor({
                       disabled={applyingTag === String(tag.tag)}
                       className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted disabled:opacity-50"
                     >
-                      <span className="truncate font-medium">
-                        #{tag.name}
-                      </span>
+                      <span className="truncate font-medium">#{tag.name}</span>
                       {applyingTag === String(tag.tag) ? (
                         <Loader2 className="size-3 shrink-0 animate-spin text-muted-foreground" />
                       ) : (

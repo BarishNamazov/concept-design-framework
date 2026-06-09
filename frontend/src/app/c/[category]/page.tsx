@@ -1,7 +1,7 @@
 "use client";
 
-import { use } from "react";
 import { FolderOpen } from "lucide-react";
+import { use } from "react";
 import { PageContainer, PageHeader } from "@/components/forum/page";
 import { PostPreview } from "@/components/forum/post-preview";
 import {

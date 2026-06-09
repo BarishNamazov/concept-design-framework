@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   CheckCircle2,
   CornerUpLeft,
@@ -10,7 +9,18 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
+import { BookmarkButton } from "@/components/forum/bookmark-button";
+import { Composer } from "@/components/forum/composer";
+import { FlagDialog } from "@/components/forum/flag-dialog";
+import { PinControl } from "@/components/forum/pin-control";
+import { PostLinks } from "@/components/forum/post-links";
+import { ReactionBar } from "@/components/forum/reaction-bar";
+import { RenderedMarkdown } from "@/components/forum/rendered-markdown";
+import { RevisionsDialog } from "@/components/forum/revisions-dialog";
+import { UserAvatar } from "@/components/forum/user-avatar";
+import { UserName } from "@/components/forum/user-name";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,21 +29,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { UserAvatar } from "@/components/forum/user-avatar";
-import { UserName } from "@/components/forum/user-name";
-import { RenderedMarkdown } from "@/components/forum/rendered-markdown";
-import { ReactionBar } from "@/components/forum/reaction-bar";
-import { BookmarkButton } from "@/components/forum/bookmark-button";
-import { PinControl } from "@/components/forum/pin-control";
-import { PostLinks } from "@/components/forum/post-links";
-import { RevisionsDialog } from "@/components/forum/revisions-dialog";
-import { FlagDialog } from "@/components/forum/flag-dialog";
-import { Composer } from "@/components/forum/composer";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { ThreadNode } from "@/lib/models";
 import { relativeTime } from "@/lib/format";
+import type { ThreadNode } from "@/lib/models";
 import { cn } from "@/lib/utils";
 
 interface PostCardProps {
@@ -270,10 +270,7 @@ export function PostCard({
                         <Pencil className="size-4" />
                         Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={remove}
-                      >
+                      <DropdownMenuItem variant="destructive" onClick={remove}>
                         <Trash2 className="size-4" />
                         Delete
                       </DropdownMenuItem>

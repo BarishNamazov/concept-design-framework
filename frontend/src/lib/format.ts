@@ -86,8 +86,12 @@ export function titleFromContent(content: string): string {
       .split("\n")
       .map((l) => l.trim())
       .find((l) => l.length > 0) ?? "";
-  return line.replace(/^#{1,6}\s+/, "").replace(/[*_`>#]/g, "").trim() ||
-    "(untitled)";
+  return (
+    line
+      .replace(/^#{1,6}\s+/, "")
+      .replace(/[*_`>#]/g, "")
+      .trim() || "(untitled)"
+  );
 }
 
 /** Plain-text excerpt for feed previews. */
@@ -112,5 +116,5 @@ export function bodyExcerpt(content: string, max = 180): string {
 
 /** Pluralize a count with its noun: `count(1, "reply")` → "1 reply". */
 export function count(n: number, noun: string, plural?: string): string {
-  return `${n} ${n === 1 ? noun : plural ?? `${noun}s`}`;
+  return `${n} ${n === 1 ? noun : (plural ?? `${noun}s`)}`;
 }

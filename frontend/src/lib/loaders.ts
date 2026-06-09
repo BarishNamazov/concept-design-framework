@@ -49,8 +49,10 @@ function statsFromNodes(nodes: ThreadNode[]): ThreadStats {
 }
 
 /** The newest-first feed of conversation roots. */
-export async function loadFeed(): Promise<ConversationSummary[]> {
-  const { conversations } = unwrap(await api.threads.list({}));
+export async function loadFeed(
+  sort: "latest" | "activity" = "latest",
+): Promise<ConversationSummary[]> {
+  const { conversations } = unwrap(await api.threads.list({ sort }));
   return conversations;
 }
 

@@ -1,20 +1,20 @@
 "use client";
 
 import { CheckCircle2, Lock, MessageSquare } from "lucide-react";
-import { Link } from "@/components/link";
-import { UserAvatar } from "@/components/forum/user-avatar";
 import { CategoryBadge, TagBadge } from "@/components/forum/badges";
-import { useProfile } from "@/lib/profiles";
+import { UserAvatar } from "@/components/forum/user-avatar";
+import { Link } from "@/components/link";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
-import { enrichTopic } from "@/lib/loaders";
-import type { ConversationSummary } from "@/lib/models";
 import {
   bodyExcerpt,
   count,
   relativeTime,
   titleFromContent,
 } from "@/lib/format";
+import { enrichTopic } from "@/lib/loaders";
+import type { ConversationSummary } from "@/lib/models";
+import { useProfile } from "@/lib/profiles";
 import { cn } from "@/lib/utils";
 
 /** Stacked participant avatars, capped with a "+N" overflow. */
@@ -127,8 +127,12 @@ export function TopicRow({
             <span aria-hidden className="hidden sm:inline">
               ·
             </span>
-            <time dateTime={String(summary.post.createdAt)}>
-              {relativeTime(summary.post.createdAt)}
+            <time
+              dateTime={String(
+                summary.lastActivityAt ?? summary.post.createdAt,
+              )}
+            >
+              {relativeTime(summary.lastActivityAt ?? summary.post.createdAt)}
             </time>
           </div>
         </div>
