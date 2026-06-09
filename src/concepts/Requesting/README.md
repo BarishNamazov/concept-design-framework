@@ -1,12 +1,13 @@
 # Requesting
 
-The Requesting concept is the HTTP entrypoint for an application built with
-concepts and synchronizations. It encapsulates Bun's server, CORS, request
-logging, response persistence, and request timeouts, while the application keeps
-its behavior in explicit synchronizations.
+The Requesting concept reifies external requests as concept actions so the wire
+boundary is expressible as concept behavior. It records request inputs, tracks
+pending responses, and lets synchronizations complete requests with
+`Requesting.respond`.
 
-Every `POST` under the configured base URL becomes a `Requesting.request`
-action. There are no direct concept passthrough routes.
+The Bun HTTP adapter in `server.ts` turns every `POST` under the configured base
+URL into a `Requesting.request` action. There are no direct concept passthrough
+routes.
 
 ## Setup
 
@@ -17,12 +18,15 @@ action. There are no direct concept passthrough routes.
 
 ## Configuration
 
-The following environment variables are available:
+The following environment variables are available to the concept:
+
+- `REQUESTING_TIMEOUT`: the timeout for requests, default `10000` ms.
+- `REQUESTING_SAVE_RESPONSES`: whether to persist responses, default `true`.
+
+The following environment variables are available to the HTTP adapter:
 
 - `PORT`: the port the server binds, default `8000`.
 - `REQUESTING_BASE_URL`: the base URL prefix for API requests, default `/api`.
-- `REQUESTING_TIMEOUT`: the timeout for requests, default `10000` ms.
-- `REQUESTING_SAVE_RESPONSES`: whether to persist responses, default `true`.
 - `REQUESTING_ALLOWED_DOMAIN`: the CORS allowed origin, default `*`.
 
 ## Requesting Routes
