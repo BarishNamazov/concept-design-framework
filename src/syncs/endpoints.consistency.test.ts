@@ -77,6 +77,7 @@ type ExpectedPaths =
   | "/auth/logout"
   | "/auth/me"
   | "/auth/changePassword"
+  | "/auth/resolve"
   | "/profiles/get"
   | "/profiles/setDisplayName"
   | "/profiles/setBio"
@@ -110,6 +111,8 @@ type ExpectedPaths =
   | "/roles/revoke"
   | "/roles/forUser"
   | "/roles/can"
+  | "/roles/get"
+  | "/roles/list"
   | "/notifications/list"
   | "/notifications/unreadCount"
   | "/notifications/markRead"
@@ -155,7 +158,8 @@ type ExpectedPaths =
   | "/locks/list"
   | "/revisions/list"
   | "/revisions/get"
-  | "/revisions/latest";
+  | "/revisions/latest"
+  | "/users/search";
 
 type _PathSet = Expect<Equal<keyof ForumApi, ExpectedPaths>>;
 type _LoginInput = Expect<

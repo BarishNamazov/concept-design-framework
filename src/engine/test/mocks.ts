@@ -91,7 +91,7 @@ export class RecorderConcept {
 /** Concept whose action always throws — used to test engine error resilience. */
 export class ThrowingConcept {
   public hit = false;
-  explode(_: Empty) {
+  explode(_: Empty): { error: string } {
     this.hit = true;
     throw new Error("kaboom");
   }

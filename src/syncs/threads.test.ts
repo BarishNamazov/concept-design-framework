@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { setupApp, type TestApp } from "@utils/app_testing.ts";
+import type { ID } from "@utils/types.ts";
 
 let app: TestApp;
 
@@ -49,7 +50,7 @@ describe("thread error handlers", () => {
     });
     const result = await app.concepts.Conversing.reply({
       item: post,
-      parent: "nonexistent-node",
+      parent: "nonexistent-node" as ID,
     });
     expect("error" in result).toBe(true);
   });
