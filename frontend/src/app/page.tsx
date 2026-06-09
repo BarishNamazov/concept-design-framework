@@ -95,13 +95,13 @@ export default function HomePage() {
             <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
               Conversations
             </h1>
-            <div className="mt-2 inline-flex rounded-lg bg-muted p-0.5">
+            <div className="mt-2 inline-flex rounded-lg border bg-card p-0.5 shadow-xs">
               <button
                 type="button"
                 aria-pressed={sort === "latest"}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`rounded-[6px] px-3 py-1.5 text-xs font-semibold transition-all ${
                   sort === "latest"
-                    ? "bg-background text-foreground shadow-sm"
+                    ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
                 onClick={() => setSort("latest")}
@@ -111,9 +111,9 @@ export default function HomePage() {
               <button
                 type="button"
                 aria-pressed={sort === "activity"}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`rounded-[6px] px-3 py-1.5 text-xs font-semibold transition-all ${
                   sort === "activity"
-                    ? "bg-background text-foreground shadow-sm"
+                    ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
                 onClick={() => setSort("activity")}

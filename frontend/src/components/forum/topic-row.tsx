@@ -127,13 +127,22 @@ export function TopicRow({
             <span aria-hidden className="hidden sm:inline">
               ·
             </span>
-            <time
-              dateTime={String(
-                summary.lastActivityAt ?? summary.post.createdAt,
-              )}
-            >
-              {relativeTime(summary.lastActivityAt ?? summary.post.createdAt)}
+            <time dateTime={String(summary.post.createdAt)}>
+              {relativeTime(summary.post.createdAt)}
             </time>
+            {summary.lastActivityAt &&
+            String(summary.lastActivityAt) !==
+              String(summary.post.createdAt) ? (
+              <>
+                <span aria-hidden className="hidden sm:inline">
+                  ·
+                </span>
+                <span className="inline-flex items-center gap-1 text-xs text-primary/80">
+                  <span className="size-1 rounded-full bg-primary/60" />
+                  {relativeTime(summary.lastActivityAt)}
+                </span>
+              </>
+            ) : null}
           </div>
         </div>
 
