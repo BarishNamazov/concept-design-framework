@@ -114,6 +114,44 @@ describe("cross-concept event synchronizations", () => {
     expect(kinds).toContain("mention");
   });
 
+  test("a reply with an @mention creates exactly one mention notification", async () => {
+    const alice = await signUp("alice");
+    const bob = await signUp("bob");
+
+    const thread = await app.send("/threads/create", {
+      session: alice,
+      content: "Asking for help.",
+    });
+    await app.send("/threads/reply", {
+      session: alice,
+      parent: thread.node,
+      content: "Hey @bob can you help?",
+    });
+
+    const kinds = (await inboxKinds(bob)).filter((k) => k === "mention");
+    expect(kinds).toHaveLength(1);
+  });
+
+  test("a reply that @mentions the parent author does not give redundant mention", async () => {
+    const alice = await signUp("alice");
+    const bob = await signUp("bob");
+
+    const thread = await app.send("/threads/create", {
+      session: alice,
+      content: "The question.",
+    });
+    await app.send("/threads/reply", {
+      session: bob,
+      parent: thread.node,
+      content: "Hey @alice, great question!",
+    });
+
+    const kinds = await inboxKinds(alice);
+    // Should get a "reply" notification but NOT a redundant "mention"
+    expect(kinds).toContain("reply");
+    expect(kinds).not.toContain("mention");
+  });
+
   test("mentioning yourself does not create a notification", async () => {
     const alice = await signUp("alice");
 

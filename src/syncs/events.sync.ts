@@ -30,7 +30,8 @@ import {
   Tracking,
   Trashing,
 } from "@concepts";
-import { actions, type Sync } from "@engine";
+import { actions, Frames, type Sync } from "@engine";
+import type { ID } from "@utils/types.ts";
 
 /**
  * Parses unique `@username` handles out of post markdown. Usernames match the
@@ -148,7 +149,27 @@ export const NotifyOnMention: Sync = ({
       { username },
       { user: mentioned },
     );
-    return frames.filter(($) => $[mentioned] !== $[author]);
+    frames = frames.filter(($) => $[mentioned] !== $[author]);
+
+    // Skip mentioning the parent author of a reply — they already get a
+    // "reply" notification from NotifyOnReply for the same post.
+    const kept = new Frames();
+    for (const frame of frames) {
+      const postId = frame[post] as ID;
+      const [nodeRow] = await Conversing._getNodeByItem({ item: postId });
+      if (!nodeRow) { kept.push(frame); continue; }
+      const [parentRow] = await Conversing._getParent({ node: nodeRow.node });
+      if (!parentRow) { kept.push(frame); continue; }
+      const [itemRow] = await Conversing._getItem({ node: parentRow.parent });
+      if (!itemRow) { kept.push(frame); continue; }
+      const [authorRow] = await Posting._getAuthor({ post: itemRow.item });
+      if (!authorRow || authorRow.author !== (frame[mentioned] as ID)) {
+        kept.push(frame);
+        continue;
+      }
+      // Skip: parent author is already notified via NotifyOnReply.
+    }
+    return kept;
   },
   then: actions([
     Notifying.notify,
