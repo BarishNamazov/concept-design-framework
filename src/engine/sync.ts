@@ -27,6 +27,7 @@
  * single flow so independent invocations never cross-match.
  */
 
+import { cached } from "@utils/cache.ts";
 import { ForumErrorCode } from "../sdk/error-codes.ts";
 import { ActionConcept, type ActionRecord } from "./actions.ts";
 import { Frames } from "./frames.ts";
@@ -103,9 +104,28 @@ export class SyncConcept {
     object,
     Map<AnyAction, InstrumentedAction>
   > = new WeakMap();
+  /** Tracks query cache invalidators per concept instance. */
+  private queryCaches: WeakMap<object, Array<{ invalidate: () => void }>> =
+    new WeakMap();
+  /** All raw concept instances known to this engine (for bulk invalidation). */
+  private concepts = new Set<object>();
 
   constructor(actionConcept: ActionConcept = new ActionConcept()) {
     this.Action = actionConcept;
+  }
+
+  /** Invalidate all query caches for a concept — useful after external DB mutations. */
+  invalidateCaches(concept: object): void {
+    this.queryCaches.get(concept)?.forEach((c) => {
+      c.invalidate();
+    });
+  }
+
+  /** Invalidate query caches for every instrumented concept. */
+  invalidateAllCaches(): void {
+    for (const concept of this.concepts) {
+      this.invalidateCaches(concept);
+    }
   }
 
   /**
@@ -410,8 +430,10 @@ export class SyncConcept {
    * and then drives {@link synchronize}.
    */
   instrumentConcept<T extends object>(concept: T): T {
+    this.concepts.add(concept);
     const Action = this.Action;
     const synchronize = this.synchronize.bind(this);
+    const queryCaches = this.queryCaches;
     let boundActions = this.boundActionsByConcept.get(concept);
     if (boundActions === undefined) {
       boundActions = new Map();
@@ -424,13 +446,26 @@ export class SyncConcept {
         if (typeof value !== "function") return value;
         const actionKey = value as AnyAction;
 
-        // Queries: bound, but never instrumented.
+        // Queries: wrap with automatic caching.
         if (value.name.startsWith("_")) {
-          const cached = boundActions.get(actionKey);
-          if (cached !== undefined) return cached;
-          const bound = value.bind(concept) as InstrumentedAction;
-          boundActions.set(actionKey, bound);
-          return bound;
+          const memoized = boundActions.get(actionKey);
+          if (memoized !== undefined) return memoized;
+
+          const queryFn = value.bind(concept);
+          const withCache = cached(queryFn);
+          boundActions.set(
+            actionKey,
+            withCache as unknown as InstrumentedAction,
+          );
+
+          let caches = queryCaches.get(concept);
+          if (!caches) {
+            caches = [];
+            queryCaches.set(concept, caches);
+          }
+          caches.push(withCache);
+
+          return withCache as unknown as InstrumentedAction;
         }
 
         // Actions: instrument once, then memoize.
@@ -439,6 +474,12 @@ export class SyncConcept {
 
         const action = value.bind(concept);
         instrumented = async function instrumented(args: ActionArguments) {
+          // Invalidate every cached query result for this concept
+          // so subsequent reads see fresh data after this mutation.
+          queryCaches.get(concept)?.forEach((c) => {
+            c.invalidate();
+          });
+
           let {
             [flow]: flowToken,
             [synced]: syncedMap,
