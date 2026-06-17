@@ -19,13 +19,13 @@ async function signUp(
 ): Promise<string> {
   await app.send("/auth/register", {
     username,
-    password: "pw",
+    password: "password123",
     displayName,
     email: `${username}@example.com`,
   });
   const { session } = await app.send("/auth/login", {
     username,
-    password: "pw",
+    password: "password123",
   });
   return session;
 }

@@ -7,7 +7,7 @@
   "scripts": {
     "start": "bun run src/main.ts",
     "example-client": "bun run example-client/server.ts",
-    "test": "bun test src/",
+    "test": "BCRYPT_ROUNDS=4 bun test src/",
     "typecheck": "tsc --noEmit",
     "format": "biome format --write .",
     "lint": "biome lint .",

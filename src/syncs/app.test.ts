@@ -17,7 +17,7 @@ describe("auth synchronizations", () => {
   test("register creates a user and a profile", async () => {
     const res = await app.send("/auth/register", {
       username: "alice",
-      password: "pw",
+      password: "password123",
       displayName: "Alice",
       email: "alice@example.com",
     });
@@ -25,7 +25,7 @@ describe("auth synchronizations", () => {
 
     const me = await app.send("/auth/login", {
       username: "alice",
-      password: "pw",
+      password: "password123",
     });
     expect(me.session).toBeDefined();
     expect(me.user).toBe(res.user);
@@ -40,13 +40,13 @@ describe("auth synchronizations", () => {
   test("duplicate registration returns an error", async () => {
     await app.send("/auth/register", {
       username: "bob",
-      password: "pw",
+      password: "password123",
       displayName: "Bob",
       email: "bob@example.com",
     });
     const dup = await app.send("/auth/register", {
       username: "bob",
-      password: "pw2",
+      password: "password456",
       displayName: "Bobby",
       email: "bob2@example.com",
     });
@@ -57,7 +57,7 @@ describe("auth synchronizations", () => {
   test("login with wrong password returns an error", async () => {
     await app.send("/auth/register", {
       username: "carol",
-      password: "pw",
+      password: "password123",
       displayName: "Carol",
       email: "carol@example.com",
     });
@@ -72,13 +72,13 @@ describe("auth synchronizations", () => {
   test("logout ends the session; me then reports invalid session", async () => {
     await app.send("/auth/register", {
       username: "dave",
-      password: "pw",
+      password: "password123",
       displayName: "Dave",
       email: "dave@example.com",
     });
     const { session } = await app.send("/auth/login", {
       username: "dave",
-      password: "pw",
+      password: "password123",
     });
     const out = await app.send("/auth/logout", { session });
     expect(out.ok).toBe(true);
@@ -95,31 +95,31 @@ describe("auth synchronizations", () => {
   test("changePassword updates the credential and old password stops working", async () => {
     const reg = await app.send("/auth/register", {
       username: "pwd_alice",
-      password: "old",
+      password: "oldpasswd",
       displayName: "Alice",
       email: "pwd_alice@example.com",
     });
     const { session } = await app.send("/auth/login", {
       username: "pwd_alice",
-      password: "old",
+      password: "oldpasswd",
     });
 
     const res = await app.send("/auth/changePassword", {
       session,
-      oldPassword: "old",
-      newPassword: "new",
+      oldPassword: "oldpasswd",
+      newPassword: "newpasswd",
     });
     expect(res.user).toBe(reg.user);
 
     // The new password authenticates; the old one no longer does.
     const withNew = await app.send("/auth/login", {
       username: "pwd_alice",
-      password: "new",
+      password: "newpasswd",
     });
     expect(withNew.session).toBeDefined();
     const withOld = await app.send("/auth/login", {
       username: "pwd_alice",
-      password: "old",
+      password: "oldpasswd",
     });
     expect(withOld.error).toBeDefined();
     expect(withOld.session).toBeUndefined();
@@ -128,19 +128,19 @@ describe("auth synchronizations", () => {
   test("changePassword with the wrong old password errors and keeps the credential", async () => {
     await app.send("/auth/register", {
       username: "pwd_bob",
-      password: "secret",
+      password: "passw0rd",
       displayName: "Bob",
       email: "pwd_bob@example.com",
     });
     const { session } = await app.send("/auth/login", {
       username: "pwd_bob",
-      password: "secret",
+      password: "passw0rd",
     });
 
     const res = await app.send("/auth/changePassword", {
       session,
-      oldPassword: "wrong",
-      newPassword: "new",
+      oldPassword: "wrongpw10",
+      newPassword: "newpasswd",
     });
     expect(res.error).toBeDefined();
     expect(res.user).toBeUndefined();
@@ -148,7 +148,7 @@ describe("auth synchronizations", () => {
     // The original password still works; nothing changed.
     const stillWorks = await app.send("/auth/login", {
       username: "pwd_bob",
-      password: "secret",
+      password: "passw0rd",
     });
     expect(stillWorks.session).toBeDefined();
   });
@@ -172,13 +172,13 @@ async function registerAndLogin(
 ): Promise<{ user: string; session: string }> {
   const { user } = await app.send("/auth/register", {
     username,
-    password: "pw",
+    password: "password123",
     displayName,
     email: `${username}@example.com`,
   });
   const { session } = await app.send("/auth/login", {
     username,
-    password: "pw",
+    password: "password123",
   });
   return { user, session };
 }
@@ -404,7 +404,7 @@ describe("post edit / delete synchronizations", () => {
     const { post } = await createPost("e_alice", "before");
     const owner = await app.send("/auth/login", {
       username: "e_alice",
-      password: "pw",
+      password: "password123",
     });
     const res = await app.send("/posts/edit", {
       session: owner.session,

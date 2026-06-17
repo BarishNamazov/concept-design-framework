@@ -15,13 +15,13 @@ afterAll(async () => {
 async function registerAndLogin(username: string): Promise<string> {
   await app.send("/auth/register", {
     username,
-    password: "pw",
+    password: "password123",
     displayName: username,
     email: `${username}@example.com`,
   });
   const { session } = await app.send("/auth/login", {
     username,
-    password: "pw",
+    password: "password123",
   });
   return session;
 }

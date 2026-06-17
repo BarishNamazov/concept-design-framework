@@ -25,12 +25,15 @@ describe("Authenticating", () => {
     const { user } = ok(
       await Authenticating.register({
         username: "alice",
-        password: "pw",
+        password: "password123",
         email: "alice@example.com",
       }),
     );
     const auth = ok(
-      await Authenticating.authenticate({ username: "alice", password: "pw" }),
+      await Authenticating.authenticate({
+        username: "alice",
+        password: "password123",
+      }),
     );
     expect(auth.user).toBe(user);
   });
@@ -39,13 +42,13 @@ describe("Authenticating", () => {
     ok(
       await Authenticating.register({
         username: "bob",
-        password: "pw",
+        password: "password123",
         email: "bob@example.com",
       }),
     );
     const dup = await Authenticating.register({
       username: "bob",
-      password: "other",
+      password: "otherpassw",
       email: "bob2@example.com",
     });
     expect(dup).toHaveProperty("error");
@@ -54,7 +57,7 @@ describe("Authenticating", () => {
   test("register requires a valid email", async () => {
     const noAt = await Authenticating.register({
       username: "emailtest",
-      password: "pw",
+      password: "password123",
       email: "invalid",
     });
     expect(noAt).toHaveProperty("error");
@@ -64,15 +67,21 @@ describe("Authenticating", () => {
     ok(
       await Authenticating.register({
         username: "carol",
-        password: "pw",
+        password: "password123",
         email: "carol@example.com",
       }),
     );
     expect(
-      await Authenticating.authenticate({ username: "carol", password: "no" }),
+      await Authenticating.authenticate({
+        username: "carol",
+        password: "wrongpass1",
+      }),
     ).toHaveProperty("error");
     expect(
-      await Authenticating.authenticate({ username: "nobody", password: "pw" }),
+      await Authenticating.authenticate({
+        username: "nobody",
+        password: "password123",
+      }),
     ).toHaveProperty("error");
   });
 
@@ -80,26 +89,29 @@ describe("Authenticating", () => {
     const { user } = ok(
       await Authenticating.register({
         username: "dave",
-        password: "old",
+        password: "oldpasswd",
         email: "dave@example.com",
       }),
     );
     expect(
       await Authenticating.changePassword({
         user,
-        oldPassword: "wrong",
-        newPassword: "new",
+        oldPassword: "wrongpw123",
+        newPassword: "newpasswd",
       }),
     ).toHaveProperty("error");
     ok(
       await Authenticating.changePassword({
         user,
-        oldPassword: "old",
-        newPassword: "new",
+        oldPassword: "oldpasswd",
+        newPassword: "newpasswd",
       }),
     );
     expect(
-      await Authenticating.authenticate({ username: "dave", password: "new" }),
+      await Authenticating.authenticate({
+        username: "dave",
+        password: "newpasswd",
+      }),
     ).not.toHaveProperty("error");
   });
 
@@ -107,7 +119,7 @@ describe("Authenticating", () => {
     const { user } = ok(
       await Authenticating.register({
         username: "emailuser",
-        password: "pw",
+        password: "password123",
         email: "old@example.com",
       }),
     );
@@ -124,7 +136,7 @@ describe("Authenticating", () => {
     const { user } = ok(
       await Authenticating.register({
         username: "emailbad",
-        password: "pw",
+        password: "password123",
         email: "ok@example.com",
       }),
     );
@@ -140,14 +152,14 @@ describe("Authenticating", () => {
     const { user } = ok(
       await Authenticating.register({
         username: "eve",
-        password: "pw",
+        password: "password123",
         email: "eve@example.com",
       }),
     );
     ok(
       await Authenticating.register({
         username: "taken",
-        password: "pw",
+        password: "password123",
         email: "taken@example.com",
       }),
     );
@@ -164,7 +176,7 @@ describe("Authenticating", () => {
     const { user } = ok(
       await Authenticating.register({
         username: "frank",
-        password: "pw",
+        password: "password123",
         email: "frank@example.com",
       }),
     );
@@ -177,7 +189,7 @@ describe("Authenticating", () => {
     const { user } = ok(
       await Authenticating.register({
         username: "grace",
-        password: "pw",
+        password: "password123",
         email: "grace@example.com",
       }),
     );
@@ -201,18 +213,119 @@ describe("Authenticating", () => {
     ok(
       await Authenticating.register({
         username: "heidi",
-        password: "pw",
+        password: "password123",
         email: "heidi@example.com",
       }),
     );
     ok(
       await Authenticating.register({
         username: "ivan",
-        password: "pw",
+        password: "password123",
         email: "ivan@example.com",
       }),
     );
 
     expect(await Authenticating._getUserCount()).toEqual([{ count: 2 }]);
+  });
+
+  // ── Password validation ──
+
+  test("register rejects password too short (< 8)", async () => {
+    const result = await Authenticating.register({
+      username: "shortpw",
+      password: "short",
+      email: "short@example.com",
+    });
+    expect(result).toHaveProperty("error");
+  });
+
+  test("register accepts password at boundary (exactly 8)", async () => {
+    const result = await Authenticating.register({
+      username: "boundary8",
+      password: "12345678",
+      email: "boundary@example.com",
+    });
+    expect(result).not.toHaveProperty("error");
+  });
+
+  test("register accepts password at boundary (exactly 128)", async () => {
+    const result = await Authenticating.register({
+      username: "boundary128",
+      password: "x".repeat(128),
+      email: "boundary@example.com",
+    });
+    expect(result).not.toHaveProperty("error");
+  });
+
+  test("changePassword rejects new password too short", async () => {
+    const { user } = ok(
+      await Authenticating.register({
+        username: "cpwshort",
+        password: "password123",
+        email: "cpw@example.com",
+      }),
+    );
+    const result = await Authenticating.changePassword({
+      user,
+      oldPassword: "password123",
+      newPassword: "short",
+    });
+    expect(result).toHaveProperty("error");
+  });
+
+  // ── Username validation ──
+
+  test("register rejects username too short (< 3)", async () => {
+    const result = await Authenticating.register({
+      username: "ab",
+      password: "password123",
+      email: "short@example.com",
+    });
+    expect(result).toHaveProperty("error");
+  });
+
+  test("register rejects username too long (> 32)", async () => {
+    const result = await Authenticating.register({
+      username: "x".repeat(33),
+      password: "password123",
+      email: "long@example.com",
+    });
+    expect(result).toHaveProperty("error");
+  });
+
+  test("register rejects username starting with number", async () => {
+    const result = await Authenticating.register({
+      username: "1invalid",
+      password: "password123",
+      email: "num@example.com",
+    });
+    expect(result).toHaveProperty("error");
+  });
+
+  test("register rejects username starting with underscore", async () => {
+    const result = await Authenticating.register({
+      username: "_invalid",
+      password: "password123",
+      email: "under@example.com",
+    });
+    expect(result).toHaveProperty("error");
+  });
+
+  test("register rejects username with spaces", async () => {
+    const result = await Authenticating.register({
+      username: "bad user",
+      password: "password123",
+      email: "space@example.com",
+    });
+    expect(result).toHaveProperty("error");
+  });
+
+  test("register rejects username with special chars", async () => {
+    const result = await Authenticating.register({
+      username: "bad@user!",
+      password: "password123",
+      email: "spec@example.com",
+    });
+    expect(result).toHaveProperty("error");
   });
 });

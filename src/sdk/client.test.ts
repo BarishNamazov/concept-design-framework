@@ -63,12 +63,12 @@ async function makeUser(username: string) {
   const reg = ok(
     await api.auth.register({
       username,
-      password: "pw",
+      password: "password123",
       displayName: username,
       email: `${username}@example.com`,
     }),
   );
-  const login = ok(await api.auth.login({ username, password: "pw" }));
+  const login = ok(await api.auth.login({ username, password: "password123" }));
   return { user: reg.user, session: login.session };
 }
 
@@ -79,7 +79,7 @@ describe("auth flows", () => {
     const reg = ok(
       await api.auth.register({
         username: "alice",
-        password: "pw",
+        password: "password123",
         displayName: "Alice",
         email: "alice@example.com",
       }),
@@ -87,7 +87,7 @@ describe("auth flows", () => {
     expect(reg.user).toBeDefined();
 
     const login = ok(
-      await api.auth.login({ username: "alice", password: "pw" }),
+      await api.auth.login({ username: "alice", password: "password123" }),
     );
     expect(login.session).toBeDefined();
     expect(login.user).toBe(reg.user);
@@ -110,13 +110,13 @@ describe("auth flows", () => {
   test("duplicate registration surfaces the backend error", async () => {
     await api.auth.register({
       username: "bob",
-      password: "pw",
+      password: "password123",
       displayName: "Bob",
       email: "bob@example.com",
     });
     const dup = await api.auth.register({
       username: "bob",
-      password: "pw2",
+      password: "password456",
       displayName: "Bob2",
       email: "bob2@example.com",
     });
@@ -365,13 +365,13 @@ describe("indexed call style", () => {
     const reg = ok(
       await api["/auth/register"]({
         username: "leo",
-        password: "pw",
+        password: "password123",
         displayName: "Leo",
         email: "leo@example.com",
       }),
     );
     const login = ok(
-      await api["/auth/login"]({ username: "leo", password: "pw" }),
+      await api["/auth/login"]({ username: "leo", password: "password123" }),
     );
     const me = ok(await api["/auth/me"]({ session: login.session }));
     expect(me.user).toBe(reg.user);

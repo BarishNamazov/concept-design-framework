@@ -6,10 +6,13 @@ import { ForumErrorCode } from "../../sdk/error-codes.ts";
 // Generic types of this concept.
 type User = ID;
 
+const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS) || 12;
+const USERNAME_ALLOWED_RE = /^[a-zA-Z][a-zA-Z0-9_-]*$/;
+
 /**
  * a set of Users with
  *   a username String
- *   a password String
+ *   a password String (bcrypt hash)
  *   an email String
  *
  * Invariant: usernames are unique across the set of Users.
@@ -41,11 +44,12 @@ export default class AuthenticatingConcept {
    * register (username: String, password: String, email: String): (user: User)
    *
    * **requires** no User with the given `username` exists, `email` is non-empty
-   * and contains `@`
+   * and contains `@`, username is 3-32 chars starting with a letter using only
+   * `[a-zA-Z0-9_-]`, password is 8-128 chars
    *
    * **effects** creates a fresh User `u`; sets the username of `u` to `username`,
-   * the password of `u` to `password`, and the email of `u` to `email`; returns `u`
-   * as `user`
+   * the bcrypt hash of `password` as the password, and the email of `u` to `email`;
+   * returns `u` as `user`
    */
   async register({
     username,
@@ -59,12 +63,39 @@ export default class AuthenticatingConcept {
     if (!email?.includes("@")) {
       return { error: ForumErrorCode.INVALID_BODY };
     }
+    if (username.length < 3 || username.length > 32) {
+      return {
+        error: ForumErrorCode.USERNAME_INVALID_LENGTH,
+        detail: username,
+      };
+    }
+    if (!USERNAME_ALLOWED_RE.test(username)) {
+      return {
+        error: ForumErrorCode.USERNAME_INVALID_CHARS,
+        detail: username,
+      };
+    }
+    if (password.length < 8 || password.length > 128) {
+      return {
+        error: ForumErrorCode.PASSWORD_TOO_SHORT,
+        detail: "Must be 8-128 characters",
+      };
+    }
     const existing = await this.users.findOne({ username });
     if (existing !== null) {
       return { error: ForumErrorCode.USERNAME_TAKEN, detail: username };
     }
     const user = freshID() as User;
-    await this.users.insertOne({ _id: user, username, password, email });
+    const hashed = await Bun.password.hash(password, {
+      algorithm: "bcrypt",
+      cost: BCRYPT_ROUNDS,
+    });
+    await this.users.insertOne({
+      _id: user,
+      username,
+      password: hashed,
+      email,
+    });
     return { user };
   }
 
@@ -84,7 +115,7 @@ export default class AuthenticatingConcept {
     password: string;
   }): Promise<{ user: User } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.users.findOne({ username });
-    if (doc === null || doc.password !== password) {
+    if (doc === null || !(await Bun.password.verify(password, doc.password))) {
       return { error: ForumErrorCode.INVALID_CREDENTIALS };
     }
     return { user: doc._id };
@@ -93,9 +124,11 @@ export default class AuthenticatingConcept {
   /**
    * changePassword (user: User, oldPassword: String, newPassword: String): (user: User)
    *
-   * **requires** the given `user` exists and its password equals `oldPassword`
+   * **requires** the given `user` exists and its password equals `oldPassword`,
+   * `newPassword` is 8-128 chars
    *
-   * **effects** sets the password of `user` to `newPassword`; returns `user`
+   * **effects** sets the password of `user` to the bcrypt hash of `newPassword`;
+   * returns `user`
    */
   async changePassword({
     user,
@@ -110,15 +143,20 @@ export default class AuthenticatingConcept {
     if (doc === null) {
       return { error: ForumErrorCode.NOT_FOUND };
     }
-    if (doc.password !== oldPassword) {
+    if (!(await Bun.password.verify(oldPassword, doc.password))) {
       return { error: ForumErrorCode.INVALID_CREDENTIALS };
     }
-    await this.users.updateOne(
-      { _id: user },
-      {
-        $set: { password: newPassword },
-      },
-    );
+    if (newPassword.length < 8 || newPassword.length > 128) {
+      return {
+        error: ForumErrorCode.PASSWORD_TOO_SHORT,
+        detail: "Must be 8-128 characters",
+      };
+    }
+    const hashed = await Bun.password.hash(newPassword, {
+      algorithm: "bcrypt",
+      cost: BCRYPT_ROUNDS,
+    });
+    await this.users.updateOne({ _id: user }, { $set: { password: hashed } });
     return { user };
   }
 

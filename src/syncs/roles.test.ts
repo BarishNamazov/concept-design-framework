@@ -19,13 +19,13 @@ async function registerAndLogin(
 ): Promise<{ user: string; session: string }> {
   const { user } = await app.send("/auth/register", {
     username,
-    password: "pw",
+    password: "password123",
     displayName,
     email: `${username}@example.com`,
   });
   const { session } = await app.send("/auth/login", {
     username,
-    password: "pw",
+    password: "password123",
   });
   return { user, session };
 }
@@ -203,7 +203,7 @@ describe("role administration authorization", () => {
   test("the first registered account automatically receives administrator powers", async () => {
     const first = await app.send("/auth/register", {
       username: "role_auto_admin",
-      password: "pw",
+      password: "password123",
       displayName: "role_auto_admin",
       email: "role_auto_admin@example.com",
     });
@@ -219,7 +219,7 @@ describe("role administration authorization", () => {
 
     const second = await app.send("/auth/register", {
       username: "role_auto_member",
-      password: "pw",
+      password: "password123",
       displayName: "role_auto_member",
       email: "role_auto_member@example.com",
     });
@@ -234,7 +234,7 @@ describe("role administration authorization", () => {
   test("logging in an existing sole account backfills administrator powers", async () => {
     const created = await app.concepts.Authenticating.register({
       username: "role_legacy_admin",
-      password: "pw",
+      password: "password123",
       email: "role_legacy_admin@example.com",
     });
     if ("error" in created) throw new Error(created.error);
@@ -248,7 +248,7 @@ describe("role administration authorization", () => {
 
     const login = await app.send("/auth/login", {
       username: "role_legacy_admin",
-      password: "pw",
+      password: "password123",
     });
     expect(login.session).toBeDefined();
 

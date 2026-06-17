@@ -15,7 +15,7 @@ afterAll(async () => {
 async function register(username: string): Promise<string> {
   const res = await app.send("/auth/register", {
     username,
-    password: "pw",
+    password: "password123",
     displayName: username,
     email: `${username}@example.com`,
   });
@@ -24,7 +24,10 @@ async function register(username: string): Promise<string> {
 }
 
 async function login(username: string): Promise<string> {
-  const res = await app.send("/auth/login", { username, password: "pw" });
+  const res = await app.send("/auth/login", {
+    username,
+    password: "password123",
+  });
   expect(res.session).toBeDefined();
   return res.session as string;
 }
