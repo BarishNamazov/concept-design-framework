@@ -43,6 +43,26 @@ import type {
 import { inspect, inspectCustom, uuid } from "./util.ts";
 import { $vars } from "./vars.ts";
 
+const SENSITIVE_FIELDS = new Set([
+  "password",
+  "oldPassword",
+  "newPassword",
+  "passwordHash",
+]);
+
+function sanitize(obj: unknown): unknown {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) return obj.map(sanitize);
+  if (typeof obj === "object") {
+    const copy: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      copy[key] = SENSITIVE_FIELDS.has(key) ? "***" : sanitize(value);
+    }
+    return copy;
+  }
+  return obj;
+}
+
 /**
  * Reserved frame keys carried alongside the user's logic variables:
  *  - `flow`     — the flow token threaded through a causal chain;
@@ -395,9 +415,11 @@ export class SyncConcept {
   /** Per-action logging honouring the current {@link Logging} level. */
   private logAction(record: ActionRecord): void {
     if (this.logging === Logging.VERBOSE) {
-      const { concept, ...rest } = record;
+      const { concept, input, output, ...rest } = record;
       console.log("Synchronizing action:", {
         concept: concept.constructor.name,
+        input: sanitize(input),
+        output: sanitize(output),
         ...rest,
       });
       return;
@@ -412,8 +434,8 @@ export class SyncConcept {
         ? boundAction.name.slice("bound ".length)
         : "UNDEFINED";
       console.log(
-        `\n${conceptName}.${boundName} ${inspect(record.input)} => ${inspect(
-          record.output,
+        `\n${conceptName}.${boundName} ${inspect(sanitize(record.input))} => ${inspect(
+          sanitize(record.output),
         )}\n`,
       );
     }
