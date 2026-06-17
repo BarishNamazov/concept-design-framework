@@ -11,8 +11,9 @@ type User = ID;
  *   a displayName String
  *   a bio String
  *   an avatar String
+ *   an email String
  *
- * `bio` and `avatar` may hold the empty string to indicate "not provided".
+ * `bio`, `avatar`, and `email` may hold the empty string to indicate "not provided".
  * Each User in this set is a user that has a profile.
  */
 interface ProfileDoc {
@@ -20,6 +21,7 @@ interface ProfileDoc {
   displayName: string;
   bio: string;
   avatar: string;
+  email: string;
 }
 
 /**
@@ -39,14 +41,14 @@ export default class ProfilingConcept {
   }
 
   /**
-   * createProfile (user: User, displayName: String): (user: User)
+   * createProfile (user: User, displayName: String, email: String): (user: User)
    *
    * **requires** no profile exists for the given `user`
    *
-   * **effects** adds `user` to the set with the given `displayName`, an empty
-   * `bio`, and an empty `avatar`; returns `user`
+   * **effects** adds `user` to the set with the given `displayName`, the given
+   * `email`, an empty `bio`, and an empty `avatar`; returns `user`
    *
-   * createProfile (user: User, displayName: String): (error: String)
+   * createProfile (user: User, displayName: String, email: String): (error: String)
    *
    * **requires** a profile already exists for the given `user`
    *
@@ -55,9 +57,11 @@ export default class ProfilingConcept {
   async createProfile({
     user,
     displayName,
+    email,
   }: {
     user: User;
     displayName: string;
+    email: string;
   }): Promise<{ user: User } | { error: ForumErrorCode; detail?: string }> {
     const existing = await this.profiles.findOne({ _id: user });
     if (existing !== null) {
@@ -68,6 +72,7 @@ export default class ProfilingConcept {
       displayName,
       bio: "",
       avatar: "",
+      email,
     });
     return { user };
   }
@@ -171,19 +176,22 @@ export default class ProfilingConcept {
   }
 
   /**
-   * _getProfile (user: User): (profile: {displayName: String, bio: String, avatar: String})
+   * _getProfile (user: User): (profile: {displayName: String, bio: String, avatar: String, email: String})
    *
    * **requires** a profile exists for the given `user`
    *
-   * **effects** returns the displayName, bio and avatar of `user` as a single
+   * **effects** returns the displayName, bio, avatar and email of `user` as a single
    * `profile` record
    */
-  async _getProfile({
-    user,
-  }: {
-    user: User;
-  }): Promise<
-    { profile: { displayName: string; bio: string; avatar: string } }[]
+  async _getProfile({ user }: { user: User }): Promise<
+    {
+      profile: {
+        displayName: string;
+        bio: string;
+        avatar: string;
+        email: string;
+      };
+    }[]
   > {
     const doc = await this.profiles.findOne({ _id: user });
     return doc === null
@@ -194,6 +202,7 @@ export default class ProfilingConcept {
               displayName: doc.displayName,
               bio: doc.bio,
               avatar: doc.avatar,
+              email: doc.email,
             },
           },
         ];

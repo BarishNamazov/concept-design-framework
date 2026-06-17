@@ -17,6 +17,7 @@ async function register(username: string): Promise<string> {
     username,
     password: "pw",
     displayName: username,
+    email: `${username}@example.com`,
   });
   expect(res.user).toBeDefined();
   return res.user as string;

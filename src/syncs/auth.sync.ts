@@ -41,6 +41,7 @@ type MeOutput = Prettify<
     QueryRow<typeof Profiling, "_getProfile">
 >;
 type ChangePasswordOutput = ActionOk<typeof Authenticating, "changePassword">;
+type ChangeEmailOutput = ActionOk<typeof Authenticating, "changeEmail">;
 
 const ADMIN_ROLE_NAME = "administrator";
 const PIN_CAPABILITY = "pin";
@@ -96,18 +97,18 @@ async function existingInitialAdminRole(
 const register = defineEndpoint(
   "/auth/register",
   ({ Sync, Actions, Request, Respond, Fail }) => ({
-    RegisterRequest: Sync(({ username, password }) => ({
-      when: Actions(Request({ username, password })),
-      then: Actions([Authenticating.register, { username, password }]),
+    RegisterRequest: Sync(({ username, password, email }) => ({
+      when: Actions(Request({ username, password, email })),
+      then: Actions([Authenticating.register, { username, password, email }]),
     })),
 
-    RegisterCreatesProfile: Sync(({ displayName, user }) => ({
-      when: Actions(Request({ displayName }), [
+    RegisterCreatesProfile: Sync(({ displayName, email, user }) => ({
+      when: Actions(Request({ displayName, email }), [
         Authenticating.register,
         {},
         { user },
       ]),
-      then: Actions([Profiling.createProfile, { user, displayName }]),
+      then: Actions([Profiling.createProfile, { user, displayName, email }]),
     })),
 
     // First registration defines the forum administrator role.
@@ -249,18 +250,18 @@ const logout = defineEndpoint(
 const me = defineEndpoint(
   "/auth/me",
   ({ Sync, Actions, Request, Respond }) => ({
-    MeResponse: Sync(({ session, user, username, profile }) => ({
+    MeResponse: Sync(({ session, user, username, email, profile }) => ({
       when: Actions(Request({ session })),
       where: async (frames) => {
         frames = await frames.query(Sessioning._getUser, { session }, { user });
         frames = await frames.query(
           Authenticating._getById,
           { user },
-          { username },
+          { username, email },
         );
         return await frames.query(Profiling._getProfile, { user }, { profile });
       },
-      then: Actions(Respond<MeOutput>({ user, username, profile })),
+      then: Actions(Respond<MeOutput>({ user, username, email, profile })),
     })),
   }),
 );
@@ -294,6 +295,30 @@ const changePassword = defineEndpoint(
   }),
 );
 
+// --- changeEmail: resolve session, change email (auth-only) ---
+
+const changeEmail = defineEndpoint(
+  "/auth/changeEmail",
+  ({ Sync, Actions, Request, Respond, Fail }) => ({
+    ChangeEmailRequest: Sync(({ session, email, user }) => ({
+      when: Actions(Request({ session, email })),
+      where: async (frames) =>
+        await frames.query(Sessioning._getUser, { session }, { user }),
+      then: Actions([Authenticating.changeEmail, { user, email }]),
+    })),
+
+    ChangeEmailResponse: Sync(({ user }) => ({
+      when: Actions([Authenticating.changeEmail, {}, { user }]),
+      then: Actions(Respond<ChangeEmailOutput>({ user })),
+    })),
+
+    ChangeEmailError: Sync(({ error }) => ({
+      when: Actions([Authenticating.changeEmail, {}, { error }]),
+      then: Actions(Fail(error)),
+    })),
+  }),
+);
+
 // --- resolve: public lookup of a user id by username ---
 
 type ResolveOutput = QueryRow<typeof Authenticating, "_getByUsername">;
@@ -320,6 +345,7 @@ export const authApi = {
   logout,
   me,
   changePassword,
+  changeEmail,
   resolve,
 };
 

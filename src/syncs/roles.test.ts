@@ -21,6 +21,7 @@ async function registerAndLogin(
     username,
     password: "pw",
     displayName,
+    email: `${username}@example.com`,
   });
   const { session } = await app.send("/auth/login", {
     username,
@@ -204,6 +205,7 @@ describe("role administration authorization", () => {
       username: "role_auto_admin",
       password: "pw",
       displayName: "role_auto_admin",
+      email: "role_auto_admin@example.com",
     });
 
     for (const capability of ["administer", "moderate", "pin"]) {
@@ -219,6 +221,7 @@ describe("role administration authorization", () => {
       username: "role_auto_member",
       password: "pw",
       displayName: "role_auto_member",
+      email: "role_auto_member@example.com",
     });
     const canAdmin = await app.send("/roles/can", {
       user: second.user,
@@ -232,6 +235,7 @@ describe("role administration authorization", () => {
     const created = await app.concepts.Authenticating.register({
       username: "role_legacy_admin",
       password: "pw",
+      email: "role_legacy_admin@example.com",
     });
     if ("error" in created) throw new Error(created.error);
 

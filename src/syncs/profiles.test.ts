@@ -13,7 +13,12 @@ afterAll(async () => {
 });
 
 async function signUp(username: string, displayName = username) {
-  await app.send("/auth/register", { username, password: "pw", displayName });
+  await app.send("/auth/register", {
+    username,
+    password: "pw",
+    displayName,
+    email: `${username}@example.com`,
+  });
   const { session } = await app.send("/auth/login", {
     username,
     password: "pw",

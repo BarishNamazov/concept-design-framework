@@ -24,6 +24,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const { login, register } = useAuth();
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -34,7 +35,12 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     setBusy(true);
     try {
       if (isRegister) {
-        await register(username.trim(), password, displayName.trim());
+        await register(
+          username.trim(),
+          password,
+          displayName.trim(),
+          email.trim(),
+        );
         toast.success(`Welcome, ${displayName.trim() || username.trim()}!`);
       } else {
         await login(username.trim(), password);
@@ -83,16 +89,30 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               />
             </div>
             {isRegister ? (
-              <div className="flex flex-col gap-2.5">
-                <Label htmlFor="displayName">Display name</Label>
-                <Input
-                  id="displayName"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Ada Lovelace"
-                  required
-                />
-              </div>
+              <>
+                <div className="flex flex-col gap-2.5">
+                  <Label htmlFor="displayName">Display name</Label>
+                  <Input
+                    id="displayName"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Ada Lovelace"
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-2.5">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="ada@example.com"
+                    required
+                  />
+                </div>
+              </>
             ) : null}
             <div className="flex flex-col gap-2.5">
               <Label htmlFor="password">Password</Label>

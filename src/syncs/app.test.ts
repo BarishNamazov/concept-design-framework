@@ -19,6 +19,7 @@ describe("auth synchronizations", () => {
       username: "alice",
       password: "pw",
       displayName: "Alice",
+      email: "alice@example.com",
     });
     expect(res.user).toBeDefined();
 
@@ -31,7 +32,9 @@ describe("auth synchronizations", () => {
 
     const profile = await app.send("/auth/me", { session: me.session });
     expect(profile.username).toBe("alice");
+    expect(profile.email).toBe("alice@example.com");
     expect(profile.profile.displayName).toBe("Alice");
+    expect(profile.profile.email).toBe("alice@example.com");
   });
 
   test("duplicate registration returns an error", async () => {
@@ -39,11 +42,13 @@ describe("auth synchronizations", () => {
       username: "bob",
       password: "pw",
       displayName: "Bob",
+      email: "bob@example.com",
     });
     const dup = await app.send("/auth/register", {
       username: "bob",
       password: "pw2",
       displayName: "Bobby",
+      email: "bob2@example.com",
     });
     expect(dup.error).toBeDefined();
     expect(dup.user).toBeUndefined();
@@ -54,6 +59,7 @@ describe("auth synchronizations", () => {
       username: "carol",
       password: "pw",
       displayName: "Carol",
+      email: "carol@example.com",
     });
     const bad = await app.send("/auth/login", {
       username: "carol",
@@ -68,6 +74,7 @@ describe("auth synchronizations", () => {
       username: "dave",
       password: "pw",
       displayName: "Dave",
+      email: "dave@example.com",
     });
     const { session } = await app.send("/auth/login", {
       username: "dave",
@@ -90,6 +97,7 @@ describe("auth synchronizations", () => {
       username: "pwd_alice",
       password: "old",
       displayName: "Alice",
+      email: "pwd_alice@example.com",
     });
     const { session } = await app.send("/auth/login", {
       username: "pwd_alice",
@@ -122,6 +130,7 @@ describe("auth synchronizations", () => {
       username: "pwd_bob",
       password: "secret",
       displayName: "Bob",
+      email: "pwd_bob@example.com",
     });
     const { session } = await app.send("/auth/login", {
       username: "pwd_bob",
@@ -165,6 +174,7 @@ async function registerAndLogin(
     username,
     password: "pw",
     displayName,
+    email: `${username}@example.com`,
   });
   const { session } = await app.send("/auth/login", {
     username,
@@ -180,6 +190,7 @@ describe("profile synchronizations", () => {
     expect(res.profile.displayName).toBe("Alice");
     expect(res.profile.bio).toBe("");
     expect(res.profile.avatar).toBe("");
+    expect(res.profile.email).toBe("p_alice@example.com");
   });
 
   test("setDisplayName, setBio, setAvatar update the profile", async () => {

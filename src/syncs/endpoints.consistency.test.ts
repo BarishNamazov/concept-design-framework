@@ -76,6 +76,7 @@ type ExpectedPaths =
   | "/auth/logout"
   | "/auth/me"
   | "/auth/changePassword"
+  | "/auth/changeEmail"
   | "/auth/resolve"
   | "/profiles/get"
   | "/profiles/setDisplayName"
@@ -232,7 +233,7 @@ type _LoginInput = Expect<
 type _RegisterInput = Expect<
   Equal<
     ForumApi["/auth/register"]["input"],
-    { username: string; password: string; displayName: string }
+    { username: string; password: string; email: string; displayName: string }
   >
 >;
 type _ThreadListInput = Expect<

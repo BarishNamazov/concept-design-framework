@@ -30,6 +30,7 @@ export interface AuthState {
     username: string,
     password: string,
     displayName: string,
+    email: string,
   ) => Promise<void>;
   logout: () => Promise<void>;
   /** Re-reads `/auth/me` (e.g. after editing your own profile). */
@@ -98,8 +99,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const register = useCallback(
-    async (username: string, password: string, displayName: string) => {
-      unwrap(await api.auth.register({ username, password, displayName }));
+    async (
+      username: string,
+      password: string,
+      displayName: string,
+      email: string,
+    ) => {
+      unwrap(
+        await api.auth.register({ username, password, displayName, email }),
+      );
       const { session: token } = unwrap(
         await api.auth.login({ username, password }),
       );

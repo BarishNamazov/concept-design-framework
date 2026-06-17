@@ -65,6 +65,7 @@ async function makeUser(username: string) {
       username,
       password: "pw",
       displayName: username,
+      email: `${username}@example.com`,
     }),
   );
   const login = ok(await api.auth.login({ username, password: "pw" }));
@@ -80,6 +81,7 @@ describe("auth flows", () => {
         username: "alice",
         password: "pw",
         displayName: "Alice",
+        email: "alice@example.com",
       }),
     );
     expect(reg.user).toBeDefined();
@@ -110,11 +112,13 @@ describe("auth flows", () => {
       username: "bob",
       password: "pw",
       displayName: "Bob",
+      email: "bob@example.com",
     });
     const dup = await api.auth.register({
       username: "bob",
       password: "pw2",
       displayName: "Bob2",
+      email: "bob2@example.com",
     });
     expect("error" in dup).toBe(true);
   });
@@ -363,6 +367,7 @@ describe("indexed call style", () => {
         username: "leo",
         password: "pw",
         displayName: "Leo",
+        email: "leo@example.com",
       }),
     );
     const login = ok(

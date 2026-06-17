@@ -26,23 +26,53 @@ const userB = "user:Bob" as ID;
 
 describe("Profiling", () => {
   test("principle: create a profile, viewers see it, edits are reflected", async () => {
-    ok(await Profiling.createProfile({ user: userA, displayName: "Alice" }));
+    ok(
+      await Profiling.createProfile({
+        user: userA,
+        displayName: "Alice",
+        email: "alice@example.com",
+      }),
+    );
     expect(await Profiling._getProfile({ user: userA })).toEqual([
-      { profile: { displayName: "Alice", bio: "", avatar: "" } },
+      {
+        profile: {
+          displayName: "Alice",
+          bio: "",
+          avatar: "",
+          email: "alice@example.com",
+        },
+      },
     ]);
 
     ok(await Profiling.setBio({ user: userA, bio: "hi there" }));
     ok(await Profiling.setAvatar({ user: userA, avatar: "a.png" }));
     ok(await Profiling.setDisplayName({ user: userA, displayName: "Ali" }));
     expect(await Profiling._getProfile({ user: userA })).toEqual([
-      { profile: { displayName: "Ali", bio: "hi there", avatar: "a.png" } },
+      {
+        profile: {
+          displayName: "Ali",
+          bio: "hi there",
+          avatar: "a.png",
+          email: "alice@example.com",
+        },
+      },
     ]);
   });
 
   test("createProfile requires no existing profile", async () => {
-    ok(await Profiling.createProfile({ user: userA, displayName: "Alice" }));
+    ok(
+      await Profiling.createProfile({
+        user: userA,
+        displayName: "Alice",
+        email: "alice@example.com",
+      }),
+    );
     expect(
-      await Profiling.createProfile({ user: userA, displayName: "Again" }),
+      await Profiling.createProfile({
+        user: userA,
+        displayName: "Again",
+        email: "again@example.com",
+      }),
     ).toHaveProperty("error");
   });
 
@@ -59,7 +89,13 @@ describe("Profiling", () => {
   });
 
   test("deleteProfile removes the profile and requires it to exist", async () => {
-    ok(await Profiling.createProfile({ user: userA, displayName: "Alice" }));
+    ok(
+      await Profiling.createProfile({
+        user: userA,
+        displayName: "Alice",
+        email: "alice@example.com",
+      }),
+    );
     ok(await Profiling.deleteProfile({ user: userA }));
     expect(await Profiling._getProfile({ user: userA })).toEqual([]);
     expect(await Profiling.deleteProfile({ user: userA })).toHaveProperty(
@@ -68,7 +104,13 @@ describe("Profiling", () => {
   });
 
   test("_getDisplayName returns the current display name", async () => {
-    ok(await Profiling.createProfile({ user: userA, displayName: "Alice" }));
+    ok(
+      await Profiling.createProfile({
+        user: userA,
+        displayName: "Alice",
+        email: "alice@example.com",
+      }),
+    );
     expect(await Profiling._getDisplayName({ user: userA })).toEqual([
       { displayName: "Alice" },
     ]);
@@ -76,8 +118,20 @@ describe("Profiling", () => {
   });
 
   test("_getByDisplayName returns all matching users", async () => {
-    ok(await Profiling.createProfile({ user: userA, displayName: "Sam" }));
-    ok(await Profiling.createProfile({ user: userB, displayName: "Sam" }));
+    ok(
+      await Profiling.createProfile({
+        user: userA,
+        displayName: "Sam",
+        email: "sam@example.com",
+      }),
+    );
+    ok(
+      await Profiling.createProfile({
+        user: userB,
+        displayName: "Sam",
+        email: "sam2@example.com",
+      }),
+    );
     const result = await Profiling._getByDisplayName({ displayName: "Sam" });
     expect(result.map((r) => r.user).sort()).toEqual([userA, userB].sort());
     expect(await Profiling._getByDisplayName({ displayName: "None" })).toEqual(

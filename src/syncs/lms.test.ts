@@ -18,7 +18,12 @@ async function registerUser(
   password: string,
   displayName: string,
 ): Promise<{ session: string; user: ID }> {
-  await app.send("/auth/register", { username, password, displayName });
+  await app.send("/auth/register", {
+    username,
+    password,
+    displayName,
+    email: `${username}@example.com`,
+  });
   const login = await app.send("/auth/login", { username, password });
   return { session: login.session as string, user: login.user as ID };
 }

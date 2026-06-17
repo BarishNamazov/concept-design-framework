@@ -10,6 +10,7 @@ type User = ID;
  * a set of Users with
  *   a username String
  *   a password String
+ *   an email String
  *
  * Invariant: usernames are unique across the set of Users.
  */
@@ -17,6 +18,7 @@ interface UserDoc {
   _id: User;
   username: string;
   password: string;
+  email: string;
 }
 
 /**
@@ -36,26 +38,33 @@ export default class AuthenticatingConcept {
   }
 
   /**
-   * register (username: String, password: String): (user: User)
+   * register (username: String, password: String, email: String): (user: User)
    *
-   * **requires** no User with the given `username` exists
+   * **requires** no User with the given `username` exists, `email` is non-empty
+   * and contains `@`
    *
-   * **effects** creates a fresh User `u`; sets the username of `u` to `username`
-   * and the password of `u` to `password`; returns `u` as `user`
+   * **effects** creates a fresh User `u`; sets the username of `u` to `username`,
+   * the password of `u` to `password`, and the email of `u` to `email`; returns `u`
+   * as `user`
    */
   async register({
     username,
     password,
+    email,
   }: {
     username: string;
     password: string;
+    email: string;
   }): Promise<{ user: User } | { error: ForumErrorCode; detail?: string }> {
+    if (!email?.includes("@")) {
+      return { error: ForumErrorCode.INVALID_BODY };
+    }
     const existing = await this.users.findOne({ username });
     if (existing !== null) {
       return { error: ForumErrorCode.USERNAME_TAKEN, detail: username };
     }
     const user = freshID() as User;
-    await this.users.insertOne({ _id: user, username, password });
+    await this.users.insertOne({ _id: user, username, password, email });
     return { user };
   }
 
@@ -141,6 +150,31 @@ export default class AuthenticatingConcept {
   }
 
   /**
+   * changeEmail (user: User, email: String): (user: User)
+   *
+   * **requires** the given `user` exists, `email` is non-empty and contains `@`
+   *
+   * **effects** sets the email of `user` to `email`; returns `user`
+   */
+  async changeEmail({
+    user,
+    email,
+  }: {
+    user: User;
+    email: string;
+  }): Promise<{ user: User } | { error: ForumErrorCode; detail?: string }> {
+    if (!email?.includes("@")) {
+      return { error: ForumErrorCode.INVALID_BODY };
+    }
+    const doc = await this.users.findOne({ _id: user });
+    if (doc === null) {
+      return { error: ForumErrorCode.NOT_FOUND };
+    }
+    await this.users.updateOne({ _id: user }, { $set: { email } });
+    return { user };
+  }
+
+  /**
    * unregister (user: User): (user: User)
    *
    * **requires** the given `user` exists
@@ -161,15 +195,19 @@ export default class AuthenticatingConcept {
   }
 
   /**
-   * _getById (user: User): (username: String)
+   * _getById (user: User): (username: String, email: String)
    *
    * **requires** the given `user` exists
    *
-   * **effects** returns the username of `user`
+   * **effects** returns the username and email of `user`
    */
-  async _getById({ user }: { user: User }): Promise<{ username: string }[]> {
+  async _getById({
+    user,
+  }: {
+    user: User;
+  }): Promise<{ username: string; email: string }[]> {
     const doc = await this.users.findOne({ _id: user });
-    return doc === null ? [] : [{ username: doc.username }];
+    return doc === null ? [] : [{ username: doc.username, email: doc.email }];
   }
 
   /**

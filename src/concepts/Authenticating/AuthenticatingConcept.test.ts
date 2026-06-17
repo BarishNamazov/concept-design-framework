@@ -23,7 +23,11 @@ function ok<T>(result: T | { error: ForumErrorCode; detail?: string }): T {
 describe("Authenticating", () => {
   test("principle: register then authenticate recognizes the same user", async () => {
     const { user } = ok(
-      await Authenticating.register({ username: "alice", password: "pw" }),
+      await Authenticating.register({
+        username: "alice",
+        password: "pw",
+        email: "alice@example.com",
+      }),
     );
     const auth = ok(
       await Authenticating.authenticate({ username: "alice", password: "pw" }),
@@ -32,16 +36,38 @@ describe("Authenticating", () => {
   });
 
   test("register requires a unique username", async () => {
-    ok(await Authenticating.register({ username: "bob", password: "pw" }));
+    ok(
+      await Authenticating.register({
+        username: "bob",
+        password: "pw",
+        email: "bob@example.com",
+      }),
+    );
     const dup = await Authenticating.register({
       username: "bob",
       password: "other",
+      email: "bob2@example.com",
     });
     expect(dup).toHaveProperty("error");
   });
 
+  test("register requires a valid email", async () => {
+    const noAt = await Authenticating.register({
+      username: "emailtest",
+      password: "pw",
+      email: "invalid",
+    });
+    expect(noAt).toHaveProperty("error");
+  });
+
   test("authenticate rejects wrong password and unknown username", async () => {
-    ok(await Authenticating.register({ username: "carol", password: "pw" }));
+    ok(
+      await Authenticating.register({
+        username: "carol",
+        password: "pw",
+        email: "carol@example.com",
+      }),
+    );
     expect(
       await Authenticating.authenticate({ username: "carol", password: "no" }),
     ).toHaveProperty("error");
@@ -52,7 +78,11 @@ describe("Authenticating", () => {
 
   test("changePassword: old password required, new password takes effect", async () => {
     const { user } = ok(
-      await Authenticating.register({ username: "dave", password: "old" }),
+      await Authenticating.register({
+        username: "dave",
+        password: "old",
+        email: "dave@example.com",
+      }),
     );
     expect(
       await Authenticating.changePassword({
@@ -73,23 +103,70 @@ describe("Authenticating", () => {
     ).not.toHaveProperty("error");
   });
 
+  test("changeEmail: updates the email field", async () => {
+    const { user } = ok(
+      await Authenticating.register({
+        username: "emailuser",
+        password: "pw",
+        email: "old@example.com",
+      }),
+    );
+    const row = await Authenticating._getById({ user });
+    expect(row[0].email).toBe("old@example.com");
+
+    ok(await Authenticating.changeEmail({ user, email: "new@example.com" }));
+
+    const updated = await Authenticating._getById({ user });
+    expect(updated[0].email).toBe("new@example.com");
+  });
+
+  test("changeEmail: rejects invalid email", async () => {
+    const { user } = ok(
+      await Authenticating.register({
+        username: "emailbad",
+        password: "pw",
+        email: "ok@example.com",
+      }),
+    );
+    expect(
+      await Authenticating.changeEmail({ user, email: "no-at-sign" }),
+    ).toHaveProperty("error");
+    expect(
+      await Authenticating.changeEmail({ user, email: "" }),
+    ).toHaveProperty("error");
+  });
+
   test("changeUsername: must be unique, and lookups reflect the change", async () => {
     const { user } = ok(
-      await Authenticating.register({ username: "eve", password: "pw" }),
+      await Authenticating.register({
+        username: "eve",
+        password: "pw",
+        email: "eve@example.com",
+      }),
     );
-    ok(await Authenticating.register({ username: "taken", password: "pw" }));
+    ok(
+      await Authenticating.register({
+        username: "taken",
+        password: "pw",
+        email: "taken@example.com",
+      }),
+    );
     expect(
       await Authenticating.changeUsername({ user, username: "taken" }),
     ).toHaveProperty("error");
     ok(await Authenticating.changeUsername({ user, username: "evelyn" }));
     expect(await Authenticating._getById({ user })).toEqual([
-      { username: "evelyn" },
+      { username: "evelyn", email: "eve@example.com" },
     ]);
   });
 
   test("unregister removes the user", async () => {
     const { user } = ok(
-      await Authenticating.register({ username: "frank", password: "pw" }),
+      await Authenticating.register({
+        username: "frank",
+        password: "pw",
+        email: "frank@example.com",
+      }),
     );
     ok(await Authenticating.unregister({ user }));
     expect(await Authenticating._getById({ user })).toEqual([]);
@@ -98,7 +175,11 @@ describe("Authenticating", () => {
 
   test("queries: lookup by username and existence", async () => {
     const { user } = ok(
-      await Authenticating.register({ username: "grace", password: "pw" }),
+      await Authenticating.register({
+        username: "grace",
+        password: "pw",
+        email: "grace@example.com",
+      }),
     );
     expect(await Authenticating._getByUsername({ username: "grace" })).toEqual([
       { user },
@@ -117,8 +198,20 @@ describe("Authenticating", () => {
   test("_getUserCount returns the number of registered users", async () => {
     expect(await Authenticating._getUserCount()).toEqual([{ count: 0 }]);
 
-    ok(await Authenticating.register({ username: "heidi", password: "pw" }));
-    ok(await Authenticating.register({ username: "ivan", password: "pw" }));
+    ok(
+      await Authenticating.register({
+        username: "heidi",
+        password: "pw",
+        email: "heidi@example.com",
+      }),
+    );
+    ok(
+      await Authenticating.register({
+        username: "ivan",
+        password: "pw",
+        email: "ivan@example.com",
+      }),
+    );
 
     expect(await Authenticating._getUserCount()).toEqual([{ count: 2 }]);
   });

@@ -17,6 +17,7 @@ async function registerAndLogin(username: string): Promise<string> {
     username,
     password: "pw",
     displayName: username,
+    email: `${username}@example.com`,
   });
   const { session } = await app.send("/auth/login", {
     username,

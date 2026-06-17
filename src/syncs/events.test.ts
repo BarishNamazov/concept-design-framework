@@ -21,6 +21,7 @@ async function signUp(
     username,
     password: "pw",
     displayName,
+    email: `${username}@example.com`,
   });
   const { session } = await app.send("/auth/login", {
     username,
