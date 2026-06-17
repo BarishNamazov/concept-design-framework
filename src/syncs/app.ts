@@ -8,8 +8,19 @@ import { authApi, InvalidSession } from "./auth.sync.ts";
 import { bookmarksApi } from "./bookmarks.sync.ts";
 import { categoriesApi } from "./categories.sync.ts";
 import { eventSyncs } from "./events.sync.ts";
+import { eventSyncs as lmsEventSyncs } from "./events.lms.ts";
 import { flagsApi } from "./flags.sync.ts";
 import { linksApi } from "./links.sync.ts";
+import {
+  assignmentsApi,
+  calendarApi,
+  gradesApi,
+  lateDaysApi,
+  lmsApi,
+  rosterApi,
+  studentsApi,
+  submissionsApi,
+} from "./lms.sync.ts";
 import { locksApi } from "./locks.sync.ts";
 import { notificationsApi } from "./notifications.sync.ts";
 import { pinsApi } from "./pins.sync.ts";
@@ -46,11 +57,20 @@ export const api = {
   locks: locksApi,
   revisions: revisionsApi,
   users: usersApi,
+  roster: rosterApi,
+  assignments: assignmentsApi,
+  submissions: submissionsApi,
+  lateDays: lateDaysApi,
+  grades: gradesApi,
+  students: studentsApi,
+  lms: lmsApi,
+  calendar: calendarApi,
 };
 
 export const syncs = {
   ...syncMap(api),
   ...eventSyncs,
+  ...lmsEventSyncs,
   InvalidSession,
 };
 

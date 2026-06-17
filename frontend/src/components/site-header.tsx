@@ -2,7 +2,12 @@
 
 import {
   Bell,
+  BookOpen,
   Bookmark,
+  CalendarDays,
+  Clock,
+  FileText,
+  GraduationCap,
   LayoutGrid,
   LogOut,
   Menu,
@@ -10,11 +15,13 @@ import {
   Settings,
   Shield,
   Sparkles,
+  StickyNote,
   User,
+  Users,
   Wrench,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NotificationBell } from "@/components/forum/notification-bell";
 import { UserAvatar } from "@/components/forum/user-avatar";
 import { Link } from "@/components/link";
@@ -28,6 +35,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -36,10 +44,44 @@ const NAV = [
   { href: "/categories", label: "Categories", icon: LayoutGrid },
 ];
 
+const STUDENT_NAV = [
+  { href: "/assignments", label: "Assignments", icon: BookOpen },
+  { href: "/grades", label: "Grades", icon: GraduationCap },
+  { href: "/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/notes", label: "Notes", icon: StickyNote },
+];
+
+const STAFF_NAV = [
+  { href: "/staff", label: "Dashboard", icon: Sparkles },
+  { href: "/staff/roster", label: "Roster", icon: Users },
+  { href: "/staff/assignments", label: "Assignments", icon: BookOpen },
+  { href: "/staff/gradebook", label: "Gradebook", icon: FileText },
+  { href: "/staff/late-days", label: "Late Days", icon: Clock },
+  { href: "/staff/calendar", label: "Calendar", icon: CalendarDays },
+];
+
 export function SiteHeader() {
-  const { me, loading, can, logout } = useAuth();
+  const { me, loading, can, logout, session } = useAuth();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [hasRosterSeat, setHasRosterSeat] = useState(false);
+  const [isStaff, setIsStaff] = useState(false);
+
+  useEffect(() => {
+    if (!session) {
+      setHasRosterSeat(false);
+      setIsStaff(false);
+      return;
+    }
+    api.roster.me({ session }).then((r) => {
+      if ("error" in r) return;
+      if (r.seat) {
+        setHasRosterSeat(true);
+        const s = r.seat as { kind?: string };
+        setIsStaff(s.kind === "STAFF");
+      }
+    });
+  }, [session]);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -63,6 +105,29 @@ export function SiteHeader() {
               href={item.href}
               className={cn(
                 "rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                isActive(item.href) && "bg-muted text-foreground",
+              )}
+            >
+              {item.label}
+            </Link>
+          ))}
+          {hasRosterSeat && isStaff && (
+            <Link
+              href="/staff"
+              className={cn(
+                "rounded-md px-3 py-2 text-sm font-medium text-primary/80 transition-colors hover:bg-primary/10 hover:text-primary",
+                pathname.startsWith("/staff") && "bg-primary/10 text-primary",
+              )}
+            >
+              Staff
+            </Link>
+          )}
+          {hasRosterSeat && STUDENT_NAV.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
                 isActive(item.href) && "bg-muted text-foreground",
               )}
             >
@@ -136,6 +201,35 @@ export function SiteHeader() {
                     </Link>
                   </DropdownMenuItem>
                 ) : null}
+                {hasRosterSeat && isStaff ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                      LMS Staff
+                    </DropdownMenuLabel>
+                    {STAFF_NAV.map((item) => (
+                      <DropdownMenuItem key={item.href} asChild>
+                        <Link href={item.href}>
+                          <item.icon className="size-4" /> {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </>
+                ) : hasRosterSeat && !isStaff ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                      LMS
+                    </DropdownMenuLabel>
+                    {STUDENT_NAV.map((item) => (
+                      <DropdownMenuItem key={item.href} asChild>
+                        <Link href={item.href}>
+                          <item.icon className="size-4" /> {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </>
+                ) : null}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => logout()}>
                   <LogOut className="size-4" /> Sign out
@@ -178,6 +272,32 @@ export function SiteHeader() {
                 <item.icon className="size-4" /> {item.label}
               </Link>
             ))}
+            {hasRosterSeat && (
+              <>
+                <div className="mt-2 mb-1 px-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">LMS</p>
+                </div>
+                {isStaff && (
+                  <Link
+                    href="/staff"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-primary/80 hover:bg-primary/10"
+                  >
+                    <Sparkles className="size-4" /> Staff Dashboard
+                  </Link>
+                )}
+                {STUDENT_NAV.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
+                  >
+                    <item.icon className="size-4" /> {item.label}
+                  </Link>
+                ))}
+              </>
+            )}
             <Link
               href="/new"
               onClick={() => setMobileOpen(false)}
