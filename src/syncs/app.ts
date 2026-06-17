@@ -7,8 +7,8 @@ import type { ID } from "@utils/types.ts";
 import { authApi, InvalidSession } from "./auth.sync.ts";
 import { bookmarksApi } from "./bookmarks.sync.ts";
 import { categoriesApi } from "./categories.sync.ts";
-import { eventSyncs } from "./events.sync.ts";
 import { eventSyncs as lmsEventSyncs } from "./events.lms.ts";
+import { eventSyncs } from "./events.sync.ts";
 import { flagsApi } from "./flags.sync.ts";
 import { linksApi } from "./links.sync.ts";
 import {

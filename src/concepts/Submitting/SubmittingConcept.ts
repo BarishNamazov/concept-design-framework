@@ -77,7 +77,7 @@ export default class SubmittingConcept {
       .sort({ number: -1 })
       .limit(1)
       .toArray();
-    const number = latest.length > 0 ? latest[0]!.number + 1 : 1;
+    const number = latest.length > 0 ? latest[0]?.number + 1 : 1;
     const submission = freshID() as Submission;
     const submittedAt: Date = new Date();
     await this.submissions.insertOne({
@@ -153,11 +153,7 @@ export default class SubmittingConcept {
    * **effects** returns the full details of the given submission, or an empty
    * array if not found
    */
-  async _getSubmission({
-    submission,
-  }: {
-    submission: Submission;
-  }): Promise<
+  async _getSubmission({ submission }: { submission: Submission }): Promise<
     {
       submission: Submission;
       assignment: Assignment;

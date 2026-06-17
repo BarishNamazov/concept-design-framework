@@ -1,8 +1,8 @@
 "use client";
 
 import { CalendarDays } from "lucide-react";
+import { fullTime, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { relativeTime, fullTime } from "@/lib/format";
 
 interface CalendarEvent {
   date: string;
@@ -19,7 +19,12 @@ interface CalendarViewProps {
 export function CalendarView({ events, className }: CalendarViewProps) {
   if (events.length === 0) {
     return (
-      <div className={cn("flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground", className)}>
+      <div
+        className={cn(
+          "flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground",
+          className,
+        )}
+      >
         <CalendarDays className="size-6" />
         <p className="text-sm">No events in this range.</p>
       </div>
@@ -44,14 +49,22 @@ export function CalendarView({ events, className }: CalendarViewProps) {
             )}
           >
             <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border bg-card text-xs font-medium">
-              {date.toLocaleDateString("en", { month: "short", day: "numeric" })}
+              {date.toLocaleDateString("en", {
+                month: "short",
+                day: "numeric",
+              })}
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium truncate">{event.label}</p>
               {event.detail && (
-                <p className="text-xs text-muted-foreground truncate">{event.detail}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {event.detail}
+                </p>
               )}
-              <p className="text-xs text-muted-foreground mt-0.5" title={fullTime(event.date)}>
+              <p
+                className="text-xs text-muted-foreground mt-0.5"
+                title={fullTime(event.date)}
+              >
                 {relativeTime(event.date)}
               </p>
             </div>

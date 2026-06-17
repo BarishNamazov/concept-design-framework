@@ -157,15 +157,23 @@ export const NotifyOnMention: Sync = ({
     for (const frame of frames) {
       const postId = frame[post] as ID;
       const [nodeRow] = await Conversing._getNodeByItem({ item: postId });
-      if (!nodeRow) { kept.push(frame); continue; }
+      if (!nodeRow) {
+        kept.push(frame);
+        continue;
+      }
       const [parentRow] = await Conversing._getParent({ node: nodeRow.node });
-      if (!parentRow) { kept.push(frame); continue; }
+      if (!parentRow) {
+        kept.push(frame);
+        continue;
+      }
       const [itemRow] = await Conversing._getItem({ node: parentRow.parent });
-      if (!itemRow) { kept.push(frame); continue; }
+      if (!itemRow) {
+        kept.push(frame);
+        continue;
+      }
       const [authorRow] = await Posting._getAuthor({ post: itemRow.item });
       if (!authorRow || authorRow.author !== (frame[mentioned] as ID)) {
         kept.push(frame);
-        continue;
       }
       // Skip: parent author is already notified via NotifyOnReply.
     }

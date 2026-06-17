@@ -18,7 +18,7 @@ import { useAuth } from "@/lib/auth";
 
 interface AssignmentFormProps {
   onSaved: () => void;
-    existing?: {
+  existing?: {
     assignment: string;
     title: string;
     instructions: string;
@@ -34,14 +34,22 @@ interface AssignmentFormProps {
   onCancel?: () => void;
 }
 
-export function AssignmentForm({ onSaved, existing, onCancel }: AssignmentFormProps) {
+export function AssignmentForm({
+  onSaved,
+  existing,
+  onCancel,
+}: AssignmentFormProps) {
   const { session } = useAuth();
   const [title, setTitle] = useState(existing?.title ?? "");
-  const [instructions, setInstructions] = useState(existing?.instructions ?? "");
+  const [instructions, setInstructions] = useState(
+    existing?.instructions ?? "",
+  );
   const [kind, setKind] = useState(existing?.kind ?? "HOMEWORK");
   const [availableAt, setAvailableAt] = useState(
     existing?.availableAt
-      ? new Date(existing.availableAt as unknown as string).toISOString().slice(0, 16)
+      ? new Date(existing.availableAt as unknown as string)
+          .toISOString()
+          .slice(0, 16)
       : new Date().toISOString().slice(0, 16),
   );
   const [dueAt, setDueAt] = useState(
@@ -51,7 +59,9 @@ export function AssignmentForm({ onSaved, existing, onCancel }: AssignmentFormPr
   );
   const [closeAt, setCloseAt] = useState(
     existing?.closeAt
-      ? new Date(existing.closeAt as unknown as string).toISOString().slice(0, 16)
+      ? new Date(existing.closeAt as unknown as string)
+          .toISOString()
+          .slice(0, 16)
       : "",
   );
   const [acceptsSubmissions, setAcceptsSubmissions] = useState(
@@ -78,7 +88,10 @@ export function AssignmentForm({ onSaved, existing, onCancel }: AssignmentFormPr
     };
 
     const result = existing
-      ? await api.assignments.revise({ ...payload, assignment: existing.assignment })
+      ? await api.assignments.revise({
+          ...payload,
+          assignment: existing.assignment,
+        })
       : await api.assignments["create-draft"](payload);
 
     setLoading(false);
@@ -121,7 +134,11 @@ export function AssignmentForm({ onSaved, existing, onCancel }: AssignmentFormPr
 
         <div className="space-y-2">
           <Label htmlFor="asgn-audience">Audience</Label>
-          <Select value={audience} onValueChange={setAudience} disabled={loading}>
+          <Select
+            value={audience}
+            onValueChange={setAudience}
+            disabled={loading}
+          >
             <SelectTrigger id="asgn-audience">
               <SelectValue />
             </SelectTrigger>
@@ -157,7 +174,9 @@ export function AssignmentForm({ onSaved, existing, onCancel }: AssignmentFormPr
         <div className="space-y-2">
           <Label htmlFor="asgn-close">
             Close at{" "}
-            <span className="text-muted-foreground font-normal">(optional)</span>
+            <span className="text-muted-foreground font-normal">
+              (optional)
+            </span>
           </Label>
           <Input
             id="asgn-close"

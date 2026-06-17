@@ -223,7 +223,9 @@ export default class RosteringConcept {
   }): Promise<{ seat: SeatDoc } | { error: string }> {
     const existing = await this.seats.findOne({ externalKey });
     if (existing !== null) {
-      return { error: `A seat with externalKey "${externalKey}" already exists.` };
+      return {
+        error: `A seat with externalKey "${externalKey}" already exists.`,
+      };
     }
     const _id = freshID() as Seat;
     const doc: SeatDoc = {
@@ -317,10 +319,7 @@ export default class RosteringConcept {
     if (doc.status !== "ACTIVE") {
       return { error: "Seat is not in ACTIVE status." };
     }
-    await this.seats.updateOne(
-      { _id: seat },
-      { $set: { status: "DROPPED" } },
-    );
+    await this.seats.updateOne({ _id: seat }, { $set: { status: "DROPPED" } });
     return { seat: { ...doc, status: "DROPPED" } };
   }
 
@@ -343,10 +342,7 @@ export default class RosteringConcept {
     if (doc.status !== "DROPPED") {
       return { error: "Seat is not in DROPPED status." };
     }
-    await this.seats.updateOne(
-      { _id: seat },
-      { $set: { status: "ACTIVE" } },
-    );
+    await this.seats.updateOne({ _id: seat }, { $set: { status: "ACTIVE" } });
     return { seat: { ...doc, status: "ACTIVE" } };
   }
 
@@ -404,7 +400,13 @@ export default class RosteringConcept {
    * if none exists
    */
   async _getClass(): Promise<
-    { code: string; title: string; term: string; timezone: string; status: "ACTIVE" | "ARCHIVED" }[]
+    {
+      code: string;
+      title: string;
+      term: string;
+      timezone: string;
+      status: "ACTIVE" | "ARCHIVED";
+    }[]
   > {
     const doc = await this.class_.findOne({});
     if (doc === null) return [];
@@ -455,11 +457,7 @@ export default class RosteringConcept {
    *
    * **effects** returns the Seat details for the given `seat` id
    */
-  async _getSeat({
-    seat,
-  }: {
-    seat: Seat;
-  }): Promise<
+  async _getSeat({ seat }: { seat: Seat }): Promise<
     {
       seat: Seat;
       user?: User;
@@ -496,11 +494,7 @@ export default class RosteringConcept {
    *
    * **effects** returns the Seat associated with the given `user`
    */
-  async _getSeatByUser({
-    user,
-  }: {
-    user: User;
-  }): Promise<
+  async _getSeatByUser({ user }: { user: User }): Promise<
     {
       seat: Seat;
       user: User;
@@ -515,7 +509,7 @@ export default class RosteringConcept {
     const docs = await this.seats.find({ user }).toArray();
     return docs.map((doc) => ({
       seat: doc._id,
-      user: doc.user!,
+      user: doc.user as ID,
       externalKey: doc.externalKey,
       email: doc.email,
       rosterName: doc.rosterName,
@@ -588,7 +582,7 @@ export default class RosteringConcept {
   > {
     const docs = await this.seats.find({ status: "ACTIVE" }).toArray();
     return docs.map((doc) => ({
-      user: doc.user!,
+      user: doc.user as ID,
       seat: doc._id,
       kind: doc.kind,
       section: doc.section ?? undefined,
@@ -618,7 +612,7 @@ export default class RosteringConcept {
       .find({ status: "ACTIVE", kind: "STUDENT" })
       .toArray();
     return docs.map((doc) => ({
-      user: doc.user!,
+      user: doc.user as ID,
       seat: doc._id,
       section: doc.section ?? undefined,
       rosterName: doc.rosterName,
@@ -638,14 +632,12 @@ export default class RosteringConcept {
     section,
   }: {
     section: Section;
-  }): Promise<
-    { user: User; seat: Seat; rosterName: string; email: string }[]
-  > {
+  }): Promise<{ user: User; seat: Seat; rosterName: string; email: string }[]> {
     const docs = await this.seats
       .find({ status: "ACTIVE", kind: "STUDENT", section })
       .toArray();
     return docs.map((doc) => ({
-      user: doc.user!,
+      user: doc.user as ID,
       seat: doc._id,
       rosterName: doc.rosterName,
       email: doc.email,

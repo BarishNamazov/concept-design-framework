@@ -206,10 +206,18 @@ export class SyncConcept {
     sync: Synchronization,
     actionSymbols: symbol[],
   ): Promise<void> {
-    const thens: [InstrumentedAction, ActionArguments][] = [];
+    const thens: [InstrumentedAction, ActionArguments, ActionRecord[]][] = [];
 
     for (const frame of frames) {
-      const whenActions = this.resolveWhenActions(frame, actionSymbols);
+      let whenActions: ActionRecord[];
+      try {
+        whenActions = this.resolveWhenActions(frame, actionSymbols);
+      } catch (err) {
+        console.warn(
+          `Sync "${sync.sync}": skipping frame — ${err instanceof Error ? err.message : String(err)}`,
+        );
+        continue;
+      }
 
       for (const then of sync.then) {
         const matched = this.matchThen(then, frame);
@@ -220,11 +228,11 @@ export class SyncConcept {
         for (const whenAction of whenActions) {
           whenAction.synced?.set(sync.sync, id);
         }
-        thens.push([then.action, matched]);
+        thens.push([then.action, matched, whenActions]);
       }
     }
 
-    for (const [thenAction, thenRecord] of thens) {
+    for (const [thenAction, thenRecord, whenActions] of thens) {
       if (this.logging === Logging.VERBOSE) {
         console.log(`${sync.sync}: THEN ${thenAction}`, thenRecord);
       }
@@ -235,6 +243,9 @@ export class SyncConcept {
         await runThen(thenRecord);
       } catch (err) {
         console.error(`Error in then action ${String(thenAction)}:`, err);
+        for (const whenAction of whenActions) {
+          whenAction.synced?.delete(sync.sync);
+        }
       }
     }
   }

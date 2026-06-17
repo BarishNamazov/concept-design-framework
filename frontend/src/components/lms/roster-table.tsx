@@ -1,7 +1,12 @@
 "use client";
 
+import {
+  ArrowLeftRight,
+  MoreHorizontal,
+  UserMinus,
+  UserPlus,
+} from "lucide-react";
 import { useState } from "react";
-import { MoreHorizontal, Pencil, Trash2, UserPlus, UserMinus, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
 import { StatusBadge } from "@/components/lms/status-badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +22,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -26,7 +30,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -56,7 +67,10 @@ interface RosterTableProps {
 
 export function RosterTable({ members, sections, onUpdate }: RosterTableProps) {
   const { session } = useAuth();
-  const [moveSeat, setMoveSeat] = useState<{ seat: string; name: string } | null>(null);
+  const [moveSeat, setMoveSeat] = useState<{
+    seat: string;
+    name: string;
+  } | null>(null);
   const [targetSection, setTargetSection] = useState("");
 
   async function dropSeat(seat: string) {
@@ -111,7 +125,10 @@ export function RosterTable({ members, sections, onUpdate }: RosterTableProps) {
           <TableBody>
             {members.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell
+                  colSpan={6}
+                  className="text-center text-muted-foreground py-8"
+                >
                   No roster members.
                 </TableCell>
               </TableRow>
@@ -120,19 +137,29 @@ export function RosterTable({ members, sections, onUpdate }: RosterTableProps) {
                 const sec = sections.find((s) => s.section === m.section);
                 return (
                   <TableRow key={m.seat}>
-                    <TableCell className="font-medium text-sm">{m.rosterName}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{m.email}</TableCell>
+                    <TableCell className="font-medium text-sm">
+                      {m.rosterName}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {m.email}
+                    </TableCell>
                     <TableCell>
                       <StatusBadge status={m.kind} />
                     </TableCell>
-                    <TableCell className="text-xs">{sec?.name ?? "—"}</TableCell>
+                    <TableCell className="text-xs">
+                      {sec?.name ?? "—"}
+                    </TableCell>
                     <TableCell>
                       <StatusBadge status={m.status ?? "ACTIVE"} />
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="size-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                          >
                             <MoreHorizontal className="size-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -140,11 +167,15 @@ export function RosterTable({ members, sections, onUpdate }: RosterTableProps) {
                           <DropdownMenuItem onClick={() => dropSeat(m.seat)}>
                             <UserMinus className="size-4" /> Drop
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => reinstateSeat(m.seat)}>
+                          <DropdownMenuItem
+                            onClick={() => reinstateSeat(m.seat)}
+                          >
                             <UserPlus className="size-4" /> Reinstate
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => setMoveSeat({ seat: m.seat, name: m.rosterName })}
+                            onClick={() =>
+                              setMoveSeat({ seat: m.seat, name: m.rosterName })
+                            }
                           >
                             <ArrowLeftRight className="size-4" /> Move Section
                           </DropdownMenuItem>

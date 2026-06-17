@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "bun test src/",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint"
   },
   "dependencies": {

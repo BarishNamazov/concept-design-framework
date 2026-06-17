@@ -1,9 +1,9 @@
 "use client";
 
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import { LoadingState, ErrorState, EmptyState } from "@/components/forum/states";
 import { PageContainer, PageHeader } from "@/components/forum/page";
+import { ErrorState, LoadingState } from "@/components/forum/states";
 import { CalendarView } from "@/components/lms/calendar-view";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@/hooks/use-query";
@@ -36,42 +36,52 @@ export default function CalendarPage() {
     [session],
   );
 
-  const { data: calendarData, loading, error, refetch } = useQuery<{
+  const {
+    data: calendarData,
+    loading,
+    error,
+    refetch,
+  } = useQuery<{
     events: { assignment: string }[];
   }>(
-    session && rosterData && rosterData.seat
+    session && rosterData?.seat
       ? () => api.calendar.me({ session, start, end })
       : null,
     [session, rosterData, start, end],
   );
 
   const { data: detailsData } = useQuery<Record<string, unknown>>(
-    calendarData && calendarData.events ? async () => {
-      const map: Record<string, unknown> = {};
-      await Promise.all(
-        calendarData.events.map(async (e) => {
-          const key = e.assignment;
-          if (!map[key]) {
-            const res = await api.assignments.get({ assignment: key });
-            if (!("error" in res)) map[key] = res.assignment;
-          }
-        }),
-      );
-      return map;
-    } : null,
+    calendarData?.events
+      ? async () => {
+          const map: Record<string, unknown> = {};
+          await Promise.all(
+            calendarData.events.map(async (e) => {
+              const key = e.assignment;
+              if (!map[key]) {
+                const res = await api.assignments.get({ assignment: key });
+                if (!("error" in res)) map[key] = res.assignment;
+              }
+            }),
+          );
+          return map;
+        }
+      : null,
     [calendarData],
   );
 
-  const details = (detailsData ?? {}) as Record<string, {
-    title: string;
-    kind: string;
-    availableAt: string;
-    dueAt: string;
-    closeAt?: string;
-    status: string;
-  }>;
+  const details = (detailsData ?? {}) as Record<
+    string,
+    {
+      title: string;
+      kind: string;
+      availableAt: string;
+      dueAt: string;
+      closeAt?: string;
+      status: string;
+    }
+  >;
 
-  const events = (calendarData?.events ?? []).map((e) => {
+  const events = (calendarData?.events ?? []).flatMap((e) => {
     const d = details[e.assignment];
     const name = d?.title ?? e.assignment.slice(0, 8);
     return [
@@ -99,8 +109,13 @@ export default function CalendarPage() {
             detail: d.kind,
           }
         : null,
-    ].filter(Boolean) as { date: string; label: string; kind?: string; detail?: string }[];
-  }).flat();
+    ].filter(Boolean) as {
+      date: string;
+      label: string;
+      kind?: string;
+      detail?: string;
+    }[];
+  });
 
   return (
     <PageContainer>
@@ -130,11 +145,7 @@ export default function CalendarPage() {
           </Button>
         </div>
         <span className="text-sm font-medium">{label}</span>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setWeekOffset(0)}
-        >
+        <Button variant="ghost" size="sm" onClick={() => setWeekOffset(0)}>
           Today
         </Button>
       </div>

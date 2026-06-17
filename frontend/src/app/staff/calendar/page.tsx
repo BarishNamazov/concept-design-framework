@@ -1,9 +1,9 @@
 "use client";
 
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import { LoadingState, ErrorState } from "@/components/forum/states";
 import { PageContainer, PageHeader } from "@/components/forum/page";
+import { ErrorState, LoadingState } from "@/components/forum/states";
 import { CalendarView } from "@/components/lms/calendar-view";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,57 +43,83 @@ export default function StaffCalendarPage() {
     sections: { section: string; name: string }[];
   }>(() => api.roster["sections/list"]({}), []);
 
-  const { data: calendarData, loading, error, refetch } = useQuery<{
+  const {
+    data: calendarData,
+    loading,
+    error,
+    refetch,
+  } = useQuery<{
     events: { assignment: string }[];
   }>(
     session
-      ? () => api.calendar.staff({
-          session,
-          start,
-          end,
-          section: sectionFilter !== "all" ? sectionFilter : undefined,
-        })
+      ? () =>
+          api.calendar.staff({
+            session,
+            start,
+            end,
+            section: sectionFilter !== "all" ? sectionFilter : undefined,
+          })
       : null,
     [session, start, end, sectionFilter],
   );
 
   const { data: detailsData } = useQuery<Record<string, unknown>>(
-    calendarData && calendarData.events ? async () => {
-      const map: Record<string, unknown> = {};
-      await Promise.all(
-        calendarData.events.map(async (e) => {
-          const key = e.assignment;
-          if (!map[key]) {
-            const res = await api.assignments.get({ assignment: key });
-            if (!("error" in res)) map[key] = res.assignment;
-          }
-        }),
-      );
-      return map;
-    } : null,
+    calendarData?.events
+      ? async () => {
+          const map: Record<string, unknown> = {};
+          await Promise.all(
+            calendarData.events.map(async (e) => {
+              const key = e.assignment;
+              if (!map[key]) {
+                const res = await api.assignments.get({ assignment: key });
+                if (!("error" in res)) map[key] = res.assignment;
+              }
+            }),
+          );
+          return map;
+        }
+      : null,
     [calendarData],
   );
 
-  const details = (detailsData ?? {}) as Record<string, {
-    title: string;
-    kind: string;
-    dueAt: string;
-    closeAt?: string;
-    status: string;
-  }>;
+  const details = (detailsData ?? {}) as Record<
+    string,
+    {
+      title: string;
+      kind: string;
+      dueAt: string;
+      closeAt?: string;
+      status: string;
+    }
+  >;
 
-  const events = (calendarData?.events ?? []).map((e) => {
+  const events = (calendarData?.events ?? []).flatMap((e) => {
     const d = details[e.assignment];
     const name = d?.title ?? e.assignment.slice(0, 8);
     return [
       d?.dueAt
-        ? { date: d.dueAt as unknown as string, label: `Due: ${name}`, kind: "due", detail: d.kind }
+        ? {
+            date: d.dueAt as unknown as string,
+            label: `Due: ${name}`,
+            kind: "due",
+            detail: d.kind,
+          }
         : null,
       d?.closeAt
-        ? { date: d.closeAt as unknown as string, label: `Closes: ${name}`, kind: "close", detail: d.kind }
+        ? {
+            date: d.closeAt as unknown as string,
+            label: `Closes: ${name}`,
+            kind: "close",
+            detail: d.kind,
+          }
         : null,
-    ].filter(Boolean) as { date: string; label: string; kind?: string; detail?: string }[];
-  }).flat();
+    ].filter(Boolean) as {
+      date: string;
+      label: string;
+      kind?: string;
+      detail?: string;
+    }[];
+  });
 
   const sections = sectionsData?.sections ?? [];
 
@@ -107,10 +133,20 @@ export default function StaffCalendarPage() {
 
       <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="size-8" onClick={() => setWeekOffset((w) => w - 1)}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-8"
+            onClick={() => setWeekOffset((w) => w - 1)}
+          >
             <ChevronLeft className="size-4" />
           </Button>
-          <Button variant="outline" size="icon" className="size-8" onClick={() => setWeekOffset((w) => w + 1)}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-8"
+            onClick={() => setWeekOffset((w) => w + 1)}
+          >
             <ChevronRight className="size-4" />
           </Button>
         </div>
@@ -125,11 +161,15 @@ export default function StaffCalendarPage() {
               {sections
                 .filter((s) => s.status === "ACTIVE")
                 .map((s) => (
-                  <SelectItem key={s.section} value={s.section}>{s.name}</SelectItem>
+                  <SelectItem key={s.section} value={s.section}>
+                    {s.name}
+                  </SelectItem>
                 ))}
             </SelectContent>
           </Select>
-          <Button variant="ghost" size="sm" onClick={() => setWeekOffset(0)}>Today</Button>
+          <Button variant="ghost" size="sm" onClick={() => setWeekOffset(0)}>
+            Today
+          </Button>
         </div>
       </div>
 

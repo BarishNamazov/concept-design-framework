@@ -1,13 +1,16 @@
 "use client";
 
+import { BookOpen, Plus } from "lucide-react";
 import { useState } from "react";
-import { Plus, BookOpen } from "lucide-react";
-import { toast } from "sonner";
-import { LoadingState, ErrorState, EmptyState } from "@/components/forum/states";
 import { PageContainer, PageHeader } from "@/components/forum/page";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/forum/states";
+import { Link } from "@/components/link";
 import { AssignmentForm } from "@/components/lms/assignment-form";
 import { StatusBadge } from "@/components/lms/status-badge";
-import { Link } from "@/components/link";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,7 +21,7 @@ import {
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { relativeTime, fullTime } from "@/lib/format";
+import { fullTime } from "@/lib/format";
 
 const KIND_LABELS: Record<string, string> = {
   HOMEWORK: "Homework",
@@ -35,19 +38,36 @@ export default function StaffAssignmentsPage() {
 
   const { data: rosterData } = useQuery<{
     dashboard: { user: string; seat: string; kind: string }[];
-  }>(
-    session ? () => api.lms["staff-dashboard"]({ session }) : null,
-    [session],
-  );
+  }>(session ? () => api.lms["staff-dashboard"]({ session }) : null, [session]);
 
-  const { data: asgnData, loading, error, refetch } = useQuery<{
-    assignments: { assignment: string; title: string; kind: string; status: string; dueAt: string; availableAt: string; audience: string }[];
-  }>(
-    async () => {
-      return { assignments: [] as { assignment: string; title: string; kind: string; status: string; dueAt: string; availableAt: string; audience: string }[] };
-    },
-    [],
-  );
+  const {
+    data: asgnData,
+    loading,
+    error,
+    refetch,
+  } = useQuery<{
+    assignments: {
+      assignment: string;
+      title: string;
+      kind: string;
+      status: string;
+      dueAt: string;
+      availableAt: string;
+      audience: string;
+    }[];
+  }>(async () => {
+    return {
+      assignments: [] as {
+        assignment: string;
+        title: string;
+        kind: string;
+        status: string;
+        dueAt: string;
+        availableAt: string;
+        audience: string;
+      }[],
+    };
+  }, []);
 
   const filters = [
     { key: "all", label: "All" },
@@ -57,9 +77,10 @@ export default function StaffAssignmentsPage() {
   ];
 
   const assignments = asgnData?.assignments ?? [];
-  const filtered = filter === "all"
-    ? assignments
-    : assignments.filter((a) => a.status === filter);
+  const filtered =
+    filter === "all"
+      ? assignments
+      : assignments.filter((a) => a.status === filter);
 
   return (
     <PageContainer>
@@ -118,7 +139,8 @@ export default function StaffAssignmentsPage() {
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Due: {fullTime(a.dueAt)} | Audience: {a.audience.toLowerCase()}
+                  Due: {fullTime(a.dueAt)} | Audience:{" "}
+                  {a.audience.toLowerCase()}
                 </p>
               </div>
               <StatusBadge status={a.status} />

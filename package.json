@@ -7,12 +7,13 @@
   "scripts": {
     "start": "bun run src/main.ts",
     "example-client": "bun run example-client/server.ts",
-    "test": "bun test",
+    "test": "bun test src/",
     "typecheck": "tsc --noEmit",
     "format": "biome format --write .",
     "lint": "biome lint .",
     "check": "biome check .",
-    "check:write": "biome check --write ."
+    "check:write": "biome check --write .",
+    "check:all": "bun run typecheck && bun run lint && bun run test"
   },
   "dependencies": {
     "marked": "^18.0.4",

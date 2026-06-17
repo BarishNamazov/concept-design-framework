@@ -1,13 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { Clock, Plus } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { LoadingState, ErrorState, EmptyState } from "@/components/forum/states";
 import { PageContainer, PageHeader } from "@/components/forum/page";
-import { StatusBadge } from "@/components/lms/status-badge";
+import { EmptyState } from "@/components/forum/states";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -16,30 +14,27 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { relativeTime } from "@/lib/format";
 
 export default function LateDaysAdminPage() {
   const { session } = useAuth();
 
   const { data: rosterData } = useQuery<{
-    dashboard: { user: string; seat: string; kind: string; rosterName: string }[];
-  }>(
-    session ? () => api.lms["staff-dashboard"]({ session }) : null,
-    [session],
-  );
+    dashboard: {
+      user: string;
+      seat: string;
+      kind: string;
+      rosterName: string;
+    }[];
+  }>(session ? () => api.lms["staff-dashboard"]({ session }) : null, [session]);
 
-  const [grantDialog, setGrantDialog] = useState<{ learner: string; name: string } | null>(null);
+  const [grantDialog, setGrantDialog] = useState<{
+    learner: string;
+    name: string;
+  } | null>(null);
   const [grantDays, setGrantDays] = useState(1);
   const [grantReason, setGrantReason] = useState("");
   const [grantLoading, setGrantLoading] = useState(false);
@@ -47,10 +42,15 @@ export default function LateDaysAdminPage() {
   const { data: balances, refetch: refetchBalances } = useQuery<
     Record<string, { granted: number; used: number; remaining: number }>
   >(
-    rosterData && rosterData.dashboard
+    rosterData?.dashboard
       ? async () => {
-          const map: Record<string, { granted: number; used: number; remaining: number }> = {};
-          const students = rosterData.dashboard.filter((m) => m.kind === "STUDENT");
+          const map: Record<
+            string,
+            { granted: number; used: number; remaining: number }
+          > = {};
+          const students = rosterData.dashboard.filter(
+            (m) => m.kind === "STUDENT",
+          );
           await Promise.all(
             students.map(async (s) => {
               const r = await api["late-days"].balance({ learner: s.user });
@@ -83,7 +83,9 @@ export default function LateDaysAdminPage() {
     }
   }
 
-  const students = (rosterData?.dashboard ?? []).filter((m) => m.kind === "STUDENT");
+  const students = (rosterData?.dashboard ?? []).filter(
+    (m) => m.kind === "STUDENT",
+  );
 
   return (
     <PageContainer>
@@ -94,7 +96,11 @@ export default function LateDaysAdminPage() {
       />
 
       {students.length === 0 ? (
-        <EmptyState icon={Clock} title="No students" description="No students with late day data." />
+        <EmptyState
+          icon={Clock}
+          title="No students"
+          description="No students with late day data."
+        />
       ) : (
         <div className="space-y-2">
           {students.map((s) => {
@@ -112,22 +118,35 @@ export default function LateDaysAdminPage() {
                   {b ? (
                     <div className="flex items-center gap-3 text-sm">
                       <span className="text-muted-foreground">
-                        <span className="font-medium text-foreground">{b.remaining}</span> remaining
+                        <span className="font-medium text-foreground">
+                          {b.remaining}
+                        </span>{" "}
+                        remaining
                       </span>
                       <span className="text-muted-foreground">
-                        <span className="font-medium text-foreground">{b.used}</span> used
+                        <span className="font-medium text-foreground">
+                          {b.used}
+                        </span>{" "}
+                        used
                       </span>
                       <span className="text-muted-foreground">
-                        <span className="font-medium text-foreground">{b.granted}</span> granted
+                        <span className="font-medium text-foreground">
+                          {b.granted}
+                        </span>{" "}
+                        granted
                       </span>
                     </div>
                   ) : (
-                    <span className="text-xs text-muted-foreground">Loading...</span>
+                    <span className="text-xs text-muted-foreground">
+                      Loading...
+                    </span>
                   )}
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => setGrantDialog({ learner: s.user, name: s.rosterName })}
+                    onClick={() =>
+                      setGrantDialog({ learner: s.user, name: s.rosterName })
+                    }
                   >
                     <Plus className="size-4 mr-1" /> Grant days
                   </Button>

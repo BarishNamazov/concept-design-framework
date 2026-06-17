@@ -140,9 +140,7 @@ describe("StudentNoting", () => {
       }),
     );
     ok(await StudentNoting.resolve({ note }));
-    expect(
-      await StudentNoting.resolve({ note }),
-    ).toHaveProperty("error");
+    expect(await StudentNoting.resolve({ note })).toHaveProperty("error");
   });
 
   test("archive transitions RESOLVED->ARCHIVED", async () => {
@@ -173,9 +171,7 @@ describe("StudentNoting", () => {
         visibility: "STAFF_ONLY",
       }),
     );
-    expect(
-      await StudentNoting.archive({ note }),
-    ).toHaveProperty("error");
+    expect(await StudentNoting.archive({ note })).toHaveProperty("error");
   });
 
   test("restore transitions RESOLVED/ARCHIVED -> OPEN", async () => {
@@ -219,9 +215,7 @@ describe("StudentNoting", () => {
         visibility: "STAFF_ONLY",
       }),
     );
-    expect(
-      await StudentNoting.restore({ note }),
-    ).toHaveProperty("error");
+    expect(await StudentNoting.restore({ note })).toHaveProperty("error");
   });
 
   test("acknowledge sets acknowledgedAt for LEARNER_VISIBLE note", async () => {

@@ -233,9 +233,9 @@ describe("Rostering", () => {
     );
     const u = user("dave");
     ok(await Rostering.claimSeat({ seat: s1._id, user: u }));
-    expect(
-      await Rostering.claimSeat({ seat: s2._id, user: u }),
-    ).toHaveProperty("error");
+    expect(await Rostering.claimSeat({ seat: s2._id, user: u })).toHaveProperty(
+      "error",
+    );
   });
 
   test("claimSeat rejects if seat is not PENDING", async () => {
@@ -250,9 +250,9 @@ describe("Rostering", () => {
     const u = user("erin");
     ok(await Rostering.claimSeat({ seat: s._id, user: u }));
     const u2 = user("erin2");
-    expect(
-      await Rostering.claimSeat({ seat: s._id, user: u2 }),
-    ).toHaveProperty("error");
+    expect(await Rostering.claimSeat({ seat: s._id, user: u2 })).toHaveProperty(
+      "error",
+    );
   });
 
   test("claimSeat rejects for nonexistent seat", async () => {
@@ -295,9 +295,9 @@ describe("Rostering", () => {
     );
     const u = user("grace");
     ok(await Rostering.linkUser({ seat: s1._id, user: u }));
-    expect(
-      await Rostering.linkUser({ seat: s2._id, user: u }),
-    ).toHaveProperty("error");
+    expect(await Rostering.linkUser({ seat: s2._id, user: u })).toHaveProperty(
+      "error",
+    );
   });
 
   test("dropSeat transitions ACTIVE->DROPPED", async () => {
@@ -361,9 +361,9 @@ describe("Rostering", () => {
         kind: "STUDENT",
       }),
     );
-    expect(
-      await Rostering.reinstateSeat({ seat: s._id }),
-    ).toHaveProperty("error");
+    expect(await Rostering.reinstateSeat({ seat: s._id })).toHaveProperty(
+      "error",
+    );
   });
 
   test("reinstateSeat rejects for nonexistent seat", async () => {
@@ -490,7 +490,7 @@ describe("Rostering", () => {
         kind: "STUDENT",
       }),
     );
-    const { seat: s2 } = ok(
+    const { seat: _s2 } = ok(
       await Rostering.importSeat({
         externalKey: "ek-081",
         email: "oscar@example.com",
@@ -821,7 +821,7 @@ describe("Rostering", () => {
         kind: "AUDITOR",
       }),
     );
-    const { seat: s4 } = ok(
+    const { seat: _s4 } = ok(
       await Rostering.importSeat({
         externalKey: "ek-153",
         email: "g@example.com",

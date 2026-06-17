@@ -105,10 +105,16 @@ export default class GradingConcept {
     private readonly db: Db,
     namespace = "Grading",
   ) {
-    this.gradeItems = this.db.collection(collectionName(namespace, "gradeItems"));
+    this.gradeItems = this.db.collection(
+      collectionName(namespace, "gradeItems"),
+    );
     this.criteria = this.db.collection(collectionName(namespace, "criteria"));
-    this.gradeRecords = this.db.collection(collectionName(namespace, "gradeRecords"));
-    this.criterionScores = this.db.collection(collectionName(namespace, "criterionScores"));
+    this.gradeRecords = this.db.collection(
+      collectionName(namespace, "gradeRecords"),
+    );
+    this.criterionScores = this.db.collection(
+      collectionName(namespace, "criterionScores"),
+    );
   }
 
   /**
@@ -410,7 +416,13 @@ export default class GradingConcept {
     }
     await this.gradeRecords.updateOne(
       { _id: record._id },
-      { $set: { status: "RELEASED", releasedAt: new Date(), updatedAt: new Date() } },
+      {
+        $set: {
+          status: "RELEASED",
+          releasedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      },
     );
     return { grade: record._id };
   }
@@ -440,7 +452,10 @@ export default class GradingConcept {
     }
     await this.gradeRecords.updateOne(
       { _id: record._id },
-      { $set: { status: "DRAFT", updatedAt: new Date() }, $unset: { releasedAt: "" } },
+      {
+        $set: { status: "DRAFT", updatedAt: new Date() },
+        $unset: { releasedAt: "" },
+      },
     );
     return { grade: record._id };
   }
@@ -472,7 +487,13 @@ export default class GradingConcept {
     await this.gradeRecords.updateOne(
       { _id: record._id },
       {
-        $set: { status: "EXCUSED", score: 0, grader, feedback, updatedAt: new Date() },
+        $set: {
+          status: "EXCUSED",
+          score: 0,
+          grader,
+          feedback,
+          updatedAt: new Date(),
+        },
         $unset: { releasedAt: "" },
       },
     );
@@ -494,7 +515,9 @@ export default class GradingConcept {
     item,
   }: {
     item: Item;
-  }): Promise<{ item: Item; label: string; maxPoints: number; status: string }[]> {
+  }): Promise<
+    { item: Item; label: string; maxPoints: number; status: string }[]
+  > {
     const docs = await this.gradeItems.find({ item }).toArray();
     return docs.map((d) => ({
       item: d.item,
@@ -511,12 +534,13 @@ export default class GradingConcept {
    * **effects** returns every Criterion for the given `item`, each with its
    * criterion id, name, maxPoints and position, ordered by position ascending
    */
-  async _getCriteria({
-    item,
-  }: {
-    item: Item;
-  }): Promise<
-    { criterion: Criterion; name: string; maxPoints: number; position: number }[]
+  async _getCriteria({ item }: { item: Item }): Promise<
+    {
+      criterion: Criterion;
+      name: string;
+      maxPoints: number;
+      position: number;
+    }[]
   > {
     const docs = await this.criteria
       .find({ item })
@@ -539,13 +563,7 @@ export default class GradingConcept {
    * **effects** returns every GradeRecord for the given (`learner`, `item`) pair
    * regardless of status
    */
-  async _getGrade({
-    learner,
-    item,
-  }: {
-    learner: Learner;
-    item: Item;
-  }): Promise<
+  async _getGrade({ learner, item }: { learner: Learner; item: Item }): Promise<
     {
       grade: GradeRecord;
       learner: Learner;
@@ -655,11 +673,7 @@ export default class GradingConcept {
    * item, grade id, score, maxPoints, status and label (from the active
    * GradeItem)
    */
-  async _getGradesForLearner({
-    learner,
-  }: {
-    learner: Learner;
-  }): Promise<
+  async _getGradesForLearner({ learner }: { learner: Learner }): Promise<
     {
       item: Item;
       grade: GradeRecord;
@@ -679,7 +693,10 @@ export default class GradingConcept {
       label: string;
     }[] = [];
     for (const r of records) {
-      const gi = await this.gradeItems.findOne({ item: r.item, status: "ACTIVE" });
+      const gi = await this.gradeItems.findOne({
+        item: r.item,
+        status: "ACTIVE",
+      });
       results.push({
         item: r.item,
         grade: r._id,

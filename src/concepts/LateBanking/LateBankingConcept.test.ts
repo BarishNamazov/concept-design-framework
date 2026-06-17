@@ -67,7 +67,9 @@ describe("LateBanking", () => {
     const [balanceBefore] = await LateBanking._getBalance({ learner: l });
     expect(balanceBefore.remaining).toBe(2);
 
-    const { use } = ok(await LateBanking.apply({ learner: l, item: i, days: 2 }));
+    const { use } = ok(
+      await LateBanking.apply({ learner: l, item: i, days: 2 }),
+    );
     expect(use).toBeString();
 
     const [balanceAfter] = await LateBanking._getBalance({ learner: l });
@@ -82,14 +84,20 @@ describe("LateBanking", () => {
     const i = item("hw2");
     ok(await LateBanking.configurePolicy({ defaultDays: 1 }));
     ok(await LateBanking.apply({ learner: l, item: i, days: 1 }));
-    const result = await LateBanking.apply({ learner: l, item: item("hw3"), days: 1 });
+    const result = await LateBanking.apply({
+      learner: l,
+      item: item("hw3"),
+      days: 1,
+    });
     expect(result).toHaveProperty("error");
   });
 
   test("apply fails when exceeds maxDaysPerItem", async () => {
     const l = learner("dave");
     const i = item("hw4");
-    ok(await LateBanking.configurePolicy({ defaultDays: 10, maxDaysPerItem: 3 }));
+    ok(
+      await LateBanking.configurePolicy({ defaultDays: 10, maxDaysPerItem: 3 }),
+    );
     const result = await LateBanking.apply({ learner: l, item: i, days: 4 });
     expect(result).toHaveProperty("error");
   });
@@ -114,7 +122,9 @@ describe("LateBanking", () => {
   test("changeUse updates existing use days", async () => {
     const l = learner("grace");
     const i = item("hw7");
-    ok(await LateBanking.configurePolicy({ defaultDays: 5, maxDaysPerItem: 5 }));
+    ok(
+      await LateBanking.configurePolicy({ defaultDays: 5, maxDaysPerItem: 5 }),
+    );
     const { use } = ok(
       await LateBanking.apply({ learner: l, item: i, days: 1 }),
     );
@@ -177,7 +187,9 @@ describe("LateBanking", () => {
   test("_getBalance sums grants minus uses", async () => {
     const l = learner("mallory");
     ok(await LateBanking.configurePolicy({ defaultDays: 2 }));
-    ok(await LateBanking.grant({ learner: l, days: 5, reason: "accommodation" }));
+    ok(
+      await LateBanking.grant({ learner: l, days: 5, reason: "accommodation" }),
+    );
     ok(await LateBanking.apply({ learner: l, item: item("a"), days: 1 }));
     ok(await LateBanking.apply({ learner: l, item: item("b"), days: 2 }));
 
@@ -266,7 +278,7 @@ describe("LateBanking", () => {
     const Physics = new LateBankingConcept(mongo.db, "Physics");
     const History = new LateBankingConcept(mongo.db, "History");
 
-    const l = learner("uma");
+    const _l = learner("uma");
     ok(await Physics.configurePolicy({ defaultDays: 3 }));
     ok(await History.configurePolicy({ defaultDays: 2 }));
 

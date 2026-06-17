@@ -2,8 +2,8 @@
 
 import {
   Bell,
-  BookOpen,
   Bookmark,
+  BookOpen,
   CalendarDays,
   Clock,
   FileText,
@@ -21,7 +21,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { NotificationBell } from "@/components/forum/notification-bell";
 import { UserAvatar } from "@/components/forum/user-avatar";
 import { Link } from "@/components/link";
@@ -122,18 +122,19 @@ export function SiteHeader() {
               Staff
             </Link>
           )}
-          {hasRosterSeat && STUDENT_NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-                isActive(item.href) && "bg-muted text-foreground",
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {hasRosterSeat &&
+            STUDENT_NAV.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                  isActive(item.href) && "bg-muted text-foreground",
+                )}
+              >
+                {item.label}
+              </Link>
+            ))}
         </nav>
 
         <div className="ml-auto flex items-center gap-1.5">
@@ -275,7 +276,9 @@ export function SiteHeader() {
             {hasRosterSeat && (
               <>
                 <div className="mt-2 mb-1 px-3">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">LMS</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    LMS
+                  </p>
                 </div>
                 {isStaff && (
                   <Link

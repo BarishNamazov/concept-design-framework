@@ -4,7 +4,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -71,7 +70,12 @@ export function LateDayControls({
   }
 
   return (
-    <div className={cn("rounded-lg border border-border bg-card p-4 space-y-3", className)}>
+    <div
+      className={cn(
+        "rounded-lg border border-border bg-card p-4 space-y-3",
+        className,
+      )}
+    >
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">Late Days</p>
         {balance && (
@@ -84,7 +88,8 @@ export function LateDayControls({
       {appliedDays > 0 ? (
         <div className="space-y-2">
           <p className="text-sm">
-            <span className="font-medium">{appliedDays} day(s)</span> applied to this assignment
+            <span className="font-medium">{appliedDays} day(s)</span> applied to
+            this assignment
           </p>
           <div className="flex items-center gap-2">
             <Input
@@ -96,10 +101,21 @@ export function LateDayControls({
               className="w-20"
               disabled={loading}
             />
-            <Button size="sm" variant="outline" onClick={change} disabled={loading}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={change}
+              disabled={loading}
+            >
               Change
             </Button>
-            <Button size="sm" variant="ghost" className="text-destructive" onClick={cancel} disabled={loading}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-destructive"
+              onClick={cancel}
+              disabled={loading}
+            >
               Cancel
             </Button>
           </div>
@@ -115,7 +131,12 @@ export function LateDayControls({
             className="w-20"
             disabled={loading}
           />
-          <Button size="sm" variant="outline" onClick={apply} disabled={loading || !balance || balance.remaining < 1}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={apply}
+            disabled={loading || !balance || balance.remaining < 1}
+          >
             Apply Late Days
           </Button>
         </div>

@@ -66,7 +66,12 @@ export function GradeInput({
     if (!session) return;
     const excuseFeedback = feedback || "Excused";
     setLoading(true);
-    const result = await api.grades.excuse({ session, learner, item, feedback: excuseFeedback });
+    const result = await api.grades.excuse({
+      session,
+      learner,
+      item,
+      feedback: excuseFeedback,
+    });
     setLoading(false);
     if ("error" in result) toast.error(result.error);
     else {
@@ -104,10 +109,21 @@ export function GradeInput({
         <Button size="sm" onClick={save} disabled={loading}>
           Save Draft
         </Button>
-        <Button size="sm" variant="outline" onClick={release} disabled={loading}>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={release}
+          disabled={loading}
+        >
           Release
         </Button>
-        <Button size="sm" variant="ghost" className="text-destructive" onClick={excuse} disabled={loading}>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-destructive"
+          onClick={excuse}
+          disabled={loading}
+        >
           Excuse
         </Button>
       </div>

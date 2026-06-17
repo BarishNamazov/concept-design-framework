@@ -209,7 +209,9 @@ export default class LateBankingConcept {
       status: "APPLIED",
     });
     if (existing === null) {
-      return { error: "No active late-day use exists for this learner and item." };
+      return {
+        error: "No active late-day use exists for this learner and item.",
+      };
     }
 
     if (days < 0) {
@@ -256,7 +258,9 @@ export default class LateBankingConcept {
       status: "APPLIED",
     });
     if (existing === null) {
-      return { error: "No active late-day use exists for this learner and item." };
+      return {
+        error: "No active late-day use exists for this learner and item.",
+      };
     }
     await this.uses.updateOne(
       { _id: existing._id },
@@ -299,19 +303,19 @@ export default class LateBankingConcept {
     learner,
   }: {
     learner: Learner;
-  }): Promise<
-    { granted: number; used: number; remaining: number }[]
-  > {
+  }): Promise<{ granted: number; used: number; remaining: number }[]> {
     const policyDoc = await this.getPolicy();
 
     const grantDocs = await this.grants.find({ learner }).toArray();
-    const granted = policyDoc.defaultDays +
-      grantDocs.reduce((sum, g) => sum + g.days, 0);
+    const granted =
+      policyDoc.defaultDays + grantDocs.reduce((sum, g) => sum + g.days, 0);
 
-    const useDocs = await this.uses.find({
-      learner,
-      status: "APPLIED",
-    }).toArray();
+    const useDocs = await this.uses
+      .find({
+        learner,
+        status: "APPLIED",
+      })
+      .toArray();
     const used = useDocs.reduce((sum, u) => sum + u.days, 0);
 
     const remaining = granted - used;
@@ -350,12 +354,13 @@ export default class LateBankingConcept {
    * **effects** returns all uses for the given `learner` with their item, days,
    * status, and application time
    */
-  async _getUses({
-    learner,
-  }: {
-    learner: Learner;
-  }): Promise<
-    { item: Item; days: number; status: "APPLIED" | "CANCELED"; appliedAt: Date }[]
+  async _getUses({ learner }: { learner: Learner }): Promise<
+    {
+      item: Item;
+      days: number;
+      status: "APPLIED" | "CANCELED";
+      appliedAt: Date;
+    }[]
   > {
     const docs = await this.uses.find({ learner }).toArray();
     return docs.map((d) => ({

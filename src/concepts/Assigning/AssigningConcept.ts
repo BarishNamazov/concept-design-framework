@@ -130,8 +130,7 @@ export default class AssigningConcept {
     const resolvedTargets = targets ?? [];
     if (audience === "EVERYONE" && resolvedTargets.length > 0) {
       return {
-        error:
-          "Audience EVERYONE must not have targets.",
+        error: "Audience EVERYONE must not have targets.",
       };
     }
     if (audience === "TARGETS" && resolvedTargets.length === 0) {
@@ -201,8 +200,7 @@ export default class AssigningConcept {
     const resolvedTargets = targets ?? [];
     if (audience === "EVERYONE" && resolvedTargets.length > 0) {
       return {
-        error:
-          "Audience EVERYONE must not have targets.",
+        error: "Audience EVERYONE must not have targets.",
       };
     }
     if (audience === "TARGETS" && resolvedTargets.length === 0) {
@@ -314,8 +312,7 @@ export default class AssigningConcept {
     });
     if (existing !== null) {
       return {
-        error:
-          "A release already exists for this assignment and assignee.",
+        error: "A release already exists for this assignment and assignee.",
       };
     }
     const release = freshID() as Release;
@@ -433,11 +430,7 @@ export default class AssigningConcept {
    *
    * **effects** returns the full details of the given assignment
    */
-  async _getAssignment({
-    assignment,
-  }: {
-    assignment: Assignment;
-  }): Promise<
+  async _getAssignment({ assignment }: { assignment: Assignment }): Promise<
     {
       assignment: Assignment;
       author: Author;
@@ -546,12 +539,13 @@ export default class AssigningConcept {
    *
    * **effects** returns every ASSIGNED release for the given assignee
    */
-  async _getAssigned({
-    assignee,
-  }: {
-    assignee: Assignee;
-  }): Promise<
-    { assignment: Assignment; release: Release; dueOverride?: Date; status: "ASSIGNED" }[]
+  async _getAssigned({ assignee }: { assignee: Assignee }): Promise<
+    {
+      assignment: Assignment;
+      release: Release;
+      dueOverride?: Date;
+      status: "ASSIGNED";
+    }[]
   > {
     const docs = await this.releases
       .find({ assignee, status: "ASSIGNED" })
@@ -573,11 +567,13 @@ export default class AssigningConcept {
    * targets
    */
   async _getPublished(): Promise<
-    { assignment: Assignment; audience: "EVERYONE" | "TARGETS"; targets: ID[] }[]
+    {
+      assignment: Assignment;
+      audience: "EVERYONE" | "TARGETS";
+      targets: ID[];
+    }[]
   > {
-    const docs = await this.assignments
-      .find({ status: "PUBLISHED" })
-      .toArray();
+    const docs = await this.assignments.find({ status: "PUBLISHED" }).toArray();
     return docs.map((d) => ({
       assignment: d._id,
       audience: d.audience,
@@ -685,8 +681,7 @@ export default class AssigningConcept {
       assignee,
       status: "ASSIGNED",
     });
-    const dueAt =
-      releaseDoc?.dueOverride ?? assignmentDoc.dueAt;
+    const dueAt = releaseDoc?.dueOverride ?? assignmentDoc.dueAt;
     return [{ dueAt, closeAt: assignmentDoc.closeAt }];
   }
 }

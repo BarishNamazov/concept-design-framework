@@ -35,7 +35,10 @@ const STAFF_CAPABILITIES = [
  */
 
 /** Define the role on every STAFF seat claim. defineRole errors if it exists — harmless. */
-export const StaffSeatDefinesCourseStaffRole: Sync = ({ seatDoc, claimer }) => ({
+export const StaffSeatDefinesCourseStaffRole: Sync = ({
+  seatDoc,
+  claimer,
+}) => ({
   when: actions([Rostering.claimSeat, { user: claimer }, { seat: seatDoc }]),
   where: async (frames) =>
     frames.filter(($) => {
@@ -54,7 +57,10 @@ export const StaffSeatGrantsNewCourseStaffRole: Sync = ({ claimer, role }) => ({
     [Rostering.claimSeat, { user: claimer }, {}],
     [Roling.defineRole, { name: COURSE_STAFF_ROLE }, { role }],
   ),
-  then: actions([Roling.grant, { user: claimer, context: FORUM_CONTEXT, role }]),
+  then: actions([
+    Roling.grant,
+    { user: claimer, context: FORUM_CONTEXT, role },
+  ]),
 });
 
 /** Grant the already-existing role to the claiming user. */
@@ -71,14 +77,21 @@ export const ClaimedStaffSeatGetsExistingRole: Sync = ({ claimer, role }) => ({
     // Use aggregate so grant path only fires when role was already present.
     return frames.aggregate(base, [role], role);
   },
-  then: actions([Roling.grant, { user: claimer, context: FORUM_CONTEXT, role }]),
+  then: actions([
+    Roling.grant,
+    { user: claimer, context: FORUM_CONTEXT, role },
+  ]),
 });
 
 // ---------------------------------------------------------------------------
 // DroppedSeatRevokesRoles
 // ---------------------------------------------------------------------------
 
-export const DroppedSeatRevokesRoles: Sync = ({ seatDoc, droppedUser, role }) => ({
+export const DroppedSeatRevokesRoles: Sync = ({
+  seatDoc,
+  droppedUser,
+  role,
+}) => ({
   when: actions([Rostering.dropSeat, {}, { seat: seatDoc }]),
   where: async (frames) => {
     frames = frames.flatMap(($) => {
@@ -92,7 +105,10 @@ export const DroppedSeatRevokesRoles: Sync = ({ seatDoc, droppedUser, role }) =>
       { role },
     );
   },
-  then: actions([Roling.revoke, { user: droppedUser, context: FORUM_CONTEXT, role }]),
+  then: actions([
+    Roling.revoke,
+    { user: droppedUser, context: FORUM_CONTEXT, role },
+  ]),
 });
 
 // ---------------------------------------------------------------------------

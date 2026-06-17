@@ -1,21 +1,18 @@
 "use client";
 
-import { useState } from "react";
 import { Plus, Settings } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { LoadingState, ErrorState, EmptyState } from "@/components/forum/states";
 import { PageContainer, PageHeader } from "@/components/forum/page";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/forum/states";
 import { CsvImport } from "@/components/lms/csv-import";
 import { RosterTable } from "@/components/lms/roster-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,13 +25,21 @@ function ClassConfig() {
   const [code, setCode] = useState("");
   const [title, setTitle] = useState("");
   const [term, setTerm] = useState("");
-  const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const [timezone, setTimezone] = useState(
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+  );
   const [loading, setLoading] = useState(false);
 
   async function configure() {
     if (!session) return;
     setLoading(true);
-    const result = await api.roster["configure-class"]({ session, code, title, term, timezone });
+    const result = await api.roster["configure-class"]({
+      session,
+      code,
+      title,
+      term,
+      timezone,
+    });
     setLoading(false);
     if ("error" in result) toast.error(result.error);
     else toast.success("Class configured");
@@ -51,22 +56,45 @@ function ClassConfig() {
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="cc-code">Course Code</Label>
-            <Input id="cc-code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="CS101" />
+            <Input
+              id="cc-code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="CS101"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="cc-title">Title</Label>
-            <Input id="cc-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Intro to CS" />
+            <Input
+              id="cc-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Intro to CS"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="cc-term">Term</Label>
-            <Input id="cc-term" value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Fall 2026" />
+            <Input
+              id="cc-term"
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
+              placeholder="Fall 2026"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="cc-tz">Timezone</Label>
-            <Input id="cc-tz" value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="America/New_York" />
+            <Input
+              id="cc-tz"
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              placeholder="America/New_York"
+            />
           </div>
         </div>
-        <Button onClick={configure} disabled={loading || !code || !title || !term}>
+        <Button
+          onClick={configure}
+          disabled={loading || !code || !title || !term}
+        >
           Configure Class
         </Button>
       </CardContent>
@@ -77,7 +105,13 @@ function ClassConfig() {
 function SectionManager() {
   const { session } = useAuth();
   const { data, refetch } = useQuery<{
-    sections: { section: string; name: string; location?: string; meetingPattern?: string; status: string }[];
+    sections: {
+      section: string;
+      name: string;
+      location?: string;
+      meetingPattern?: string;
+      status: string;
+    }[];
   }>(() => api.roster["sections/list"]({}), []);
 
   const [name, setName] = useState("");
@@ -88,7 +122,12 @@ function SectionManager() {
   async function create() {
     if (!session || !name.trim()) return;
     setLoading(true);
-    const result = await api.roster["sections/create"]({ session, name: name.trim(), location, meetingPattern });
+    const result = await api.roster["sections/create"]({
+      session,
+      name: name.trim(),
+      location,
+      meetingPattern,
+    });
     setLoading(false);
     if ("error" in result) toast.error(result.error);
     else {
@@ -112,15 +151,27 @@ function SectionManager() {
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="space-y-2">
             <Label>Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Section 01" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Section 01"
+            />
           </div>
           <div className="space-y-2">
             <Label>Location (optional)</Label>
-            <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Room 101" />
+            <Input
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Room 101"
+            />
           </div>
           <div className="space-y-2">
             <Label>Meeting Pattern (optional)</Label>
-            <Input value={meetingPattern} onChange={(e) => setMeetingPattern(e.target.value)} placeholder="MWF 10:00-10:50" />
+            <Input
+              value={meetingPattern}
+              onChange={(e) => setMeetingPattern(e.target.value)}
+              placeholder="MWF 10:00-10:50"
+            />
           </div>
         </div>
         <Button size="sm" onClick={create} disabled={loading || !name.trim()}>
@@ -131,13 +182,22 @@ function SectionManager() {
           <div className="mt-3 space-y-2">
             <p className="text-sm text-muted-foreground">Active sections:</p>
             {activeSections.map((s) => (
-              <div key={s.section} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
+              <div
+                key={s.section}
+                className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm"
+              >
                 <div>
                   <span className="font-medium">{s.name}</span>
-                  {s.location && <span className="ml-2 text-muted-foreground">{s.location}</span>}
+                  {s.location && (
+                    <span className="ml-2 text-muted-foreground">
+                      {s.location}
+                    </span>
+                  )}
                 </div>
                 {s.meetingPattern && (
-                  <span className="text-xs text-muted-foreground">{s.meetingPattern}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {s.meetingPattern}
+                  </span>
                 )}
               </div>
             ))}
@@ -150,7 +210,12 @@ function SectionManager() {
 
 export default function RosterPage() {
   const { session } = useAuth();
-  const { data: rosterData, loading, error, refetch } = useQuery<{
+  const {
+    data: rosterData,
+    loading,
+    error,
+    refetch,
+  } = useQuery<{
     members: {
       user: string;
       seat: string;
@@ -159,13 +224,16 @@ export default function RosterPage() {
       rosterName: string;
       email: string;
     }[];
-  }>(
-    session ? () => api.roster.list({ session }) : null,
-    [session],
-  );
+  }>(session ? () => api.roster.list({ session }) : null, [session]);
 
   const { data: sectionsData } = useQuery<{
-    sections: { section: string; name: string; location?: string; meetingPattern?: string; status: string }[];
+    sections: {
+      section: string;
+      name: string;
+      location?: string;
+      meetingPattern?: string;
+      status: string;
+    }[];
   }>(() => api.roster["sections/list"]({}), []);
 
   const members = rosterData?.members ?? [];
@@ -182,7 +250,9 @@ export default function RosterPage() {
       <Tabs defaultValue="config">
         <TabsList>
           <TabsTrigger value="config">Configuration</TabsTrigger>
-          <TabsTrigger value="students">Students ({members.length})</TabsTrigger>
+          <TabsTrigger value="students">
+            Students ({members.length})
+          </TabsTrigger>
           <TabsTrigger value="import">CSV Import</TabsTrigger>
         </TabsList>
 
@@ -203,14 +273,20 @@ export default function RosterPage() {
               description="Import students via CSV or have them claim seats."
             />
           ) : (
-            <RosterTable members={members} sections={sections} onUpdate={refetch} />
+            <RosterTable
+              members={members}
+              sections={sections}
+              onUpdate={refetch}
+            />
           )}
         </TabsContent>
 
         <TabsContent value="import" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Import Roster from CSV</CardTitle>
+              <CardTitle className="text-base">
+                Import Roster from CSV
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <CsvImport onComplete={refetch} />

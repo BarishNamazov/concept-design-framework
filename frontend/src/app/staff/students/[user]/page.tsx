@@ -1,18 +1,17 @@
 "use client";
 
-import { use, useState } from "react";
-import { ArrowLeft, BookOpen, GraduationCap, Clock, User } from "lucide-react";
-import { LoadingState, ErrorState } from "@/components/forum/states";
+import { ArrowLeft, BookOpen, Clock, GraduationCap, User } from "lucide-react";
+import { use } from "react";
 import { PageContainer } from "@/components/forum/page";
+import { ErrorState, LoadingState } from "@/components/forum/states";
+import { Link } from "@/components/link";
 import { StatusBadge } from "@/components/lms/status-badge";
 import { StudentNotes } from "@/components/lms/student-notes";
-import { Link } from "@/components/link";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { fullTime, relativeTime } from "@/lib/format";
+import { relativeTime } from "@/lib/format";
 
 export default function StudentDetailPage({
   params,
@@ -22,7 +21,12 @@ export default function StudentDetailPage({
   const { user } = use(params);
   const { session } = useAuth();
 
-  const { data: detailData, loading, error, refetch } = useQuery<{
+  const {
+    data: detailData,
+    loading,
+    error,
+    refetch,
+  } = useQuery<{
     detail: {
       seat: string;
       user: string;
@@ -33,38 +37,55 @@ export default function StudentDetailPage({
       section?: string;
       status: string;
     }[];
-  }>(
-    session ? () => api.students.detail({ session, user }) : null,
-    [session, user],
-  );
+  }>(session ? () => api.students.detail({ session, user }) : null, [
+    session,
+    user,
+  ]);
 
   const { data: submissionsData } = useQuery<{
-    submissions: { assignment: string; submission: string; submittedAt: string; number: number; status: string }[];
-  }>(
-    () => api.submissions["for-student"]({ submitter: user }),
-    [user],
-  );
+    submissions: {
+      assignment: string;
+      submission: string;
+      submittedAt: string;
+      number: number;
+      status: string;
+    }[];
+  }>(() => api.submissions["for-student"]({ submitter: user }), [user]);
 
   const { data: gradesData } = useQuery<{
-    grades: { item: string; grade: string; score: number; maxPoints: number; status: string; label: string }[];
+    grades: {
+      item: string;
+      grade: string;
+      score: number;
+      maxPoints: number;
+      status: string;
+      label: string;
+    }[];
   }>(
-    session ? () => api.grades["for-student"]({ session, learner: user }) : null,
+    session
+      ? () => api.grades["for-student"]({ session, learner: user })
+      : null,
     [session, user],
   );
 
   const { data: lateBalance } = useQuery<{
     balance: { granted: number; used: number; remaining: number };
-  }>(
-    () => api["late-days"].balance({ learner: user }),
-    [user],
-  );
+  }>(() => api["late-days"].balance({ learner: user }), [user]);
 
   const { data: lateUses } = useQuery<{
     uses: { item: string; days: number; status: string; appliedAt: string }[];
   }>(
-    () => api["late-days"].balance({ learner: user }).then(() => {
-      return { uses: [] as { item: string; days: number; status: string; appliedAt: string }[] };
-    }),
+    () =>
+      api["late-days"].balance({ learner: user }).then(() => {
+        return {
+          uses: [] as {
+            item: string;
+            days: number;
+            status: string;
+            appliedAt: string;
+          }[],
+        };
+      }),
     [user],
   );
 
@@ -82,7 +103,9 @@ export default function StudentDetailPage({
       tags: string[];
     }[];
   }>(
-    session ? () => api.students["notes/list"]({ session, learner: user }) : null,
+    session
+      ? () => api.students["notes/list"]({ session, learner: user })
+      : null,
     [session, user],
   );
 
@@ -93,13 +116,26 @@ export default function StudentDetailPage({
   const notes = notesData?.notes ?? [];
   const balance = lateBalance?.balance;
 
-  if (loading) return <PageContainer><LoadingState label="Loading student..." /></PageContainer>;
-  if (error) return <PageContainer><ErrorState message={error} onRetry={refetch} /></PageContainer>;
+  if (loading)
+    return (
+      <PageContainer>
+        <LoadingState label="Loading student..." />
+      </PageContainer>
+    );
+  if (error)
+    return (
+      <PageContainer>
+        <ErrorState message={error} onRetry={refetch} />
+      </PageContainer>
+    );
 
   return (
     <PageContainer>
       <div className="mb-4">
-        <Link href="/staff/roster" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <Link
+          href="/staff/roster"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="size-4" /> Back to roster
         </Link>
       </div>
@@ -109,7 +145,10 @@ export default function StudentDetailPage({
           {seat?.rosterName ?? user}
         </h1>
         <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-          <Link href={`/u/${user}`} className="flex items-center gap-1 hover:text-foreground">
+          <Link
+            href={`/u/${user}`}
+            className="flex items-center gap-1 hover:text-foreground"
+          >
             <User className="size-3.5" /> Profile
           </Link>
           {seat && (
@@ -130,19 +169,27 @@ export default function StudentDetailPage({
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                <BookOpen className="size-4" /> Submissions ({submissions.length})
+                <BookOpen className="size-4" /> Submissions (
+                {submissions.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
               {submissions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No submissions yet.</p>
+                <p className="text-sm text-muted-foreground">
+                  No submissions yet.
+                </p>
               ) : (
                 <div className="space-y-2">
                   {submissions.map((s) => (
-                    <div key={s.submission} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
+                    <div
+                      key={s.submission}
+                      className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm"
+                    >
                       <div>
                         <span className="font-medium">#{s.number}</span>
-                        <span className="ml-2 text-xs text-muted-foreground">{relativeTime(s.submittedAt)}</span>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {relativeTime(s.submittedAt)}
+                        </span>
                       </div>
                       <StatusBadge status={s.status} />
                     </div>
@@ -164,12 +211,19 @@ export default function StudentDetailPage({
               ) : (
                 <div className="space-y-2">
                   {grades.map((g) => (
-                    <div key={g.grade} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
+                    <div
+                      key={g.grade}
+                      className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm"
+                    >
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{g.label || g.item.slice(0, 8)}</span>
+                        <span className="font-medium">
+                          {g.label || g.item.slice(0, 8)}
+                        </span>
                         <StatusBadge status={g.status} />
                       </div>
-                      <span className="tabular-nums">{g.score}/{g.maxPoints}</span>
+                      <span className="tabular-nums">
+                        {g.score}/{g.maxPoints}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -202,7 +256,9 @@ export default function StudentDetailPage({
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No late day data.</p>
+                <p className="text-sm text-muted-foreground">
+                  No late day data.
+                </p>
               )}
             </CardContent>
           </Card>

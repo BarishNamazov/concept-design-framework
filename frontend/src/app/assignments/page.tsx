@@ -1,18 +1,22 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { ArrowUpDown, BookOpen, Filter, Search } from "lucide-react";
-import { LoadingState, ErrorState, EmptyState } from "@/components/forum/states";
+import { ArrowUpDown, BookOpen, Search } from "lucide-react";
+import { useState } from "react";
 import { PageContainer, PageHeader } from "@/components/forum/page";
-import { StatusBadge } from "@/components/lms/status-badge";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/forum/states";
 import { Link } from "@/components/link";
+import { StatusBadge } from "@/components/lms/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { relativeTime, fullTime } from "@/lib/format";
+import { fullTime, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const KIND_LABELS: Record<string, string> = {
@@ -35,51 +39,91 @@ export default function AssignmentsPage() {
     [session],
   );
 
-  const { data: asgnData, loading, error, refetch } = useQuery<{
-    assignments: { assignment: string; release?: string; dueOverride?: string; status: string }[];
+  const {
+    data: asgnData,
+    loading,
+    error,
+    refetch,
+  } = useQuery<{
+    assignments: {
+      assignment: string;
+      release?: string;
+      dueOverride?: string;
+      status: string;
+    }[];
   }>(
-    session && rosterData && rosterData.seat ? () => api.assignments["for-me"]({ session }) : null,
+    session && rosterData?.seat
+      ? () => api.assignments["for-me"]({ session })
+      : null,
     [session, rosterData],
   );
 
   const { data: gradesData } = useQuery<{
-    grades: { item: string; score: number; maxPoints: number; status: string; label: string }[];
+    grades: {
+      item: string;
+      score: number;
+      maxPoints: number;
+      status: string;
+      label: string;
+    }[];
   }>(
-    session && rosterData && rosterData.seat ? () => api.grades["for-me"]({ session }) : null,
+    session && rosterData?.seat
+      ? () => api.grades["for-me"]({ session })
+      : null,
     [session, rosterData],
   );
 
   const { data: submissionsData } = useQuery<{
-    submissions: { assignment: string; submission: string; submittedAt: string; number: number; status: string }[];
+    submissions: {
+      assignment: string;
+      submission: string;
+      submittedAt: string;
+      number: number;
+      status: string;
+    }[];
   }>(
-    session && asgnData ? async () => {
-      if (!asgnData?.assignments) return { submissions: [] };
-      const allSubs = await Promise.all(
-        asgnData.assignments.map(async (a) => {
-          const res = await api.submissions.latest({
-            assignment: a.assignment,
-            submitter: String(session),
-          });
-          if ("error" in res) return null;
-          return { ...res.submission, assignment: a.assignment };
-        }),
-      );
-      return { submissions: allSubs.filter(Boolean) as unknown as { assignment: string; submission: string; submittedAt: string; number: number; status: string }[] };
-    } : null,
+    session && asgnData
+      ? async () => {
+          if (!asgnData?.assignments) return { submissions: [] };
+          const allSubs = await Promise.all(
+            asgnData.assignments.map(async (a) => {
+              const res = await api.submissions.latest({
+                assignment: a.assignment,
+                submitter: String(session),
+              });
+              if ("error" in res) return null;
+              return { ...res.submission, assignment: a.assignment };
+            }),
+          );
+          return {
+            submissions: allSubs.filter(Boolean) as unknown as {
+              assignment: string;
+              submission: string;
+              submittedAt: string;
+              number: number;
+              status: string;
+            }[],
+          };
+        }
+      : null,
     [session, asgnData],
   );
 
   const { data: detailsData } = useQuery<Record<string, unknown>>(
-    asgnData && asgnData.assignments ? async () => {
-      const map: Record<string, unknown> = {};
-      await Promise.all(
-        asgnData.assignments.map(async (a) => {
-          const res = await api.assignments.get({ assignment: a.assignment });
-          if (!("error" in res)) map[a.assignment] = res.assignment;
-        }),
-      );
-      return map;
-    } : null,
+    asgnData?.assignments
+      ? async () => {
+          const map: Record<string, unknown> = {};
+          await Promise.all(
+            asgnData.assignments.map(async (a) => {
+              const res = await api.assignments.get({
+                assignment: a.assignment,
+              });
+              if (!("error" in res)) map[a.assignment] = res.assignment;
+            }),
+          );
+          return map;
+        }
+      : null,
     [asgnData],
   );
 
@@ -92,7 +136,16 @@ export default function AssignmentsPage() {
   ];
 
   const assignments = asgnData?.assignments ?? [];
-  const details = (detailsData ?? {}) as Record<string, { title: string; kind: string; dueAt: string; status: string; availableAt: string }>;
+  const details = (detailsData ?? {}) as Record<
+    string,
+    {
+      title: string;
+      kind: string;
+      dueAt: string;
+      status: string;
+      availableAt: string;
+    }
+  >;
   const submissions = submissionsData?.submissions ?? [];
   const grades = gradesData?.grades ?? [];
   const gradeMap = new Map(grades.map((g) => [g.item, g]));
@@ -107,28 +160,46 @@ export default function AssignmentsPage() {
 
     if (search && detail) {
       const q = search.toLowerCase();
-      if (!detail.title?.toLowerCase().includes(q) && !detail.kind?.toLowerCase().includes(q)) return false;
+      if (
+        !detail.title?.toLowerCase().includes(q) &&
+        !detail.kind?.toLowerCase().includes(q)
+      )
+        return false;
     }
 
     if (filter === "all") return true;
     if (filter === "submitted") return !!sub;
     if (filter === "graded") return !!grade && grade.status === "RELEASED";
     if (filter === "upcoming") {
-      if (detail?.closeAt) return new Date(detail.closeAt as unknown as string) > now;
-      if (detail?.dueAt) return new Date(detail.dueAt as unknown as string) > now && !sub;
+      if (detail?.closeAt)
+        return new Date(detail.closeAt as unknown as string) > now;
+      if (detail?.dueAt)
+        return new Date(detail.dueAt as unknown as string) > now && !sub;
       return !sub;
     }
     if (filter === "overdue") {
       if (sub) return false;
-      if (detail?.closeAt) return new Date(detail.closeAt as unknown as string) < now;
-      if (detail?.dueAt) return new Date(detail.dueAt as unknown as string) < now;
+      if (detail?.closeAt)
+        return new Date(detail.closeAt as unknown as string) < now;
+      if (detail?.dueAt)
+        return new Date(detail.dueAt as unknown as string) < now;
       return false;
     }
     return true;
   });
 
-  if (loading) return <PageContainer><LoadingState label="Loading assignments..." /></PageContainer>;
-  if (error) return <PageContainer><ErrorState message={error} onRetry={refetch} /></PageContainer>;
+  if (loading)
+    return (
+      <PageContainer>
+        <LoadingState label="Loading assignments..." />
+      </PageContainer>
+    );
+  if (error)
+    return (
+      <PageContainer>
+        <ErrorState message={error} onRetry={refetch} />
+      </PageContainer>
+    );
 
   return (
     <PageContainer>
@@ -165,7 +236,11 @@ export default function AssignmentsPage() {
         <EmptyState
           icon={BookOpen}
           title="No assignments"
-          description={filter !== "all" ? `No ${filter} assignments to show.` : "No assignments yet."}
+          description={
+            filter !== "all"
+              ? `No ${filter} assignments to show.`
+              : "No assignments yet."
+          }
         />
       ) : (
         <div className="space-y-2">
@@ -220,10 +295,14 @@ export default function AssignmentsPage() {
                   {grade && <StatusBadge status={grade.status} />}
                   {!grade && sub && <StatusBadge status="SUBMITTED" />}
                   {!grade && !sub && isOverdue && (
-                    <Badge variant="destructive" className="text-xs">Overdue</Badge>
+                    <Badge variant="destructive" className="text-xs">
+                      Overdue
+                    </Badge>
                   )}
                   {!grade && !sub && !isOverdue && (
-                    <Badge variant="outline" className="text-xs">Pending</Badge>
+                    <Badge variant="outline" className="text-xs">
+                      Pending
+                    </Badge>
                   )}
                   <ArrowUpDown className="size-4 text-muted-foreground" />
                 </div>

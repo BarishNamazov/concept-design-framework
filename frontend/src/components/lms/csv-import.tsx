@@ -1,10 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import { Upload } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -60,7 +67,12 @@ export function CsvImport({ onComplete }: CsvImportProps) {
           rows={6}
           className="font-mono text-sm"
         />
-        <Button size="sm" variant="outline" onClick={preview} disabled={loading || !csv.trim()}>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={preview}
+          disabled={loading || !csv.trim()}
+        >
           {loading ? "Parsing..." : "Preview"}
         </Button>
       </div>
@@ -68,8 +80,14 @@ export function CsvImport({ onComplete }: CsvImportProps) {
       {rows !== null && (
         <div>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-muted-foreground">{rows.length} row(s) parsed</p>
-            <Button size="sm" onClick={doImport} disabled={importing || rows.length === 0}>
+            <p className="text-sm text-muted-foreground">
+              {rows.length} row(s) parsed
+            </p>
+            <Button
+              size="sm"
+              onClick={doImport}
+              disabled={importing || rows.length === 0}
+            >
               <Upload className="size-4 mr-1" />
               {importing ? "Importing..." : `Import ${rows.length} seats`}
             </Button>
@@ -79,7 +97,9 @@ export function CsvImport({ onComplete }: CsvImportProps) {
               <TableHeader>
                 <TableRow>
                   {Object.keys(rows[0] ?? {}).map((key) => (
-                    <TableHead key={key} className="text-xs">{key}</TableHead>
+                    <TableHead key={key} className="text-xs">
+                      {key}
+                    </TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
@@ -87,7 +107,9 @@ export function CsvImport({ onComplete }: CsvImportProps) {
                 {rows.map((row, i) => (
                   <TableRow key={i}>
                     {Object.values(row).map((v, j) => (
-                      <TableCell key={j} className="text-xs font-mono">{v}</TableCell>
+                      <TableCell key={j} className="text-xs font-mono">
+                        {v}
+                      </TableCell>
                     ))}
                   </TableRow>
                 ))}

@@ -49,22 +49,38 @@ async function setupAdmin(): Promise<{ session: string; user: ID }> {
 
 async function configureClass(admin: { session: string }) {
   return await app.send("/roster/configure-class", {
-    session: admin.session, code: "CS101", title: "Intro to CS",
-    term: "Fall 2026", timezone: "America/New_York",
+    session: admin.session,
+    code: "CS101",
+    title: "Intro to CS",
+    term: "Fall 2026",
+    timezone: "America/New_York",
   });
 }
 
 function row(entry: Partial<Record<string, string>>): Record<string, string> {
-  return { externalKey: "", email: "", rosterName: "", kind: "STUDENT", section: "", ...entry };
+  return {
+    externalKey: "",
+    email: "",
+    rosterName: "",
+    kind: "STUDENT",
+    section: "",
+    ...entry,
+  };
 }
 
-async function importRows(admin: { session: string }, rows: Record<string, string>[]) {
+async function importRows(
+  admin: { session: string },
+  rows: Record<string, string>[],
+) {
   return await app.send("/roster/import", { session: admin.session, rows });
 }
 
-async function withStudent(admin: { session: string }, key: string) {
+async function withStudent(_admin: { session: string }, key: string) {
   const student = await registerUser(key, "pw", key);
-  await app.send("/roster/claim-seat", { session: student.session, externalKey: key });
+  await app.send("/roster/claim-seat", {
+    session: student.session,
+    externalKey: key,
+  });
   return student;
 }
 
@@ -72,20 +88,32 @@ async function setupStudentAndAssignment(
   admin: { session: string },
   studentKey: string,
 ) {
-  await importRows(admin, [row({ externalKey: studentKey, email: `${studentKey}@test.com`, rosterName: studentKey })]);
+  await importRows(admin, [
+    row({
+      externalKey: studentKey,
+      email: `${studentKey}@test.com`,
+      rosterName: studentKey,
+    }),
+  ]);
   const student = await withStudent(admin, studentKey);
 
   const now = Date.now();
   const draft = await app.send("/assignments/create-draft", {
     session: admin.session,
-    title: "HW1", instructions: "Submit work.",
+    title: "HW1",
+    instructions: "Submit work.",
     kind: "HOMEWORK",
     availableAt: new Date(now + 86400000).toISOString(),
     dueAt: new Date(now + 7 * 86400000).toISOString(),
     closeAt: new Date(now + 14 * 86400000).toISOString(),
-    acceptsSubmissions: true, audience: "EVERYONE", targets: [],
+    acceptsSubmissions: true,
+    audience: "EVERYONE",
+    targets: [],
   });
-  await app.send("/assignments/publish", { session: admin.session, assignment: draft.assignment });
+  await app.send("/assignments/publish", {
+    session: admin.session,
+    assignment: draft.assignment,
+  });
   return { admin, student, assignment: draft.assignment as string };
 }
 
@@ -118,8 +146,11 @@ describe("roster", () => {
     await configureClass(admin);
 
     const dup = await app.send("/roster/configure-class", {
-      session: admin.session, code: "CS102", title: "Another",
-      term: "Spring 2027", timezone: "America/Chicago",
+      session: admin.session,
+      code: "CS102",
+      title: "Another",
+      term: "Spring 2027",
+      timezone: "America/Chicago",
     });
     expect(dup.error).toBeDefined();
     expect(dup.class).toBeUndefined();
@@ -133,7 +164,10 @@ describe("roster", () => {
 
     // Create
     const created = await app.send("/roster/sections/create", {
-      session: admin.session, name: "Recitation A", location: "Room 101", meetingPattern: "MWF 10am",
+      session: admin.session,
+      name: "Recitation A",
+      location: "Room 101",
+      meetingPattern: "MWF 10am",
     });
     expect(created.section).toBeDefined();
     const sec = created.section as Record<string, unknown>;
@@ -146,16 +180,26 @@ describe("roster", () => {
 
     // Update
     const updated = await app.send("/roster/sections/update", {
-      session: admin.session, section: sec._id,
-      name: "Recitation A+", location: "Room 102", meetingPattern: "MWF 11am",
+      session: admin.session,
+      section: sec._id,
+      name: "Recitation A+",
+      location: "Room 102",
+      meetingPattern: "MWF 11am",
     });
     expect(updated.section).toBeDefined();
-    expect((updated.section as Record<string, unknown>).name).toBe("Recitation A+");
+    expect((updated.section as Record<string, unknown>).name).toBe(
+      "Recitation A+",
+    );
 
     // Archive via concept
-    const archResult = await app.concepts.Rostering.archiveSection({ section: sec._id as ID });
+    const archResult = await app.concepts.Rostering.archiveSection({
+      section: sec._id as ID,
+    });
     expect("error" in archResult).toBe(false);
-    expect((archResult as unknown as { section: Record<string, unknown> }).section.status).toBe("ARCHIVED");
+    expect(
+      (archResult as unknown as { section: Record<string, unknown> }).section
+        .status,
+    ).toBe("ARCHIVED");
   });
 
   // --- seat import ---
@@ -164,7 +208,8 @@ describe("roster", () => {
     const admin = await setupAdmin();
     await configureClass(admin);
 
-    const csv = "externalKey,email,rosterName,kind,section\n" +
+    const csv =
+      "externalKey,email,rosterName,kind,section\n" +
       "S001,s1@mit.edu,Alice,STUDENT,\n" +
       "S002,s2@mit.edu,Bob,STUDENT,\n";
 
@@ -190,11 +235,14 @@ describe("roster", () => {
   test("claim a pending seat makes it ACTIVE", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    await importRows(admin, [row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" })]);
+    await importRows(admin, [
+      row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" }),
+    ]);
 
     const student = await registerUser("alice", "pw", "Alice");
     const claimed = await app.send("/roster/claim-seat", {
-      session: student.session, externalKey: "S001",
+      session: student.session,
+      externalKey: "S001",
     });
     expect(claimed.seat).toBeDefined();
     expect((claimed.seat as Record<string, unknown>).status).toBe("ACTIVE");
@@ -203,13 +251,21 @@ describe("roster", () => {
   test("claiming already-claimed seat errors", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    await importRows(admin, [row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" })]);
+    await importRows(admin, [
+      row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" }),
+    ]);
 
     const alice = await registerUser("alice", "pw", "Alice");
-    await app.send("/roster/claim-seat", { session: alice.session, externalKey: "S001" });
+    await app.send("/roster/claim-seat", {
+      session: alice.session,
+      externalKey: "S001",
+    });
 
     const bob = await registerUser("bob", "pw", "Bob");
-    const dup = await app.send("/roster/claim-seat", { session: bob.session, externalKey: "S001" });
+    const dup = await app.send("/roster/claim-seat", {
+      session: bob.session,
+      externalKey: "S001",
+    });
     expect(dup.error).toBeDefined();
   });
 
@@ -218,14 +274,18 @@ describe("roster", () => {
   test("staff links a seat to a user", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    await importRows(admin, [row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" })]);
+    await importRows(admin, [
+      row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" }),
+    ]);
 
     const student = await registerUser("alice", "pw", "Alice");
     const unclaimed = await app.concepts.Rostering._getUnclaimedSeats();
     const seatId = unclaimed[0].seat;
 
     const linked = await app.send("/roster/link-user", {
-      session: admin.session, seat: seatId, user: student.user,
+      session: admin.session,
+      seat: seatId,
+      user: student.user,
     });
     expect(linked.seat).toBeDefined();
     expect((linked.seat as Record<string, unknown>).status).toBe("ACTIVE");
@@ -236,17 +296,28 @@ describe("roster", () => {
   test("drop an active seat then reinstate it", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    await importRows(admin, [row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" })]);
+    await importRows(admin, [
+      row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" }),
+    ]);
 
     const alice = await registerUser("alice", "pw", "Alice");
-    const claimed = await app.send("/roster/claim-seat", { session: alice.session, externalKey: "S001" });
+    const claimed = await app.send("/roster/claim-seat", {
+      session: alice.session,
+      externalKey: "S001",
+    });
     const seatId = (claimed.seat as Record<string, unknown>)._id as string;
 
-    const dropped = await app.send("/roster/drop", { session: admin.session, seat: seatId });
+    const dropped = await app.send("/roster/drop", {
+      session: admin.session,
+      seat: seatId,
+    });
     expect(dropped.seat).toBeDefined();
     expect((dropped.seat as Record<string, unknown>).status).toBe("DROPPED");
 
-    const reinstated = await app.send("/roster/reinstate", { session: admin.session, seat: seatId });
+    const reinstated = await app.send("/roster/reinstate", {
+      session: admin.session,
+      seat: seatId,
+    });
     expect(reinstated.seat).toBeDefined();
     expect((reinstated.seat as Record<string, unknown>).status).toBe("ACTIVE");
   });
@@ -257,22 +328,40 @@ describe("roster", () => {
     const admin = await setupAdmin();
     await configureClass(admin);
     const secA = await app.send("/roster/sections/create", {
-      session: admin.session, name: "Section A", location: "", meetingPattern: "",
+      session: admin.session,
+      name: "Section A",
+      location: "",
+      meetingPattern: "",
     });
     const secB = await app.send("/roster/sections/create", {
-      session: admin.session, name: "Section B", location: "", meetingPattern: "",
+      session: admin.session,
+      name: "Section B",
+      location: "",
+      meetingPattern: "",
     });
     const sectionAId = (secA.section as Record<string, unknown>)._id as string;
     const sectionBId = (secB.section as Record<string, unknown>)._id as string;
 
-    await importRows(admin, [row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice", section: sectionAId })]);
+    await importRows(admin, [
+      row({
+        externalKey: "S001",
+        email: "a@a.com",
+        rosterName: "Alice",
+        section: sectionAId,
+      }),
+    ]);
 
     const alice = await registerUser("alice", "pw", "Alice");
-    const claimed = await app.send("/roster/claim-seat", { session: alice.session, externalKey: "S001" });
+    const claimed = await app.send("/roster/claim-seat", {
+      session: alice.session,
+      externalKey: "S001",
+    });
     const seatId = (claimed.seat as Record<string, unknown>)._id as string;
 
     const moved = await app.send("/roster/move-section", {
-      session: admin.session, seat: seatId, section: sectionBId,
+      session: admin.session,
+      seat: seatId,
+      section: sectionBId,
     });
     expect(moved.seat).toBeDefined();
     expect((moved.seat as Record<string, unknown>).section).toBe(sectionBId);
@@ -283,10 +372,15 @@ describe("roster", () => {
   test("lists active members", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    await importRows(admin, [row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" })]);
+    await importRows(admin, [
+      row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" }),
+    ]);
 
     const alice = await registerUser("alice", "pw", "Alice");
-    await app.send("/roster/claim-seat", { session: alice.session, externalKey: "S001" });
+    await app.send("/roster/claim-seat", {
+      session: alice.session,
+      externalKey: "S001",
+    });
 
     const members = await app.concepts.Rostering._getActiveMembers();
     expect(members.length).toBe(1);
@@ -302,14 +396,26 @@ describe("staff role", () => {
   test("import STAFF seat and claim grants course-staff role", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    await importRows(admin, [row({ externalKey: "STAFF1", email: "staff@mit.edu", rosterName: "Dr. Staff", kind: "STAFF" })]);
+    await importRows(admin, [
+      row({
+        externalKey: "STAFF1",
+        email: "staff@mit.edu",
+        rosterName: "Dr. Staff",
+        kind: "STAFF",
+      }),
+    ]);
 
     const staffUser = await registerUser("staff", "pw", "Dr. Staff");
-    await app.send("/roster/claim-seat", { session: staffUser.session, externalKey: "STAFF1" });
+    await app.send("/roster/claim-seat", {
+      session: staffUser.session,
+      externalKey: "STAFF1",
+    });
 
     // Check capability via /roles/can endpoint
     const can = await app.send("/roles/can", {
-      user: staffUser.user, context: "forum", capability: "assignments:manage",
+      user: staffUser.user,
+      context: "forum",
+      capability: "assignments:manage",
     });
     expect(can.allowed).toBe(true);
   });
@@ -325,27 +431,48 @@ describe("assignments", () => {
     await configureClass(admin);
 
     const draft = await app.send("/assignments/create-draft", {
-      session: admin.session, title: "Homework 1", instructions: "Problems 1-5.",
-      kind: "HOMEWORK", availableAt: iso(1), dueAt: iso(7), closeAt: iso(14),
-      acceptsSubmissions: true, audience: "EVERYONE", targets: [],
+      session: admin.session,
+      title: "Homework 1",
+      instructions: "Problems 1-5.",
+      kind: "HOMEWORK",
+      availableAt: iso(1),
+      dueAt: iso(7),
+      closeAt: iso(14),
+      acceptsSubmissions: true,
+      audience: "EVERYONE",
+      targets: [],
     });
     expect(draft.assignment).toBeDefined();
     const assignId = draft.assignment as string;
 
-    const [detail] = await app.concepts.Assigning._getAssignment({ assignment: assignId as ID });
+    const [detail] = await app.concepts.Assigning._getAssignment({
+      assignment: assignId as ID,
+    });
     expect(detail.status).toBe("DRAFT");
 
     const revised = await app.send("/assignments/revise", {
-      session: admin.session, assignment: assignId,
-      title: "Homework 1 (Revised)", instructions: "Problems 1-6.",
-      kind: "HOMEWORK", availableAt: iso(1), dueAt: iso(7), closeAt: iso(14),
-      acceptsSubmissions: true, audience: "EVERYONE", targets: [],
+      session: admin.session,
+      assignment: assignId,
+      title: "Homework 1 (Revised)",
+      instructions: "Problems 1-6.",
+      kind: "HOMEWORK",
+      availableAt: iso(1),
+      dueAt: iso(7),
+      closeAt: iso(14),
+      acceptsSubmissions: true,
+      audience: "EVERYONE",
+      targets: [],
     });
     expect(revised.assignment).toBe(assignId);
 
-    await app.send("/assignments/publish", { session: admin.session, assignment: assignId });
+    await app.send("/assignments/publish", {
+      session: admin.session,
+      assignment: assignId,
+    });
 
-    const [pubDetail] = await app.concepts.Assigning._getAssignment({ assignment: assignId as ID });
+    const [pubDetail] = await app.concepts.Assigning._getAssignment({
+      assignment: assignId as ID,
+    });
     expect(pubDetail.status).toBe("PUBLISHED");
   });
 
@@ -357,17 +484,29 @@ describe("assignments", () => {
       row({ externalKey: "S002", email: "b@b.com", rosterName: "Bob" }),
     ]);
 
-    const alice = await withStudent(admin, "S001");
-    const bob = await withStudent(admin, "S002");
+    const _alice = await withStudent(admin, "S001");
+    const _bob = await withStudent(admin, "S002");
 
     const draft = await app.send("/assignments/create-draft", {
-      session: admin.session, title: "HW1", instructions: "Do it.",
-      kind: "HOMEWORK", availableAt: iso(1), dueAt: iso(7), closeAt: iso(14),
-      acceptsSubmissions: true, audience: "EVERYONE", targets: [],
+      session: admin.session,
+      title: "HW1",
+      instructions: "Do it.",
+      kind: "HOMEWORK",
+      availableAt: iso(1),
+      dueAt: iso(7),
+      closeAt: iso(14),
+      acceptsSubmissions: true,
+      audience: "EVERYONE",
+      targets: [],
     });
-    await app.send("/assignments/publish", { session: admin.session, assignment: draft.assignment });
+    await app.send("/assignments/publish", {
+      session: admin.session,
+      assignment: draft.assignment,
+    });
 
-    const assignees = await app.concepts.Assigning._getAssignees({ assignment: draft.assignment as ID });
+    const assignees = await app.concepts.Assigning._getAssignees({
+      assignment: draft.assignment as ID,
+    });
     expect(assignees.length).toBe(2);
   });
 
@@ -375,26 +514,46 @@ describe("assignments", () => {
     const admin = await setupAdmin();
     await configureClass(admin);
     const secA = await app.send("/roster/sections/create", {
-      session: admin.session, name: "Section A", location: "", meetingPattern: "",
+      session: admin.session,
+      name: "Section A",
+      location: "",
+      meetingPattern: "",
     });
     const sectionAId = (secA.section as Record<string, unknown>)._id as string;
 
     await importRows(admin, [
-      row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice", section: sectionAId }),
+      row({
+        externalKey: "S001",
+        email: "a@a.com",
+        rosterName: "Alice",
+        section: sectionAId,
+      }),
       row({ externalKey: "S002", email: "b@b.com", rosterName: "Bob" }),
     ]);
 
     const alice = await withStudent(admin, "S001");
-    const bob = await withStudent(admin, "S002");
+    const _bob = await withStudent(admin, "S002");
 
     const draft = await app.send("/assignments/create-draft", {
-      session: admin.session, title: "HW1", instructions: "Do it.",
-      kind: "HOMEWORK", availableAt: iso(1), dueAt: iso(7), closeAt: iso(14),
-      acceptsSubmissions: true, audience: "TARGETS", targets: [sectionAId],
+      session: admin.session,
+      title: "HW1",
+      instructions: "Do it.",
+      kind: "HOMEWORK",
+      availableAt: iso(1),
+      dueAt: iso(7),
+      closeAt: iso(14),
+      acceptsSubmissions: true,
+      audience: "TARGETS",
+      targets: [sectionAId],
     });
-    await app.send("/assignments/publish", { session: admin.session, assignment: draft.assignment });
+    await app.send("/assignments/publish", {
+      session: admin.session,
+      assignment: draft.assignment,
+    });
 
-    const assignees = await app.concepts.Assigning._getAssignees({ assignment: draft.assignment as ID });
+    const assignees = await app.concepts.Assigning._getAssignees({
+      assignment: draft.assignment as ID,
+    });
     expect(assignees.length).toBe(1);
     expect(assignees[0].assignee).toBe(alice.user);
   });
@@ -407,18 +566,30 @@ describe("assignments", () => {
       row({ externalKey: "S002", email: "b@b.com", rosterName: "Bob" }),
     ]);
 
-    const alice = await withStudent(admin, "S001");
+    const _alice = await withStudent(admin, "S001");
 
     const draft = await app.send("/assignments/create-draft", {
-      session: admin.session, title: "HW1", instructions: "Do it.",
-      kind: "HOMEWORK", availableAt: iso(1), dueAt: iso(7), closeAt: iso(14),
-      acceptsSubmissions: true, audience: "EVERYONE", targets: [],
+      session: admin.session,
+      title: "HW1",
+      instructions: "Do it.",
+      kind: "HOMEWORK",
+      availableAt: iso(1),
+      dueAt: iso(7),
+      closeAt: iso(14),
+      acceptsSubmissions: true,
+      audience: "EVERYONE",
+      targets: [],
     });
-    await app.send("/assignments/publish", { session: admin.session, assignment: draft.assignment });
+    await app.send("/assignments/publish", {
+      session: admin.session,
+      assignment: draft.assignment,
+    });
 
     const bob = await withStudent(admin, "S002");
 
-    const bobAssigned = await app.concepts.Assigning._getAssigned({ assignee: bob.user });
+    const bobAssigned = await app.concepts.Assigning._getAssigned({
+      assignee: bob.user,
+    });
     expect(bobAssigned.length).toBe(1);
     expect(bobAssigned[0].assignment).toBe(draft.assignment);
   });
@@ -426,31 +597,49 @@ describe("assignments", () => {
   test("set and clear due override", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    await importRows(admin, [row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" })]);
+    await importRows(admin, [
+      row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" }),
+    ]);
 
     const alice = await withStudent(admin, "S001");
 
     const draft = await app.send("/assignments/create-draft", {
-      session: admin.session, title: "HW1", instructions: "Do it.",
-      kind: "HOMEWORK", availableAt: iso(1), dueAt: iso(7), closeAt: iso(14),
-      acceptsSubmissions: true, audience: "EVERYONE", targets: [],
+      session: admin.session,
+      title: "HW1",
+      instructions: "Do it.",
+      kind: "HOMEWORK",
+      availableAt: iso(1),
+      dueAt: iso(7),
+      closeAt: iso(14),
+      acceptsSubmissions: true,
+      audience: "EVERYONE",
+      targets: [],
     });
-    await app.send("/assignments/publish", { session: admin.session, assignment: draft.assignment });
+    await app.send("/assignments/publish", {
+      session: admin.session,
+      assignment: draft.assignment,
+    });
 
     const overrideDate = iso(21);
     const setOverride = await app.send("/assignments/set-due-override", {
-      session: admin.session, assignment: draft.assignment, assignee: alice.user, dueAt: overrideDate,
+      session: admin.session,
+      assignment: draft.assignment,
+      assignee: alice.user,
+      dueAt: overrideDate,
     });
     expect(setOverride.release).toBeDefined();
 
     const [release] = await app.concepts.Assigning._getRelease({
-      assignment: draft.assignment as ID, assignee: alice.user,
+      assignment: draft.assignment as ID,
+      assignee: alice.user,
     });
     expect(release.dueOverride).toBeDefined();
 
     // Clear
     const cleared = await app.send("/assignments/clear-due-override", {
-      session: admin.session, assignment: draft.assignment, assignee: alice.user,
+      session: admin.session,
+      assignment: draft.assignment,
+      assignee: alice.user,
     });
     expect(cleared.release).toBeDefined();
   });
@@ -458,19 +647,32 @@ describe("assignments", () => {
   test("student assignment list shows effective due and status", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    await importRows(admin, [row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" })]);
+    await importRows(admin, [
+      row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" }),
+    ]);
 
     const alice = await withStudent(admin, "S001");
 
     const draft = await app.send("/assignments/create-draft", {
-      session: admin.session, title: "HW1", instructions: "Do it.",
-      kind: "HOMEWORK", availableAt: iso(1), dueAt: iso(7), closeAt: iso(14),
-      acceptsSubmissions: true, audience: "EVERYONE", targets: [],
+      session: admin.session,
+      title: "HW1",
+      instructions: "Do it.",
+      kind: "HOMEWORK",
+      availableAt: iso(1),
+      dueAt: iso(7),
+      closeAt: iso(14),
+      acceptsSubmissions: true,
+      audience: "EVERYONE",
+      targets: [],
     });
-    await app.send("/assignments/publish", { session: admin.session, assignment: draft.assignment });
+    await app.send("/assignments/publish", {
+      session: admin.session,
+      assignment: draft.assignment,
+    });
 
     const [due] = await app.concepts.Assigning._getDue({
-      assignment: draft.assignment as ID, assignee: alice.user,
+      assignment: draft.assignment as ID,
+      assignee: alice.user,
     });
     expect(due.dueAt).toBeDefined();
     expect(due.closeAt).toBeDefined();
@@ -486,10 +688,15 @@ describe("submissions", () => {
     const admin = await setupAdmin();
     await configureClass(admin);
 
-    const { student, assignment } = await setupStudentAndAssignment(admin, "S001");
+    const { student, assignment } = await setupStudentAndAssignment(
+      admin,
+      "S001",
+    );
 
     const result = await app.send("/assignments/submit", {
-      session: student.session, assignment, content: "My solution.",
+      session: student.session,
+      assignment,
+      content: "My solution.",
     });
     expect(result.submission).toBeDefined();
   });
@@ -497,12 +704,19 @@ describe("submissions", () => {
   test("submit creates attempt with artifacts", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    const { student, assignment } = await setupStudentAndAssignment(admin, "S001");
+    const { student, assignment } = await setupStudentAndAssignment(
+      admin,
+      "S001",
+    );
 
     const result = await app.send("/assignments/submit", {
-      session: student.session, assignment, content: "With code.",
+      session: student.session,
+      assignment,
+      content: "With code.",
     });
-    const [sub] = await app.concepts.Submitting._getSubmission({ submission: result.submission as ID });
+    const [sub] = await app.concepts.Submitting._getSubmission({
+      submission: result.submission as ID,
+    });
     expect(sub.status).toBe("SUBMITTED");
     expect(sub.artifacts.length).toBeGreaterThan(0);
   });
@@ -510,16 +724,22 @@ describe("submissions", () => {
   test("multiple submissions create numbered attempts", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    const { student, assignment } = await setupStudentAndAssignment(admin, "S001");
+    const { student, assignment } = await setupStudentAndAssignment(
+      admin,
+      "S001",
+    );
 
     for (const _ of [1, 2, 3]) {
       await app.send("/assignments/submit", {
-        session: student.session, assignment, content: "Attempt.",
+        session: student.session,
+        assignment,
+        content: "Attempt.",
       });
     }
 
     const attempts = await app.concepts.Submitting._getAttempts({
-      assignment: assignment as ID, submitter: student.user,
+      assignment: assignment as ID,
+      submitter: student.user,
     });
     expect(attempts.length).toBe(3);
     expect(attempts.map((a) => a.number)).toEqual([1, 2, 3]);
@@ -528,13 +748,25 @@ describe("submissions", () => {
   test("latest attempt is returned correctly", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    const { student, assignment } = await setupStudentAndAssignment(admin, "S001");
+    const { student, assignment } = await setupStudentAndAssignment(
+      admin,
+      "S001",
+    );
 
-    await app.send("/assignments/submit", { session: student.session, assignment, content: "First." });
-    await app.send("/assignments/submit", { session: student.session, assignment, content: "Second." });
+    await app.send("/assignments/submit", {
+      session: student.session,
+      assignment,
+      content: "First.",
+    });
+    await app.send("/assignments/submit", {
+      session: student.session,
+      assignment,
+      content: "Second.",
+    });
 
     const [latest] = await app.concepts.Submitting._getLatest({
-      assignment: assignment as ID, submitter: student.user,
+      assignment: assignment as ID,
+      submitter: student.user,
     });
     expect(latest.number).toBe(2);
   });
@@ -542,21 +774,31 @@ describe("submissions", () => {
   test("withdraw and restore submission", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    const { student, assignment } = await setupStudentAndAssignment(admin, "S001");
+    const { student, assignment } = await setupStudentAndAssignment(
+      admin,
+      "S001",
+    );
 
     const submitted = await app.send("/assignments/submit", {
-      session: student.session, assignment, content: "To be withdrawn.",
+      session: student.session,
+      assignment,
+      content: "To be withdrawn.",
     });
     const subId = submitted.submission as string;
 
-    const wd = await app.concepts.Submitting.withdraw({ submission: subId as ID });
+    const wd = await app.concepts.Submitting.withdraw({
+      submission: subId as ID,
+    });
     expect("error" in wd).toBe(false);
 
-    const rs = await app.concepts.Submitting.restore({ submission: subId as ID });
+    const rs = await app.concepts.Submitting.restore({
+      submission: subId as ID,
+    });
     expect("error" in rs).toBe(false);
 
     const [latest] = await app.concepts.Submitting._getLatest({
-      assignment: assignment as ID, submitter: student.user,
+      assignment: assignment as ID,
+      submitter: student.user,
     });
     expect(latest.status).toBe("SUBMITTED");
   });
@@ -564,18 +806,29 @@ describe("submissions", () => {
   test("cannot submit after close date", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    await importRows(admin, [row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" })]);
+    await importRows(admin, [
+      row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" }),
+    ]);
 
-    const student = await withStudent(admin, "S001");
+    const _student = await withStudent(admin, "S001");
 
     const past = new Date(Date.now() - 86400000).toISOString();
     const draft = await app.send("/assignments/create-draft", {
-      session: admin.session, title: "Past", instructions: "Late.",
-      kind: "HOMEWORK", availableAt: new Date(Date.now() - 7 * 86400000).toISOString(),
+      session: admin.session,
+      title: "Past",
+      instructions: "Late.",
+      kind: "HOMEWORK",
+      availableAt: new Date(Date.now() - 7 * 86400000).toISOString(),
       dueAt: new Date(Date.now() - 3 * 86400000).toISOString(),
-      closeAt: past, acceptsSubmissions: true, audience: "EVERYONE", targets: [],
+      closeAt: past,
+      acceptsSubmissions: true,
+      audience: "EVERYONE",
+      targets: [],
     });
-    await app.send("/assignments/publish", { session: admin.session, assignment: draft.assignment });
+    await app.send("/assignments/publish", {
+      session: admin.session,
+      assignment: draft.assignment,
+    });
 
     const [detail] = await app.concepts.Assigning._getAssignment({
       assignment: draft.assignment as ID,
@@ -594,7 +847,10 @@ describe("late days", () => {
     await configureClass(admin);
 
     const result = await app.send("/late-days/configure-policy", {
-      session: admin.session, defaultDays: 3, unitHours: 24, maxDaysPerItem: 5,
+      session: admin.session,
+      defaultDays: 3,
+      unitHours: 24,
+      maxDaysPerItem: 5,
     });
     expect(result.policy).toBe(true);
 
@@ -607,18 +863,28 @@ describe("late days", () => {
   test("student can apply late days if within balance", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    const { student, assignment } = await setupStudentAndAssignment(admin, "S001");
+    const { student, assignment } = await setupStudentAndAssignment(
+      admin,
+      "S001",
+    );
 
     await app.send("/late-days/configure-policy", {
-      session: admin.session, defaultDays: 5, unitHours: 24, maxDaysPerItem: 5,
+      session: admin.session,
+      defaultDays: 5,
+      unitHours: 24,
+      maxDaysPerItem: 5,
     });
 
     const result = await app.send("/late-days/apply", {
-      session: student.session, assignment, days: 2,
+      session: student.session,
+      assignment,
+      days: 2,
     });
     expect(result.use).toBeDefined();
 
-    const [balance] = await app.concepts.LateBanking._getBalance({ learner: student.user });
+    const [balance] = await app.concepts.LateBanking._getBalance({
+      learner: student.user,
+    });
     expect(balance.granted).toBe(5);
     expect(balance.used).toBe(2);
     expect(balance.remaining).toBe(3);
@@ -627,14 +893,22 @@ describe("late days", () => {
   test("applying late days fails when overspending balance", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    const { student, assignment } = await setupStudentAndAssignment(admin, "S001");
+    const { student, assignment } = await setupStudentAndAssignment(
+      admin,
+      "S001",
+    );
 
     await app.send("/late-days/configure-policy", {
-      session: admin.session, defaultDays: 2, unitHours: 24, maxDaysPerItem: 5,
+      session: admin.session,
+      defaultDays: 2,
+      unitHours: 24,
+      maxDaysPerItem: 5,
     });
 
     const result = await app.send("/late-days/apply", {
-      session: student.session, assignment, days: 5,
+      session: student.session,
+      assignment,
+      days: 5,
     });
     expect(result.error).toBeDefined();
     expect(result.use).toBeUndefined();
@@ -643,50 +917,75 @@ describe("late days", () => {
   test("change and cancel late-day use", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    const { student, assignment } = await setupStudentAndAssignment(admin, "S001");
+    const { student, assignment } = await setupStudentAndAssignment(
+      admin,
+      "S001",
+    );
 
     await app.send("/late-days/configure-policy", {
-      session: admin.session, defaultDays: 5, unitHours: 24, maxDaysPerItem: 5,
+      session: admin.session,
+      defaultDays: 5,
+      unitHours: 24,
+      maxDaysPerItem: 5,
     });
 
     await app.send("/late-days/apply", {
-      session: student.session, assignment, days: 2,
+      session: student.session,
+      assignment,
+      days: 2,
     });
 
     const changed = await app.send("/late-days/change", {
-      session: student.session, assignment, days: 1,
+      session: student.session,
+      assignment,
+      days: 1,
     });
     expect(changed.use).toBeDefined();
 
-    const [balance] = await app.concepts.LateBanking._getBalance({ learner: student.user });
+    const [balance] = await app.concepts.LateBanking._getBalance({
+      learner: student.user,
+    });
     expect(balance.used).toBe(1);
 
     const canceled = await app.send("/late-days/cancel", {
-      session: student.session, assignment,
+      session: student.session,
+      assignment,
     });
     expect(canceled.use).toBeDefined();
 
-    const [balance2] = await app.concepts.LateBanking._getBalance({ learner: student.user });
+    const [balance2] = await app.concepts.LateBanking._getBalance({
+      learner: student.user,
+    });
     expect(balance2.used).toBe(0);
   });
 
   test("staff grants extra late days", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    await importRows(admin, [row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" })]);
+    await importRows(admin, [
+      row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" }),
+    ]);
 
     const student = await withStudent(admin, "S001");
 
     await app.send("/late-days/configure-policy", {
-      session: admin.session, defaultDays: 3, unitHours: 24, maxDaysPerItem: 5,
+      session: admin.session,
+      defaultDays: 3,
+      unitHours: 24,
+      maxDaysPerItem: 5,
     });
 
     const granted = await app.send("/late-days/grant", {
-      session: admin.session, learner: student.user, days: 2, reason: "Extension",
+      session: admin.session,
+      learner: student.user,
+      days: 2,
+      reason: "Extension",
     });
     expect(granted.grant).toBeDefined();
 
-    const [balance] = await app.concepts.LateBanking._getBalance({ learner: student.user });
+    const [balance] = await app.concepts.LateBanking._getBalance({
+      learner: student.user,
+    });
     expect(balance.granted).toBe(5);
   });
 });
@@ -702,12 +1001,19 @@ describe("grades", () => {
     const { assignment } = await setupStudentAndAssignment(admin, "S001");
 
     const item = await app.send("/grades/configure-item", {
-      session: admin.session, item: assignment, label: "HW1 Grade", maxPoints: 100,
+      session: admin.session,
+      item: assignment,
+      label: "HW1 Grade",
+      maxPoints: 100,
     });
     expect(item.gradeItem).toBeDefined();
 
     const crit = await app.send("/grades/add-criterion", {
-      session: admin.session, item: assignment, name: "Correctness", maxPoints: 60, position: 0,
+      session: admin.session,
+      item: assignment,
+      name: "Correctness",
+      maxPoints: 60,
+      position: 0,
     });
     expect(crit.criterion).toBeDefined();
   });
@@ -715,20 +1021,31 @@ describe("grades", () => {
   test("record draft grade", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    const { student, assignment } = await setupStudentAndAssignment(admin, "S001");
+    const { student, assignment } = await setupStudentAndAssignment(
+      admin,
+      "S001",
+    );
 
     await app.send("/grades/configure-item", {
-      session: admin.session, item: assignment, label: "HW1", maxPoints: 100,
+      session: admin.session,
+      item: assignment,
+      label: "HW1",
+      maxPoints: 100,
     });
 
     const recorded = await app.send("/grades/record", {
-      session: admin.session, learner: student.user, item: assignment,
-      evidence: "", score: 85, feedback: "Good work!",
+      session: admin.session,
+      learner: student.user,
+      item: assignment,
+      evidence: "",
+      score: 85,
+      feedback: "Good work!",
     });
     expect(recorded.grade).toBeDefined();
 
     const [grade] = await app.concepts.Grading._getGrade({
-      learner: student.user, item: assignment as ID,
+      learner: student.user,
+      item: assignment as ID,
     });
     expect(grade.status).toBe("DRAFT");
     expect(grade.score).toBe(85);
@@ -737,43 +1054,68 @@ describe("grades", () => {
   test("draft grade is NOT visible to student", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    const { student, assignment } = await setupStudentAndAssignment(admin, "S001");
+    const { student, assignment } = await setupStudentAndAssignment(
+      admin,
+      "S001",
+    );
 
     await app.send("/grades/configure-item", {
-      session: admin.session, item: assignment, label: "HW1", maxPoints: 100,
+      session: admin.session,
+      item: assignment,
+      label: "HW1",
+      maxPoints: 100,
     });
 
     await app.send("/grades/record", {
-      session: admin.session, learner: student.user, item: assignment,
-      evidence: "", score: 85, feedback: "Good work!",
+      session: admin.session,
+      learner: student.user,
+      item: assignment,
+      evidence: "",
+      score: 85,
+      feedback: "Good work!",
     });
 
-    const grades = await app.concepts.Grading._getGradesForLearner({ learner: student.user });
+    const grades = await app.concepts.Grading._getGradesForLearner({
+      learner: student.user,
+    });
     const draftGrade = grades.find((g) => g.item === (assignment as ID));
     expect(draftGrade).toBeDefined();
-    expect(draftGrade!.status).toBe("DRAFT");
+    expect(draftGrade?.status).toBe("DRAFT");
   });
 
   test("release grade", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    const { student, assignment } = await setupStudentAndAssignment(admin, "S001");
+    const { student, assignment } = await setupStudentAndAssignment(
+      admin,
+      "S001",
+    );
 
     await app.send("/grades/configure-item", {
-      session: admin.session, item: assignment, label: "HW1", maxPoints: 100,
+      session: admin.session,
+      item: assignment,
+      label: "HW1",
+      maxPoints: 100,
     });
     await app.send("/grades/record", {
-      session: admin.session, learner: student.user, item: assignment,
-      evidence: "", score: 90, feedback: "Excellent!",
+      session: admin.session,
+      learner: student.user,
+      item: assignment,
+      evidence: "",
+      score: 90,
+      feedback: "Excellent!",
     });
 
     const released = await app.send("/grades/release", {
-      session: admin.session, learner: student.user, item: assignment,
+      session: admin.session,
+      learner: student.user,
+      item: assignment,
     });
     expect(released.grade).toBeDefined();
 
     const [grade] = await app.concepts.Grading._getGrade({
-      learner: student.user, item: assignment as ID,
+      learner: student.user,
+      item: assignment as ID,
     });
     expect(grade.status).toBe("RELEASED");
   });
@@ -781,48 +1123,77 @@ describe("grades", () => {
   test("released grade IS visible to student", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    const { student, assignment } = await setupStudentAndAssignment(admin, "S001");
+    const { student, assignment } = await setupStudentAndAssignment(
+      admin,
+      "S001",
+    );
 
     await app.send("/grades/configure-item", {
-      session: admin.session, item: assignment, label: "HW1", maxPoints: 100,
+      session: admin.session,
+      item: assignment,
+      label: "HW1",
+      maxPoints: 100,
     });
     await app.send("/grades/record", {
-      session: admin.session, learner: student.user, item: assignment,
-      evidence: "", score: 90, feedback: "Excellent!",
+      session: admin.session,
+      learner: student.user,
+      item: assignment,
+      evidence: "",
+      score: 90,
+      feedback: "Excellent!",
     });
     await app.send("/grades/release", {
-      session: admin.session, learner: student.user, item: assignment,
+      session: admin.session,
+      learner: student.user,
+      item: assignment,
     });
 
-    const grades = await app.concepts.Grading._getGradesForLearner({ learner: student.user });
+    const grades = await app.concepts.Grading._getGradesForLearner({
+      learner: student.user,
+    });
     const releasedGrade = grades.find((g) => g.item === (assignment as ID));
     expect(releasedGrade).toBeDefined();
-    expect(releasedGrade!.status).toBe("RELEASED");
+    expect(releasedGrade?.status).toBe("RELEASED");
   });
 
   test("retract grade makes it invisible again", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    const { student, assignment } = await setupStudentAndAssignment(admin, "S001");
+    const { student, assignment } = await setupStudentAndAssignment(
+      admin,
+      "S001",
+    );
 
     await app.send("/grades/configure-item", {
-      session: admin.session, item: assignment, label: "HW1", maxPoints: 100,
+      session: admin.session,
+      item: assignment,
+      label: "HW1",
+      maxPoints: 100,
     });
     await app.send("/grades/record", {
-      session: admin.session, learner: student.user, item: assignment,
-      evidence: "", score: 90, feedback: "Excellent!",
+      session: admin.session,
+      learner: student.user,
+      item: assignment,
+      evidence: "",
+      score: 90,
+      feedback: "Excellent!",
     });
     await app.send("/grades/release", {
-      session: admin.session, learner: student.user, item: assignment,
+      session: admin.session,
+      learner: student.user,
+      item: assignment,
     });
 
     const retracted = await app.send("/grades/retract", {
-      session: admin.session, learner: student.user, item: assignment,
+      session: admin.session,
+      learner: student.user,
+      item: assignment,
     });
     expect(retracted.grade).toBeDefined();
 
     const [grade] = await app.concepts.Grading._getGrade({
-      learner: student.user, item: assignment as ID,
+      learner: student.user,
+      item: assignment as ID,
     });
     expect(grade.status).toBe("DRAFT");
   });
@@ -830,23 +1201,37 @@ describe("grades", () => {
   test("excuse a student", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    const { student, assignment } = await setupStudentAndAssignment(admin, "S001");
+    const { student, assignment } = await setupStudentAndAssignment(
+      admin,
+      "S001",
+    );
 
     await app.send("/grades/configure-item", {
-      session: admin.session, item: assignment, label: "HW1", maxPoints: 100,
+      session: admin.session,
+      item: assignment,
+      label: "HW1",
+      maxPoints: 100,
     });
     await app.send("/grades/record", {
-      session: admin.session, learner: student.user, item: assignment,
-      evidence: "", score: 85, feedback: "Good work!",
+      session: admin.session,
+      learner: student.user,
+      item: assignment,
+      evidence: "",
+      score: 85,
+      feedback: "Good work!",
     });
 
     const excused = await app.send("/grades/excuse", {
-      session: admin.session, learner: student.user, item: assignment, feedback: "Med exemption.",
+      session: admin.session,
+      learner: student.user,
+      item: assignment,
+      feedback: "Med exemption.",
     });
     expect(excused.grade).toBeDefined();
 
     const [grade] = await app.concepts.Grading._getGrade({
-      learner: student.user, item: assignment as ID,
+      learner: student.user,
+      item: assignment as ID,
     });
     expect(grade.status).toBe("EXCUSED");
     expect(grade.score).toBe(0);
@@ -863,38 +1248,66 @@ describe("grades", () => {
     const bob = await withStudent(admin, "S002");
 
     const draft = await app.send("/assignments/create-draft", {
-      session: admin.session, title: "HW", instructions: "Do it.",
-      kind: "HOMEWORK", availableAt: iso(1), dueAt: iso(7), closeAt: iso(14),
-      acceptsSubmissions: true, audience: "EVERYONE", targets: [],
+      session: admin.session,
+      title: "HW",
+      instructions: "Do it.",
+      kind: "HOMEWORK",
+      availableAt: iso(1),
+      dueAt: iso(7),
+      closeAt: iso(14),
+      acceptsSubmissions: true,
+      audience: "EVERYONE",
+      targets: [],
     });
-    await app.send("/assignments/publish", { session: admin.session, assignment: draft.assignment });
+    await app.send("/assignments/publish", {
+      session: admin.session,
+      assignment: draft.assignment,
+    });
     const assignment = draft.assignment as string;
 
     await app.send("/grades/configure-item", {
-      session: admin.session, item: assignment, label: "HW", maxPoints: 100,
+      session: admin.session,
+      item: assignment,
+      label: "HW",
+      maxPoints: 100,
     });
 
     // Alice: zero score
     await app.send("/grades/record", {
-      session: admin.session, learner: alice.user, item: assignment, evidence: "", score: 0, feedback: "Incomplete.",
+      session: admin.session,
+      learner: alice.user,
+      item: assignment,
+      evidence: "",
+      score: 0,
+      feedback: "Incomplete.",
     });
 
     // Bob: record draft then excuse
     await app.send("/grades/record", {
-      session: admin.session, learner: bob.user, item: assignment, evidence: "", score: 0, feedback: "Draft.",
+      session: admin.session,
+      learner: bob.user,
+      item: assignment,
+      evidence: "",
+      score: 0,
+      feedback: "Draft.",
     });
     await app.send("/grades/excuse", {
-      session: admin.session, learner: bob.user, item: assignment, feedback: "Excused.",
+      session: admin.session,
+      learner: bob.user,
+      item: assignment,
+      feedback: "Excused.",
     });
 
     const [aliceGrade] = await app.concepts.Grading._getGrade({
-      learner: alice.user, item: assignment as ID,
+      learner: alice.user,
+      item: assignment as ID,
     });
     expect(aliceGrade.status).not.toBe("EXCUSED");
     expect(aliceGrade.score).toBe(0);
 
     const [bobGrade] = await app.concepts.Grading._getGrade({
-      learner: bob.user, item: assignment as ID,
+      learner: bob.user,
+      item: assignment as ID,
     });
     expect(bobGrade.status).toBe("EXCUSED");
     expect(bobGrade.score).toBe(0);
@@ -909,7 +1322,9 @@ describe("student notes", () => {
   async function setupNotes() {
     const admin = await setupAdmin();
     await configureClass(admin);
-    await importRows(admin, [row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" })]);
+    await importRows(admin, [
+      row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" }),
+    ]);
     const student = await withStudent(admin, "S001");
     return { admin, student };
   }
@@ -918,14 +1333,22 @@ describe("student notes", () => {
     const { admin, student } = await setupNotes();
 
     await app.send("/students/notes/write", {
-      session: admin.session, learner: student.user,
-      body: "Internal note.", visibility: "STAFF_ONLY", tags: ["academic"], followUpAt: null,
+      session: admin.session,
+      learner: student.user,
+      body: "Internal note.",
+      visibility: "STAFF_ONLY",
+      tags: ["academic"],
+      followUpAt: null,
     });
 
-    const staffNotes = await app.concepts.StudentNoting._getActiveStaffNotes({ learner: student.user });
+    const staffNotes = await app.concepts.StudentNoting._getActiveStaffNotes({
+      learner: student.user,
+    });
     expect(staffNotes.length).toBe(1);
 
-    const visible = await app.concepts.StudentNoting._getLearnerVisibleNotes({ learner: student.user });
+    const visible = await app.concepts.StudentNoting._getLearnerVisibleNotes({
+      learner: student.user,
+    });
     expect(visible.length).toBe(0);
   });
 
@@ -933,11 +1356,17 @@ describe("student notes", () => {
     const { admin, student } = await setupNotes();
 
     await app.send("/students/notes/write", {
-      session: admin.session, learner: student.user,
-      body: "Great progress!", visibility: "LEARNER_VISIBLE", tags: ["praise"], followUpAt: null,
+      session: admin.session,
+      learner: student.user,
+      body: "Great progress!",
+      visibility: "LEARNER_VISIBLE",
+      tags: ["praise"],
+      followUpAt: null,
     });
 
-    const visible = await app.concepts.StudentNoting._getLearnerVisibleNotes({ learner: student.user });
+    const visible = await app.concepts.StudentNoting._getLearnerVisibleNotes({
+      learner: student.user,
+    });
     expect(visible.length).toBe(1);
     expect(visible[0].body).toBe("Great progress!");
   });
@@ -946,17 +1375,24 @@ describe("student notes", () => {
     const { admin, student } = await setupNotes();
 
     const result = await app.send("/students/notes/write", {
-      session: admin.session, learner: student.user,
-      body: "Please review.", visibility: "LEARNER_VISIBLE", tags: ["action"], followUpAt: null,
+      session: admin.session,
+      learner: student.user,
+      body: "Please review.",
+      visibility: "LEARNER_VISIBLE",
+      tags: ["action"],
+      followUpAt: null,
     });
     const noteId = result.note as string;
 
     const ack = await app.send("/students/notes/acknowledge", {
-      session: student.session, note: noteId,
+      session: student.session,
+      note: noteId,
     });
     expect(ack.note).toBeDefined();
 
-    const [detail] = await app.concepts.StudentNoting._getNote({ note: noteId as ID });
+    const [detail] = await app.concepts.StudentNoting._getNote({
+      note: noteId as ID,
+    });
     expect(detail.acknowledgedAt).toBeDefined();
   });
 
@@ -964,18 +1400,32 @@ describe("student notes", () => {
     const { admin, student } = await setupNotes();
 
     const note = await app.send("/students/notes/write", {
-      session: admin.session, learner: student.user,
-      body: "Temporary.", visibility: "LEARNER_VISIBLE", tags: [], followUpAt: null,
+      session: admin.session,
+      learner: student.user,
+      body: "Temporary.",
+      visibility: "LEARNER_VISIBLE",
+      tags: [],
+      followUpAt: null,
     });
     const noteId = note.note as string;
 
-    await app.send("/students/notes/resolve", { session: admin.session, note: noteId });
-    await app.send("/students/notes/archive", { session: admin.session, note: noteId });
+    await app.send("/students/notes/resolve", {
+      session: admin.session,
+      note: noteId,
+    });
+    await app.send("/students/notes/archive", {
+      session: admin.session,
+      note: noteId,
+    });
 
-    const staffNotes = await app.concepts.StudentNoting._getActiveStaffNotes({ learner: student.user });
+    const staffNotes = await app.concepts.StudentNoting._getActiveStaffNotes({
+      learner: student.user,
+    });
     expect(staffNotes.length).toBe(0);
 
-    const visible = await app.concepts.StudentNoting._getLearnerVisibleNotes({ learner: student.user });
+    const visible = await app.concepts.StudentNoting._getLearnerVisibleNotes({
+      learner: student.user,
+    });
     expect(visible.length).toBe(0);
   });
 });
@@ -990,11 +1440,15 @@ describe("calendar", () => {
     await configureClass(admin);
 
     // Create a student but don't publish assignments
-    await importRows(admin, [row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" })]);
+    await importRows(admin, [
+      row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" }),
+    ]);
     const student = await withStudent(admin, "S001");
 
     const cal = await app.send("/calendar/me", {
-      session: student.session, start: iso(1), end: iso(14),
+      session: student.session,
+      start: iso(1),
+      end: iso(14),
     });
     expect(cal.events).toBeArray();
     expect((cal.events as unknown[]).length).toBe(0);
@@ -1003,10 +1457,15 @@ describe("calendar", () => {
   test("calendar /me returns events when assignments exist", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    const { student, assignment } = await setupStudentAndAssignment(admin, "S001");
+    const { student, assignment: _assignment } = await setupStudentAndAssignment(
+      admin,
+      "S001",
+    );
 
     const cal = await app.send("/calendar/me", {
-      session: student.session, start: iso(1), end: iso(14),
+      session: student.session,
+      start: iso(1),
+      end: iso(14),
     });
     expect(cal.events).toBeArray();
     expect((cal.events as unknown[]).length).toBeGreaterThanOrEqual(1);
@@ -1021,7 +1480,9 @@ describe("dashboard", () => {
   test("/lms/me returns student summary", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    await importRows(admin, [row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" })]);
+    await importRows(admin, [
+      row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" }),
+    ]);
 
     const student = await withStudent(admin, "S001");
 
@@ -1032,10 +1493,14 @@ describe("dashboard", () => {
   test("/lms/staff-dashboard returns staff summary", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    await importRows(admin, [row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" })]);
+    await importRows(admin, [
+      row({ externalKey: "S001", email: "a@a.com", rosterName: "Alice" }),
+    ]);
     await withStudent(admin, "S001");
 
-    const dash = await app.send("/lms/staff-dashboard", { session: admin.session });
+    const dash = await app.send("/lms/staff-dashboard", {
+      session: admin.session,
+    });
     expect(dash.dashboard).toBeDefined();
   });
 });

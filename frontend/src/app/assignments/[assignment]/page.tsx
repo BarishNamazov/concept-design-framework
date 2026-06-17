@@ -1,13 +1,13 @@
 "use client";
 
-import { use, useCallback, useState } from "react";
-import { ArrowLeft, Send, Clock, GraduationCap } from "lucide-react";
+import { ArrowLeft, Clock, GraduationCap, Send } from "lucide-react";
+import { use, useState } from "react";
 import { toast } from "sonner";
-import { LoadingState, ErrorState, EmptyState } from "@/components/forum/states";
 import { PageContainer } from "@/components/forum/page";
+import { ErrorState, LoadingState } from "@/components/forum/states";
+import { Link } from "@/components/link";
 import { LateDayControls } from "@/components/lms/late-day-controls";
 import { StatusBadge } from "@/components/lms/status-badge";
-import { Link } from "@/components/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,7 +34,12 @@ export default function AssignmentDetailPage({
   const { assignment } = use(params);
   const { session, me } = useAuth();
 
-  const { data: asgnData, loading, error, refetch } = useQuery<{
+  const {
+    data: asgnData,
+    loading,
+    error,
+    refetch,
+  } = useQuery<{
     assignment: {
       assignment: string;
       author: string;
@@ -47,13 +52,16 @@ export default function AssignmentDetailPage({
       acceptsSubmissions: boolean;
       status: string;
     };
-  }>(
-    () => api.assignments.get({ assignment }),
-    [assignment],
-  );
+  }>(() => api.assignments.get({ assignment }), [assignment]);
 
   const { data: subData, refetch: refetchSub } = useQuery<{
-    submission: { submission: string; artifacts: string[]; submittedAt: string; number: number; status: string } | null;
+    submission: {
+      submission: string;
+      artifacts: string[];
+      submittedAt: string;
+      number: number;
+      status: string;
+    } | null;
   }>(
     me && asgnData && !("error" in asgnData)
       ? () => api.submissions.latest({ assignment, submitter: String(me.user) })
@@ -62,45 +70,62 @@ export default function AssignmentDetailPage({
   );
 
   const { data: attemptsData, refetch: refetchAttempts } = useQuery<{
-    attempts: { submission: string; artifacts: string[]; submittedAt: string; number: number; status: string }[];
+    attempts: {
+      submission: string;
+      artifacts: string[];
+      submittedAt: string;
+      number: number;
+      status: string;
+    }[];
   }>(
     me && asgnData && !("error" in asgnData)
-      ? () => api.submissions.attempts({ assignment, submitter: String(me.user) })
+      ? () =>
+          api.submissions.attempts({ assignment, submitter: String(me.user) })
       : null,
     [assignment, me, asgnData],
   );
 
   const { data: lateBalance, refetch: refetchLate } = useQuery<{
     balance: { granted: number; used: number; remaining: number };
-  }>(
-    me ? () => api["late-days"].balance({ learner: String(me.user) }) : null,
-    [me],
-  );
+  }>(me ? () => api["late-days"].balance({ learner: String(me.user) }) : null, [
+    me,
+  ]);
 
   const { data: lateUseData, refetch: refetchLateUse } = useQuery<{
     days: number;
   }>(
-    me ? () => {
-      const result = api["late-days"].balance({ learner: String(me.user) });
-      return result.then((r) => {
-        if ("error" in r) return { days: 0 };
-        return { days: 0 };
-      });
-    } : null,
+    me
+      ? () => {
+          const result = api["late-days"].balance({ learner: String(me.user) });
+          return result.then((r) => {
+            if ("error" in r) return { days: 0 };
+            return { days: 0 };
+          });
+        }
+      : null,
     [me, assignment],
   );
 
   const { data: gradesData, refetch: refetchGrades } = useQuery<{
-    grades: { item: string; grade: string; score: number; maxPoints: number; status: string; label: string; feedback?: string }[];
-  }>(
-    me ? () => api.grades["for-me"]({ session: session! }) : null,
-    [me, session],
-  );
+    grades: {
+      item: string;
+      grade: string;
+      score: number;
+      maxPoints: number;
+      status: string;
+      label: string;
+      feedback?: string;
+    }[];
+  }>(me ? () => api.grades["for-me"]({ session: session! }) : null, [
+    me,
+    session,
+  ]);
 
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const detail = asgnData?.assignment && !("error" in asgnData) ? asgnData.assignment : null;
+  const detail =
+    asgnData?.assignment && !("error" in asgnData) ? asgnData.assignment : null;
   const latest = subData?.submission;
   const attempts = attemptsData?.attempts ?? [];
   const balance = lateBalance?.balance ?? null;
@@ -132,21 +157,42 @@ export default function AssignmentDetailPage({
     refetchGrades();
   };
 
-  if (loading) return <PageContainer><LoadingState label="Loading assignment..." /></PageContainer>;
-  if (error) return <PageContainer><ErrorState message={error} onRetry={refetch} /></PageContainer>;
-  if (!detail) return <PageContainer><ErrorState message="Assignment not found" /></PageContainer>;
+  if (loading)
+    return (
+      <PageContainer>
+        <LoadingState label="Loading assignment..." />
+      </PageContainer>
+    );
+  if (error)
+    return (
+      <PageContainer>
+        <ErrorState message={error} onRetry={refetch} />
+      </PageContainer>
+    );
+  if (!detail)
+    return (
+      <PageContainer>
+        <ErrorState message="Assignment not found" />
+      </PageContainer>
+    );
 
   const due = detail.dueAt as unknown as string;
-  const effectiveDue = detail.dueAt as unknown as string;
+  const _effectiveDue = detail.dueAt as unknown as string;
   const now = new Date();
   const isOverdue = new Date(due) < now;
-  const isPastClose = detail.closeAt ? new Date(detail.closeAt as unknown as string) < now : false;
-  const canSubmit = detail.acceptsSubmissions && !isPastClose && detail.status === "PUBLISHED";
+  const isPastClose = detail.closeAt
+    ? new Date(detail.closeAt as unknown as string) < now
+    : false;
+  const canSubmit =
+    detail.acceptsSubmissions && !isPastClose && detail.status === "PUBLISHED";
 
   return (
     <PageContainer>
       <div className="mb-4">
-        <Link href="/assignments" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <Link
+          href="/assignments"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="size-4" /> Back to assignments
         </Link>
       </div>
@@ -154,8 +200,12 @@ export default function AssignmentDetailPage({
       <div className="mb-6 flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="font-display text-3xl font-semibold tracking-tight">{detail.title}</h1>
-            <Badge variant="secondary">{KIND_LABELS[detail.kind] ?? detail.kind}</Badge>
+            <h1 className="font-display text-3xl font-semibold tracking-tight">
+              {detail.title}
+            </h1>
+            <Badge variant="secondary">
+              {KIND_LABELS[detail.kind] ?? detail.kind}
+            </Badge>
             <StatusBadge status={detail.status} />
           </div>
         </div>
@@ -185,7 +235,9 @@ export default function AssignmentDetailPage({
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">
-                  {latest ? `Resubmit (Attempt #${latest.number + 1})` : "Submit"}
+                  {latest
+                    ? `Resubmit (Attempt #${latest.number + 1})`
+                    : "Submit"}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -197,7 +249,11 @@ export default function AssignmentDetailPage({
                   disabled={submitting}
                 />
                 <div className="flex items-center gap-2">
-                  <Button onClick={submit} disabled={submitting || !content.trim()} className="gap-1.5">
+                  <Button
+                    onClick={submit}
+                    disabled={submitting || !content.trim()}
+                    className="gap-1.5"
+                  >
                     <Send className="size-4" />
                     {submitting ? "Submitting..." : "Submit"}
                   </Button>
@@ -240,26 +296,29 @@ export default function AssignmentDetailPage({
             </Card>
           )}
 
-          {myGrade && (myGrade.status === "RELEASED" || myGrade.status === "EXCUSED") && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Grade</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={myGrade.status} />
-                  {myGrade.status !== "EXCUSED" && (
-                    <span className="text-2xl font-semibold">
-                      {myGrade.score} / {myGrade.maxPoints}
-                    </span>
+          {myGrade &&
+            (myGrade.status === "RELEASED" || myGrade.status === "EXCUSED") && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Grade</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={myGrade.status} />
+                    {myGrade.status !== "EXCUSED" && (
+                      <span className="text-2xl font-semibold">
+                        {myGrade.score} / {myGrade.maxPoints}
+                      </span>
+                    )}
+                  </div>
+                  {myGrade.feedback && (
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {myGrade.feedback}
+                    </p>
                   )}
-                </div>
-                {myGrade.feedback && (
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{myGrade.feedback}</p>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
+            )}
         </div>
 
         <aside className="space-y-5">
@@ -276,7 +335,9 @@ export default function AssignmentDetailPage({
               </div>
               <div>
                 <p className="text-muted-foreground">Due</p>
-                <p className={cn("font-medium", isOverdue && "text-destructive")}>
+                <p
+                  className={cn("font-medium", isOverdue && "text-destructive")}
+                >
                   {fullTime(detail.dueAt)}
                 </p>
               </div>
@@ -303,8 +364,8 @@ export default function AssignmentDetailPage({
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
                 <p>
-                  <span className="text-muted-foreground">Latest:</span>{" "}
-                  Attempt #{latest.number}
+                  <span className="text-muted-foreground">Latest:</span> Attempt
+                  #{latest.number}
                 </p>
                 <p>
                   <span className="text-muted-foreground">Status:</span>{" "}

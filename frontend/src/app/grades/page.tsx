@@ -1,15 +1,17 @@
 "use client";
 
-import { useCallback } from "react";
 import { GraduationCap } from "lucide-react";
-import { LoadingState, ErrorState, EmptyState } from "@/components/forum/states";
 import { PageContainer, PageHeader } from "@/components/forum/page";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/forum/states";
 import { StatusBadge } from "@/components/lms/status-badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { cn } from "@/lib/utils";
 
 export default function GradesPage() {
   const { session } = useAuth();
@@ -19,7 +21,12 @@ export default function GradesPage() {
     [session],
   );
 
-  const { data: gradesData, loading, error, refetch } = useQuery<{
+  const {
+    data: gradesData,
+    loading,
+    error,
+    refetch,
+  } = useQuery<{
     grades: {
       item: string;
       grade: string;
@@ -29,35 +36,54 @@ export default function GradesPage() {
       label: string;
     }[];
   }>(
-    session && rosterData && rosterData.seat ? () => api.grades["for-me"]({ session }) : null,
+    session && rosterData?.seat
+      ? () => api.grades["for-me"]({ session })
+      : null,
     [session, rosterData],
   );
 
   const { data: detailsData } = useQuery<Record<string, unknown>>(
-    gradesData ? async () => {
-      const map: Record<string, unknown> = {};
-      const grades = gradesData.grades;
-      await Promise.all(
-        grades.map(async (g) => {
-          const item = g.item;
-          if (!map[item]) {
-            const res = await api.assignments.get({ assignment: item });
-            if (!("error" in res)) map[item] = res.assignment;
-          }
-        }),
-      );
-      return map;
-    } : null,
+    gradesData
+      ? async () => {
+          const map: Record<string, unknown> = {};
+          const grades = gradesData.grades;
+          await Promise.all(
+            grades.map(async (g) => {
+              const item = g.item;
+              if (!map[item]) {
+                const res = await api.assignments.get({ assignment: item });
+                if (!("error" in res)) map[item] = res.assignment;
+              }
+            }),
+          );
+          return map;
+        }
+      : null,
     [gradesData],
   );
 
-  if (loading) return <PageContainer><LoadingState label="Loading grades..." /></PageContainer>;
-  if (error) return <PageContainer><ErrorState message={error} onRetry={refetch} /></PageContainer>;
+  if (loading)
+    return (
+      <PageContainer>
+        <LoadingState label="Loading grades..." />
+      </PageContainer>
+    );
+  if (error)
+    return (
+      <PageContainer>
+        <ErrorState message={error} onRetry={refetch} />
+      </PageContainer>
+    );
 
   const grades = gradesData?.grades ?? [];
-  const details = (detailsData ?? {}) as Record<string, { title: string; kind: string }>;
+  const details = (detailsData ?? {}) as Record<
+    string,
+    { title: string; kind: string }
+  >;
 
-  const released = grades.filter((g) => g.status === "RELEASED" || g.status === "EXCUSED");
+  const released = grades.filter(
+    (g) => g.status === "RELEASED" || g.status === "EXCUSED",
+  );
 
   return (
     <PageContainer>
@@ -88,7 +114,10 @@ export default function GradesPage() {
                       <StatusBadge status={g.status} />
                       {g.status !== "EXCUSED" && (
                         <span className="text-xl font-semibold tabular-nums">
-                          {g.score}<span className="text-muted-foreground text-base">/{g.maxPoints}</span>
+                          {g.score}
+                          <span className="text-muted-foreground text-base">
+                            /{g.maxPoints}
+                          </span>
                         </span>
                       )}
                     </div>

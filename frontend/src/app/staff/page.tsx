@@ -1,20 +1,24 @@
 "use client";
 
-import { Users, BookOpen, FileText, Clock, StickyNote, AlertTriangle } from "lucide-react";
-import { LoadingState, ErrorState, EmptyState } from "@/components/forum/states";
+import { AlertTriangle, BookOpen, Clock, FileText, Users } from "lucide-react";
 import { PageContainer, PageHeader } from "@/components/forum/page";
+import { ErrorState, LoadingState } from "@/components/forum/states";
 import { Link } from "@/components/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { relativeTime } from "@/lib/format";
 
 export default function StaffDashboardPage() {
   const { session, can } = useAuth();
 
-  const { data: dashData, loading, error, refetch } = useQuery<{
+  const {
+    data: dashData,
+    loading,
+    error,
+    refetch,
+  } = useQuery<{
     dashboard: {
       user: string;
       seat: string;
@@ -23,13 +27,20 @@ export default function StaffDashboardPage() {
       rosterName: string;
       email: string;
     }[];
-  }>(
-    session ? () => api.lms["staff-dashboard"]({ session }) : null,
-    [session],
-  );
+  }>(session ? () => api.lms["staff-dashboard"]({ session }) : null, [session]);
 
-  if (loading) return <PageContainer><LoadingState label="Loading staff dashboard..." /></PageContainer>;
-  if (error) return <PageContainer><ErrorState message={error} onRetry={refetch} /></PageContainer>;
+  if (loading)
+    return (
+      <PageContainer>
+        <LoadingState label="Loading staff dashboard..." />
+      </PageContainer>
+    );
+  if (error)
+    return (
+      <PageContainer>
+        <ErrorState message={error} onRetry={refetch} />
+      </PageContainer>
+    );
 
   const members = dashData?.dashboard ?? [];
   const students = members.filter((m) => m.kind === "STUDENT");
@@ -45,7 +56,10 @@ export default function StaffDashboardPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        <Link href="/staff/roster" className="rounded-xl border border-border bg-card p-4 hover:bg-muted/50 transition-colors">
+        <Link
+          href="/staff/roster"
+          className="rounded-xl border border-border bg-card p-4 hover:bg-muted/50 transition-colors"
+        >
           <div className="flex items-center gap-2 mb-1">
             <Users className="size-4 text-muted-foreground" />
             <p className="text-xs text-muted-foreground">Students</p>
@@ -54,7 +68,10 @@ export default function StaffDashboardPage() {
           <p className="text-xs text-muted-foreground mt-1">enrolled</p>
         </Link>
 
-        <Link href="/staff/assignments" className="rounded-xl border border-border bg-card p-4 hover:bg-muted/50 transition-colors">
+        <Link
+          href="/staff/assignments"
+          className="rounded-xl border border-border bg-card p-4 hover:bg-muted/50 transition-colors"
+        >
           <div className="flex items-center gap-2 mb-1">
             <BookOpen className="size-4 text-muted-foreground" />
             <p className="text-xs text-muted-foreground">Assignments</p>
@@ -63,7 +80,10 @@ export default function StaffDashboardPage() {
           <p className="text-xs text-muted-foreground mt-1">manage</p>
         </Link>
 
-        <Link href="/staff/gradebook" className="rounded-xl border border-border bg-card p-4 hover:bg-muted/50 transition-colors">
+        <Link
+          href="/staff/gradebook"
+          className="rounded-xl border border-border bg-card p-4 hover:bg-muted/50 transition-colors"
+        >
           <div className="flex items-center gap-2 mb-1">
             <FileText className="size-4 text-muted-foreground" />
             <p className="text-xs text-muted-foreground">Gradebook</p>
@@ -72,7 +92,10 @@ export default function StaffDashboardPage() {
           <p className="text-xs text-muted-foreground mt-1">view</p>
         </Link>
 
-        <Link href="/staff/late-days" className="rounded-xl border border-border bg-card p-4 hover:bg-muted/50 transition-colors">
+        <Link
+          href="/staff/late-days"
+          className="rounded-xl border border-border bg-card p-4 hover:bg-muted/50 transition-colors"
+        >
           <div className="flex items-center gap-2 mb-1">
             <Clock className="size-4 text-muted-foreground" />
             <p className="text-xs text-muted-foreground">Late Days</p>
@@ -118,16 +141,28 @@ export default function StaffDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Link href="/staff/assignments" className="flex items-center gap-2 text-sm hover:text-primary">
+            <Link
+              href="/staff/assignments"
+              className="flex items-center gap-2 text-sm hover:text-primary"
+            >
               <BookOpen className="size-4" /> Create / manage assignments
             </Link>
-            <Link href="/staff/roster" className="flex items-center gap-2 text-sm hover:text-primary">
+            <Link
+              href="/staff/roster"
+              className="flex items-center gap-2 text-sm hover:text-primary"
+            >
               <Users className="size-4" /> Manage roster & sections
             </Link>
-            <Link href="/staff/gradebook" className="flex items-center gap-2 text-sm hover:text-primary">
+            <Link
+              href="/staff/gradebook"
+              className="flex items-center gap-2 text-sm hover:text-primary"
+            >
               <FileText className="size-4" /> Open gradebook
             </Link>
-            <Link href="/staff/late-days" className="flex items-center gap-2 text-sm hover:text-primary">
+            <Link
+              href="/staff/late-days"
+              className="flex items-center gap-2 text-sm hover:text-primary"
+            >
               <Clock className="size-4" /> Grant late days
             </Link>
           </CardContent>

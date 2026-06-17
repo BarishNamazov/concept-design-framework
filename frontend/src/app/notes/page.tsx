@@ -1,9 +1,13 @@
 "use client";
 
-import { StickyNote, CheckCircle } from "lucide-react";
+import { CheckCircle, StickyNote } from "lucide-react";
 import { toast } from "sonner";
-import { LoadingState, ErrorState, EmptyState } from "@/components/forum/states";
 import { PageContainer, PageHeader } from "@/components/forum/page";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/forum/states";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +24,12 @@ export default function NotesPage() {
     [session],
   );
 
-  const { data: notesData, loading, error, refetch } = useQuery<{
+  const {
+    data: notesData,
+    loading,
+    error,
+    refetch,
+  } = useQuery<{
     notes: {
       note: string;
       author: string;
@@ -33,17 +42,41 @@ export default function NotesPage() {
       tags: string[];
     }[];
   }>(
-    session && rosterData && rosterData.seat ? () => api.students["notes/visible"]({ session }) : null,
+    session && rosterData?.seat
+      ? () => api.students["notes/visible"]({ session })
+      : null,
     [session, rosterData],
   );
 
-  if (!session) return <PageContainer><PageHeader eyebrow="LMS" title="Notes" /><EmptyState icon={StickyNote} title="Sign in required" description="Sign in to view your notes." /></PageContainer>;
+  if (!session)
+    return (
+      <PageContainer>
+        <PageHeader eyebrow="LMS" title="Notes" />
+        <EmptyState
+          icon={StickyNote}
+          title="Sign in required"
+          description="Sign in to view your notes."
+        />
+      </PageContainer>
+    );
 
-  if (loading) return <PageContainer><LoadingState label="Loading notes..." /></PageContainer>;
-  if (error) return <PageContainer><ErrorState message={error} onRetry={refetch} /></PageContainer>;
+  if (loading)
+    return (
+      <PageContainer>
+        <LoadingState label="Loading notes..." />
+      </PageContainer>
+    );
+  if (error)
+    return (
+      <PageContainer>
+        <ErrorState message={error} onRetry={refetch} />
+      </PageContainer>
+    );
 
   const notes = notesData?.notes ?? [];
-  const active = notes.filter((n) => n.status === "OPEN" || n.status === "RESOLVED");
+  const active = notes.filter(
+    (n) => n.status === "OPEN" || n.status === "RESOLVED",
+  );
 
   async function acknowledge(note: string) {
     if (!session) return;
@@ -83,7 +116,9 @@ export default function NotesPage() {
                     )}
                     {note.status === "OPEN" ? "Note" : "Resolved"}
                   </CardTitle>
-                  <span className="text-xs text-muted-foreground">{fullTime(note.createdAt)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {fullTime(note.createdAt)}
+                  </span>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -91,7 +126,9 @@ export default function NotesPage() {
                 {note.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {note.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+                      <Badge key={tag} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
                     ))}
                   </div>
                 )}
@@ -101,7 +138,12 @@ export default function NotesPage() {
                   </p>
                 )}
                 {!note.acknowledgedAt && (
-                  <Button size="sm" variant="outline" onClick={() => acknowledge(note.note)} className="gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => acknowledge(note.note)}
+                    className="gap-1.5"
+                  >
                     <CheckCircle className="size-4" /> Acknowledge
                   </Button>
                 )}

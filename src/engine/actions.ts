@@ -87,4 +87,28 @@ export class ActionConcept {
   _getById(id: string): ActionRecord | undefined {
     return this.actions.get(id);
   }
+
+  /** Evict all records belonging to a flow from both indexes. */
+  evictFlow(flow: string): void {
+    const records = this.flowIndex.get(flow);
+    if (records) {
+      for (const record of records) {
+        this.actions.delete(record.id ?? "");
+      }
+      this.flowIndex.delete(flow);
+    }
+  }
+
+  /** Evict all flows whose last action has been synced. */
+  evictSyncedFlows(): number {
+    let evicted = 0;
+    for (const [flow, records] of this.flowIndex) {
+      const lastRecord = records[records.length - 1];
+      if (lastRecord?.synced && lastRecord.synced.size > 0) {
+        this.evictFlow(flow);
+        evicted++;
+      }
+    }
+    return evicted;
+  }
 }

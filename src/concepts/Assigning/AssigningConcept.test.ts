@@ -151,9 +151,7 @@ describe("Assigning", () => {
   test("assign rejects duplicate (assignment, assignee)", async () => {
     const { assignment } = ok(await Assigning.createDraft(draftPayload()));
     ok(await Assigning.publish({ assignment }));
-    ok(
-      await Assigning.assign({ assignment, assignee: assignee("student1") }),
-    );
+    ok(await Assigning.assign({ assignment, assignee: assignee("student1") }));
     const result = await Assigning.assign({
       assignment,
       assignee: assignee("student1"),
@@ -170,7 +168,10 @@ describe("Assigning", () => {
       await Assigning.withdraw({ assignment, assignee: student }),
     );
     expect(release).toBeString();
-    const [rel] = await Assigning._getRelease({ assignment, assignee: student });
+    const [rel] = await Assigning._getRelease({
+      assignment,
+      assignee: student,
+    });
     expect(rel.status).toBe("WITHDRAWN");
   });
 
@@ -196,7 +197,10 @@ describe("Assigning", () => {
         dueAt: overrideDate,
       }),
     );
-    const [rel] = await Assigning._getRelease({ assignment, assignee: student });
+    const [rel] = await Assigning._getRelease({
+      assignment,
+      assignee: student,
+    });
     expect(rel.dueOverride).toEqual(overrideDate);
   });
 
@@ -212,10 +216,11 @@ describe("Assigning", () => {
         dueAt: new Date("2026-06-20"),
       }),
     );
-    ok(
-      await Assigning.clearDueOverride({ assignment, assignee: student }),
-    );
-    const [rel] = await Assigning._getRelease({ assignment, assignee: student });
+    ok(await Assigning.clearDueOverride({ assignment, assignee: student }));
+    const [rel] = await Assigning._getRelease({
+      assignment,
+      assignee: student,
+    });
     expect(rel.dueOverride).toBeUndefined();
   });
 
@@ -306,8 +311,12 @@ describe("Assigning", () => {
     ok(await Assigning.publish({ assignment: a1.assignment }));
     ok(await Assigning.publish({ assignment: a2.assignment }));
     const student = assignee("student1");
-    ok(await Assigning.assign({ assignment: a1.assignment, assignee: student }));
-    ok(await Assigning.assign({ assignment: a2.assignment, assignee: student }));
+    ok(
+      await Assigning.assign({ assignment: a1.assignment, assignee: student }),
+    );
+    ok(
+      await Assigning.assign({ assignment: a2.assignment, assignee: student }),
+    );
 
     const assigned = await Assigning._getAssigned({ assignee: student });
     expect(assigned).toHaveLength(2);
@@ -351,11 +360,9 @@ describe("Assigning", () => {
   });
 
   test("_getPublished returns only PUBLISHED assignments", async () => {
-    const d = ok(await Assigning.createDraft(draftPayload()));
+    const _d = ok(await Assigning.createDraft(draftPayload()));
     const p = ok(
-      await Assigning.createDraft(
-        draftPayload({ title: "Publish Me" }),
-      ),
+      await Assigning.createDraft(draftPayload({ title: "Publish Me" })),
     );
     ok(await Assigning.publish({ assignment: p.assignment }));
 
@@ -368,12 +375,20 @@ describe("Assigning", () => {
   test("_getPublishedInWindow filters by date window", async () => {
     const { assignment: a1 } = ok(
       await Assigning.createDraft(
-        draftPayload({ title: "June", availableAt: new Date("2026-06-01"), dueAt: new Date("2026-06-10") }),
+        draftPayload({
+          title: "June",
+          availableAt: new Date("2026-06-01"),
+          dueAt: new Date("2026-06-10"),
+        }),
       ),
     );
     const { assignment: a2 } = ok(
       await Assigning.createDraft(
-        draftPayload({ title: "July", availableAt: new Date("2026-07-01"), dueAt: new Date("2026-07-15") }),
+        draftPayload({
+          title: "July",
+          availableAt: new Date("2026-07-01"),
+          dueAt: new Date("2026-07-15"),
+        }),
       ),
     );
     ok(await Assigning.publish({ assignment: a1 }));
@@ -494,7 +509,7 @@ describe("Assigning", () => {
     const { assignment } = ok(await Assigning.createDraft(draftPayload()));
     // Archive from DRAFT
     ok(await Assigning.archive({ assignment }));
-    let [doc] = await Assigning._getAssignment({ assignment });
+    const [doc] = await Assigning._getAssignment({ assignment });
     expect(doc.status).toBe("ARCHIVED");
   });
 

@@ -1,7 +1,7 @@
 "use client";
 
+import { Archive, CheckCircle, Pencil, RefreshCw } from "lucide-react";
 import { useState } from "react";
-import { Pencil, CheckCircle, Archive, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -106,10 +106,14 @@ function NoteCard({
             {note.visibility === "STAFF_ONLY" ? "staff-only" : "visible"}
           </Badge>
           {note.acknowledgedAt && (
-            <Badge variant="outline" className="text-xs text-green-700">acknowledged</Badge>
+            <Badge variant="outline" className="text-xs text-green-700">
+              acknowledged
+            </Badge>
           )}
         </div>
-        <span className="text-xs text-muted-foreground">{relativeTime(note.createdAt)}</span>
+        <span className="text-xs text-muted-foreground">
+          {relativeTime(note.createdAt)}
+        </span>
       </div>
 
       <p className="text-sm whitespace-pre-wrap">{note.body}</p>
@@ -117,14 +121,17 @@ function NoteCard({
       {note.tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {note.tags.map((tag) => (
-            <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
+            <Badge key={tag} variant="outline" className="text-xs">
+              {tag}
+            </Badge>
           ))}
         </div>
       )}
 
       {note.followUpAt && (
         <p className="text-xs text-muted-foreground">
-          Follow-up: {new Date(note.followUpAt as unknown as string).toLocaleDateString()}
+          Follow-up:{" "}
+          {new Date(note.followUpAt as unknown as string).toLocaleDateString()}
         </p>
       )}
 
@@ -135,7 +142,14 @@ function NoteCard({
               size="sm"
               variant="ghost"
               className="h-7 text-xs"
-              onClick={() => action(() => api.students["notes/resolve"]({ session: session!, note: note.note }))}
+              onClick={() =>
+                action(() =>
+                  api.students["notes/resolve"]({
+                    session: session!,
+                    note: note.note,
+                  }),
+                )
+              }
               disabled={loading}
             >
               <CheckCircle className="size-3 mr-1" /> Resolve
@@ -146,7 +160,14 @@ function NoteCard({
               size="sm"
               variant="ghost"
               className="h-7 text-xs"
-              onClick={() => action(() => api.students["notes/archive"]({ session: session!, note: note.note }))}
+              onClick={() =>
+                action(() =>
+                  api.students["notes/archive"]({
+                    session: session!,
+                    note: note.note,
+                  }),
+                )
+              }
               disabled={loading}
             >
               <Archive className="size-3 mr-1" /> Archive
@@ -157,10 +178,12 @@ function NoteCard({
               size="sm"
               variant="ghost"
               className="h-7 text-xs"
-              onClick={() => action(async () => {
-                const { error } = await import("@/lib/api");
-                return { error: "restore not yet wired" };
-              })}
+              onClick={() =>
+                action(async () => {
+                  const { error } = await import("@/lib/api");
+                  return { error: "restore not yet wired" };
+                })
+              }
               disabled
             >
               <RefreshCw className="size-3 mr-1" /> Restore
@@ -181,7 +204,9 @@ function WriteNoteForm({
 }) {
   const { session } = useAuth();
   const [body, setBody] = useState("");
-  const [visibility, setVisibility] = useState<"STAFF_ONLY" | "LEARNER_VISIBLE">("STAFF_ONLY");
+  const [visibility, setVisibility] = useState<
+    "STAFF_ONLY" | "LEARNER_VISIBLE"
+  >("STAFF_ONLY");
   const [tags, setTags] = useState("");
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -249,7 +274,12 @@ function WriteNoteForm({
         <Button size="sm" onClick={write} disabled={loading || !body.trim()}>
           Save
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={loading}>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setOpen(false)}
+          disabled={loading}
+        >
           Cancel
         </Button>
       </div>

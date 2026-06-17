@@ -391,7 +391,14 @@ describe("Grading", () => {
         score: 65,
       }),
     );
-    ok(await Grading.excuse({ learner: l, item: i, grader: g, feedback: "Medical" }));
+    ok(
+      await Grading.excuse({
+        learner: l,
+        item: i,
+        grader: g,
+        feedback: "Medical",
+      }),
+    );
     const rows = await Grading._getGrade({ learner: l, item: i });
     expect(rows).toHaveLength(1);
     expect(rows[0]?.status).toBe("EXCUSED");
@@ -434,9 +441,7 @@ describe("Grading", () => {
         score: 70,
       }),
     );
-    ok(
-      await Grading.excuse({ learner: learner("carol"), item: i, grader: g }),
-    );
+    ok(await Grading.excuse({ learner: learner("carol"), item: i, grader: g }));
     expect(
       await Grading._getGrade({ learner: learner("alice"), item: i }),
     ).toHaveLength(1);
@@ -483,9 +488,7 @@ describe("Grading", () => {
         score: 70,
       }),
     );
-    ok(
-      await Grading.excuse({ learner: learner("carol"), item: i, grader: g }),
-    );
+    ok(await Grading.excuse({ learner: learner("carol"), item: i, grader: g }));
     // alice is DRAFT — should not appear in released
     const aliceReleased = await Grading._getReleasedGrade({
       learner: learner("alice"),

@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback } from "react";
 import {
   BookOpen,
   CalendarDays,
@@ -10,6 +9,7 @@ import {
   PenLine,
   StickyNote,
 } from "lucide-react";
+import { useCallback, useState } from "react";
 import { CategoryDot } from "@/components/forum/badges";
 import {
   EmptyState,
@@ -25,14 +25,11 @@ import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { loadFeed } from "@/lib/loaders";
-import { relativeTime } from "@/lib/format";
-import { useState } from "react";
 
 function CategoriesCard() {
-  const { data } = useQuery<{ categories: { category: string; name: string; description?: string }[] }>(
-    () => api.categories.list({}),
-    [],
-  );
+  const { data } = useQuery<{
+    categories: { category: string; name: string; description?: string }[];
+  }>(() => api.categories.list({}), []);
   const categories = data?.categories ?? [];
 
   return (
@@ -93,47 +90,78 @@ function WelcomeCard() {
 
 function LmsDashboard() {
   const { session, me } = useAuth();
-  const { data: rosterData, loading: rosterLoading } = useQuery<{ seat: unknown }>(
-    session ? () => api.roster.me({ session }) : null,
-    [session],
-  );
+  const { data: rosterData, loading: rosterLoading } = useQuery<{
+    seat: unknown;
+  }>(session ? () => api.roster.me({ session }) : null, [session]);
 
   const { data: assignmentsData, loading: asgnLoading } = useQuery<{
-    assignments: { assignment: string; release?: string; dueOverride?: string; status: string }[];
+    assignments: {
+      assignment: string;
+      release?: string;
+      dueOverride?: string;
+      status: string;
+    }[];
   }>(
-    session && rosterData && rosterData.seat ? () => api.assignments["for-me"]({ session }) : null,
+    session && rosterData?.seat
+      ? () => api.assignments["for-me"]({ session })
+      : null,
     [session, rosterData],
   );
 
   const { data: gradesData } = useQuery<{
-    grades: { item: string; grade: string; score: number; maxPoints: number; status: string; label: string }[];
+    grades: {
+      item: string;
+      grade: string;
+      score: number;
+      maxPoints: number;
+      status: string;
+      label: string;
+    }[];
   }>(
-    session && rosterData && rosterData.seat ? () => api.grades["for-me"]({ session }) : null,
+    session && rosterData?.seat
+      ? () => api.grades["for-me"]({ session })
+      : null,
     [session, rosterData],
   );
 
   const { data: notesData } = useQuery<{
-    notes: { note: string; body: string; status: string; createdAt: string; acknowledgedAt?: string }[];
+    notes: {
+      note: string;
+      body: string;
+      status: string;
+      createdAt: string;
+      acknowledgedAt?: string;
+    }[];
   }>(
-    session && rosterData && rosterData.seat ? () => api.students["notes/visible"]({ session }) : null,
+    session && rosterData?.seat
+      ? () => api.students["notes/visible"]({ session })
+      : null,
     [session, rosterData],
   );
 
   const { data: lateBalance } = useQuery<{
     balance: { granted: number; used: number; remaining: number };
   }>(
-    me && rosterData && rosterData.seat ? () => api["late-days"].balance({ learner: String(me.user) }) : null,
+    me && rosterData?.seat
+      ? () => api["late-days"].balance({ learner: String(me.user) })
+      : null,
     [me, rosterData],
   );
 
-  const hasSeat = rosterData && rosterData.seat && !("error" in rosterData);
+  const hasSeat = rosterData?.seat && !("error" in rosterData);
 
   if (rosterLoading) return null;
   if (!hasSeat) return null;
 
-  const upcoming = assignmentsData?.assignments?.filter((a) => a.status === "ASSIGNED").slice(0, 5) ?? [];
-  const released = gradesData?.grades?.filter((g) => g.status === "RELEASED").slice(0, 5) ?? [];
-  const unacknowledged = notesData?.notes?.filter((n) => !n.acknowledgedAt).length ?? 0;
+  const upcoming =
+    assignmentsData?.assignments
+      ?.filter((a) => a.status === "ASSIGNED")
+      .slice(0, 5) ?? [];
+  const released =
+    gradesData?.grades?.filter((g) => g.status === "RELEASED").slice(0, 5) ??
+    [];
+  const unacknowledged =
+    notesData?.notes?.filter((n) => !n.acknowledgedAt).length ?? 0;
 
   return (
     <div className="space-y-5">
@@ -161,17 +189,26 @@ function LmsDashboard() {
           </div>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Link href="/assignments" className="rounded-lg border border-border bg-card p-3 hover:bg-muted/50 transition-colors">
+          <Link
+            href="/assignments"
+            className="rounded-lg border border-border bg-card p-3 hover:bg-muted/50 transition-colors"
+          >
             <p className="text-xs text-muted-foreground">Upcoming</p>
             <p className="text-2xl font-semibold">{upcoming.length}</p>
             <p className="text-xs text-muted-foreground">assignments due</p>
           </Link>
-          <Link href="/notes" className="rounded-lg border border-border bg-card p-3 hover:bg-muted/50 transition-colors">
+          <Link
+            href="/notes"
+            className="rounded-lg border border-border bg-card p-3 hover:bg-muted/50 transition-colors"
+          >
             <p className="text-xs text-muted-foreground">Notes</p>
             <p className="text-2xl font-semibold">{unacknowledged}</p>
             <p className="text-xs text-muted-foreground">unacknowledged</p>
           </Link>
-          <Link href="/grades" className="rounded-lg border border-border bg-card p-3 hover:bg-muted/50 transition-colors">
+          <Link
+            href="/grades"
+            className="rounded-lg border border-border bg-card p-3 hover:bg-muted/50 transition-colors"
+          >
             <p className="text-xs text-muted-foreground">Grades</p>
             <p className="text-2xl font-semibold">{released.length}</p>
             <p className="text-xs text-muted-foreground">released</p>
@@ -202,7 +239,9 @@ function LmsDashboard() {
                   className="flex items-center justify-between rounded-lg border border-border px-3 py-2 hover:bg-muted/50 transition-colors"
                 >
                   <span className="text-sm font-medium">{a.assignment}</span>
-                  <Badge variant="secondary" className="text-xs">DUE</Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    DUE
+                  </Badge>
                 </Link>
               ))}
             </div>
@@ -220,8 +259,13 @@ function LmsDashboard() {
           <CardContent>
             <div className="space-y-2">
               {released.map((g) => (
-                <div key={g.grade} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                  <span className="text-sm font-medium">{g.label || g.item}</span>
+                <div
+                  key={g.grade}
+                  className="flex items-center justify-between rounded-lg border border-border px-3 py-2"
+                >
+                  <span className="text-sm font-medium">
+                    {g.label || g.item}
+                  </span>
                   <Badge>
                     {g.score} / {g.maxPoints}
                   </Badge>
@@ -242,7 +286,9 @@ function LmsDashboard() {
           <CardContent>
             <p className="text-sm text-muted-foreground">
               You have {unacknowledged} unacknowledged note(s).{" "}
-              <Link href="/notes" className="text-primary hover:underline">View them</Link>
+              <Link href="/notes" className="text-primary hover:underline">
+                View them
+              </Link>
             </p>
           </CardContent>
         </Card>
@@ -253,7 +299,12 @@ function LmsDashboard() {
 
 export default function HomePage() {
   const [sort, setSort] = useState<"latest" | "activity">("latest");
-  const { data, loading: feedLoading, error: feedError, refetch } = useQuery(
+  const {
+    data,
+    loading: feedLoading,
+    error: feedError,
+    refetch,
+  } = useQuery(
     useCallback(() => loadFeed(sort), [sort]),
     [sort],
   );
@@ -264,7 +315,11 @@ export default function HomePage() {
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-6 sm:px-6 lg:grid-cols-[1fr_18rem] lg:py-10">
       <section className="min-w-0">
-        {showLms && <div className="mb-8"><LmsDashboard /></div>}
+        {showLms && (
+          <div className="mb-8">
+            <LmsDashboard />
+          </div>
+        )}
 
         <div className="mb-5 flex items-end justify-between border-b border-border pb-4">
           <div>
@@ -339,16 +394,28 @@ export default function HomePage() {
         {showLms && (
           <div className="rounded-xl border border-border bg-card p-4 space-y-2">
             <p className="eyebrow">Quick Links</p>
-            <Link href="/assignments" className="flex items-center gap-2 text-sm hover:text-primary">
+            <Link
+              href="/assignments"
+              className="flex items-center gap-2 text-sm hover:text-primary"
+            >
               <BookOpen className="size-4" /> Assignments
             </Link>
-            <Link href="/grades" className="flex items-center gap-2 text-sm hover:text-primary">
+            <Link
+              href="/grades"
+              className="flex items-center gap-2 text-sm hover:text-primary"
+            >
               <GraduationCap className="size-4" /> Grades
             </Link>
-            <Link href="/calendar" className="flex items-center gap-2 text-sm hover:text-primary">
+            <Link
+              href="/calendar"
+              className="flex items-center gap-2 text-sm hover:text-primary"
+            >
               <CalendarDays className="size-4" /> Calendar
             </Link>
-            <Link href="/notes" className="flex items-center gap-2 text-sm hover:text-primary">
+            <Link
+              href="/notes"
+              className="flex items-center gap-2 text-sm hover:text-primary"
+            >
               <StickyNote className="size-4" /> Notes
             </Link>
           </div>
