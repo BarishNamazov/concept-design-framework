@@ -64,6 +64,12 @@ export interface ClientOptions {
    * function to compute them per call, e.g. to attach a rotating auth token.
    */
   headers?: HeadersOption;
+  /**
+   * Request credentials mode. Defaults to `"include"` so cookies (including
+   * HttpOnly session cookies) are sent automatically. Override with `"omit"`
+   * or `"same-origin"` if needed.
+   */
+  credentials?: "include" | "omit" | "same-origin";
 }
 
 /**
@@ -143,6 +149,7 @@ async function request(
   fetchImpl: typeof fetch,
   baseUrl: string,
   headersOption: HeadersOption | undefined,
+  credentials: "include" | "omit" | "same-origin" | undefined,
   path: string,
   body: unknown,
 ): Promise<unknown> {
@@ -165,6 +172,7 @@ async function request(
       method: "POST",
       headers: { "Content-Type": "application/json", ...extraHeaders },
       body: JSON.stringify(body ?? {}),
+      credentials: credentials ?? "include",
     });
   } catch (e) {
     return {
@@ -241,7 +249,8 @@ export function createClient<C extends ContractShape>(
 ): Client<C> {
   const baseUrl = resolveBaseUrl(options.baseUrl);
   const fetchImpl = options.fetch ?? globalThis.fetch;
+  const credentials = options.credentials;
   const call = (path: string, body: unknown) =>
-    request(fetchImpl, baseUrl, options.headers, path, body);
+    request(fetchImpl, baseUrl, options.headers, credentials, path, body);
   return makeProxy([], call) as Client<C>;
 }

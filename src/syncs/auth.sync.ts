@@ -22,6 +22,10 @@ import {
   type QueryRow,
 } from "@concepts/Requesting/api.ts";
 import { actions, type Frames, type Sync } from "@engine";
+import {
+  CLEAR_SESSION_COOKIE_OPTS,
+  SESSION_COOKIE_OPTS,
+} from "../http-utils.ts";
 import { ForumErrorCode } from "../sdk/error-codes.ts";
 import {
   ADMIN_CAPABILITY,
@@ -213,7 +217,13 @@ const login = defineEndpoint(
         [Authenticating.authenticate, {}, { user }],
         [Sessioning.start, {}, { session }],
       ),
-      then: Actions(Respond<LoginOutput>({ session, user })),
+      then: Actions(
+        Respond<LoginOutput>({
+          session,
+          user,
+          __cookies: { session: SESSION_COOKIE_OPTS },
+        }),
+      ),
     })),
 
     LoginError: Sync(({ error }) => ({
@@ -235,7 +245,12 @@ const logout = defineEndpoint(
 
     LogoutResponse: Sync(({ session }) => ({
       when: Actions([Sessioning.end, {}, { session }]),
-      then: Actions(Respond<LogoutOutput>({ ok: true })),
+      then: Actions(
+        Respond<LogoutOutput>({
+          ok: true,
+          __cookies: { session: CLEAR_SESSION_COOKIE_OPTS },
+        }),
+      ),
     })),
 
     LogoutError: Sync(({ error }) => ({
@@ -283,9 +298,19 @@ const changePassword = defineEndpoint(
       }),
     ),
 
+    ChangePasswordRevokeSessions: Sync(({ user }) => ({
+      when: Actions([Authenticating.changePassword, {}, { user }]),
+      then: Actions([Sessioning.endAllForUser, { user }]),
+    })),
+
     ChangePasswordResponse: Sync(({ user }) => ({
       when: Actions([Authenticating.changePassword, {}, { user }]),
-      then: Actions(Respond<ChangePasswordOutput>({ user })),
+      then: Actions(
+        Respond<ChangePasswordOutput>({
+          user,
+          __cookies: { session: CLEAR_SESSION_COOKIE_OPTS },
+        }),
+      ),
     })),
 
     ChangePasswordError: Sync(({ error }) => ({
@@ -365,6 +390,10 @@ export const InvalidSession: Sync = ({ request, session, active }) => ({
   },
   then: actions([
     Requesting.respond,
-    { request, error: ForumErrorCode.INVALID_SESSION },
+    {
+      request,
+      error: ForumErrorCode.INVALID_SESSION,
+      __cookies: { session: CLEAR_SESSION_COOKIE_OPTS },
+    },
   ]),
 });

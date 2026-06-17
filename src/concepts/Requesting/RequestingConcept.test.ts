@@ -146,7 +146,7 @@ describe("startRequestingServer (Bun.serve HTTP round-trip)", () => {
         method: "OPTIONS",
       });
       expect(preflight.status).toBe(204);
-      expect(preflight.headers.get("Access-Control-Allow-Origin")).toBe("*");
+      expect(preflight.headers.get("Access-Control-Allow-Origin")).toBeNull();
 
       // 4. Unmatched routes return 404.
       const notFound = await fetch(`http://localhost:${server.port}/`, {

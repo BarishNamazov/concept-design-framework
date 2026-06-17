@@ -19,6 +19,31 @@ const REQUESTING_TIMEOUT = parseInt(
 const REQUESTING_SAVE_RESPONSES =
   (process.env.REQUESTING_SAVE_RESPONSES ?? "true") !== "false";
 
+/** Keys whose values are redacted from the audit log. */
+const REDACT_KEYS = new Set([
+  "password",
+  "oldPassword",
+  "newPassword",
+  "session",
+  "secret",
+  "token",
+]);
+
+/** Deep-clones an object and replaces sensitive key values with "[redacted]". */
+function redact(obj: unknown): unknown {
+  if (obj === null || typeof obj !== "object") return obj;
+  if (Array.isArray(obj)) return obj.map(redact);
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+    if (REDACT_KEYS.has(key)) {
+      result[key] = "[redacted]";
+    } else {
+      result[key] = redact(value);
+    }
+  }
+  return result;
+}
+
 // --- Type Definitions ---
 // Internal alias for a Request identifier. Named `RequestID` (rather than
 // `Request`) so it doesn't shadow the Web-standard `Request` used by the server.
@@ -57,6 +82,7 @@ export default class RequestingConcept {
   private readonly requests: Collection<RequestDoc>;
   private readonly pending: Map<RequestID, PendingRequest> = new Map();
   private readonly timeout: number;
+  private ttlIndexCreated = false;
 
   constructor(
     private readonly db: Db,
@@ -69,22 +95,40 @@ export default class RequestingConcept {
     );
   }
 
+  /** Ensures a MongoDB TTL index exists on `createdAt` (expire after 30 days). */
+  private async ensureTtlIndex(): Promise<void> {
+    if (this.ttlIndexCreated) return;
+    try {
+      await this.requests.createIndex(
+        { createdAt: 1 },
+        { expireAfterSeconds: 2592000 },
+      );
+      this.ttlIndexCreated = true;
+    } catch (e) {
+      console.warn(`[Requesting] Could not create TTL index on createdAt:`, e);
+    }
+  }
+
   /**
    * request (path: String, ...): (request: Request)
    * System action triggered by an external HTTP request.
    *
    * **requires** true
    *
-   * **effects** creates a new Request `r`; sets the input of `r` to be the path and all other input parameters; returns `r` as `request`
+   * **effects** creates a new Request `r`; sets the input of `r` to be the path and all other input parameters; redacts sensitive fields; returns `r` as `request`
    */
   async request(inputs: {
     path: string;
     [key: string]: unknown;
   }): Promise<{ request: RequestID }> {
+    // Ensure TTL index exists (first-call initialisation).
+    await this.ensureTtlIndex();
+
     const requestId = freshID() as RequestID;
+    // Deep-clone and redact sensitive fields before persisting.
     const requestDoc: RequestDoc = {
       _id: requestId,
-      input: inputs,
+      input: redact(inputs) as { path: string; [key: string]: unknown },
       createdAt: new Date(),
     };
 

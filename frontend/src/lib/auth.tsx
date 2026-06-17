@@ -11,13 +11,12 @@ import {
 import { api, unwrap } from "@/lib/api";
 import type { Me } from "@/lib/models";
 
-const SESSION_KEY = "forum.session";
-
 /** The global Roling context every forum-wide capability is scoped to. */
 export const FORUM_CONTEXT = "forum";
 
 export interface AuthState {
-  /** The opaque session token, or null when signed out. */
+  /** The opaque session token from the last login response, or null when signed out.
+   *  Primary auth is via HttpOnly cookie; this is kept for API body compatibility. */
   session: string | null;
   /** The signed-in user's identity + profile, or null. */
   me: Me | null;
@@ -63,29 +62,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     pin: false,
   });
 
-  const hydrate = useCallback(async (token: string) => {
-    const result = await api.auth.me({ session: token });
+  const hydrate = useCallback(async () => {
+    // Session auth is handled via HttpOnly cookie (credentials: "include").
+    // The server extracts session from the cookie and injects it into the
+    // request inputs. We pass an empty body — the cookie does the real work.
+    const result = await api.auth.me({ session: "" });
     if ("error" in result) {
-      localStorage.removeItem(SESSION_KEY);
       setSession(null);
       setMe(null);
       setCan({ administer: false, moderate: false, pin: false });
       return;
     }
-    setSession(token);
+    setSession("cookie");
     setMe(result);
-    localStorage.setItem(SESSION_KEY, token);
     setCan(await resolveCapabilities(String(result.user)));
   }, []);
 
   useEffect(() => {
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem(SESSION_KEY) : null;
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-    hydrate(token).finally(() => setLoading(false));
+    hydrate().finally(() => setLoading(false));
   }, [hydrate]);
 
   const login = useCallback(
@@ -93,7 +87,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { session: token } = unwrap(
         await api.auth.login({ username, password }),
       );
-      await hydrate(String(token));
+      // Primary auth is via HttpOnly cookie set by the server, but we keep
+      // the session in memory for API body compatibility.
+      setSession(String(token));
+      await hydrate();
     },
     [hydrate],
   );
@@ -111,22 +108,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { session: token } = unwrap(
         await api.auth.login({ username, password }),
       );
-      await hydrate(String(token));
+      setSession(String(token));
+      await hydrate();
     },
     [hydrate],
   );
 
   const logout = useCallback(async () => {
-    if (session) await api.auth.logout({ session });
-    localStorage.removeItem(SESSION_KEY);
+    // Pass an empty session — the real session is in the HttpOnly cookie.
+    // The server clears the cookie via Set-Cookie header.
+    if (session) await api.auth.logout({ session: "" });
     setSession(null);
     setMe(null);
     setCan({ administer: false, moderate: false, pin: false });
   }, [session]);
 
   const refresh = useCallback(async () => {
-    if (session) await hydrate(session);
-  }, [session, hydrate]);
+    await hydrate();
+  }, [hydrate]);
 
   const value = useMemo<AuthState>(
     () => ({ session, me, loading, can, login, register, logout, refresh }),
