@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 /**
  * # Requesting concept configuration
@@ -44,7 +45,9 @@ interface PendingRequest {
   resolve: (value: unknown) => void;
 }
 
-export type AwaitResponseResult = { response: unknown } | { error: string };
+export type AwaitResponseResult =
+  | { response: unknown }
+  | { error: ForumErrorCode; detail?: string };
 
 /**
  * purpose: reify external requests as concept actions so the wire boundary is
@@ -144,7 +147,8 @@ export default class RequestingConcept {
       // We could check the database for a persisted response here if needed.
       return [
         {
-          error: `Request ${request} is not pending or does not exist: it may have timed-out.`,
+          error: ForumErrorCode.NOT_FOUND,
+          detail: `Request ${request} is not pending or does not exist: it may have timed-out.`,
         },
       ];
     }
@@ -153,7 +157,8 @@ export default class RequestingConcept {
     const timeoutPromise = new Promise<AwaitResponseResult>((resolve) => {
       timeoutId = setTimeout(() => {
         resolve({
-          error: `Request ${request} timed out after ${this.timeout}ms`,
+          error: ForumErrorCode.REQUEST_TIMEOUT,
+          detail: `Request ${request} timed out after ${this.timeout}ms`,
         });
       }, this.timeout);
     });

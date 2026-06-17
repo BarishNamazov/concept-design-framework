@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type Item = ID;
@@ -68,10 +69,12 @@ export default class CategorizingConcept {
   }: {
     name: string;
     description: string;
-  }): Promise<{ category: Category } | { error: string }> {
+  }): Promise<
+    { category: Category } | { error: ForumErrorCode; detail?: string }
+  > {
     const existing = await this.categories.findOne({ name });
     if (existing !== null) {
-      return { error: `Category "${name}" already exists.` };
+      return { error: ForumErrorCode.CATEGORY_ALREADY_EXISTS, detail: name };
     }
     const category = freshID() as Category;
     await this.categories.insertOne({ _id: category, name, description });
@@ -92,10 +95,10 @@ export default class CategorizingConcept {
   }: {
     item: Item;
     category: Category;
-  }): Promise<{ item: Item } | { error: string }> {
+  }): Promise<{ item: Item } | { error: ForumErrorCode; detail?: string }> {
     const categoryDoc = await this.categories.findOne({ _id: category });
     if (categoryDoc === null) {
-      return { error: "Category does not exist." };
+      return { error: ForumErrorCode.CATEGORY_NOT_FOUND };
     }
     await this.memberships.updateOne(
       { _id: item },
@@ -116,10 +119,10 @@ export default class CategorizingConcept {
     item,
   }: {
     item: Item;
-  }): Promise<{ item: Item } | { error: string }> {
+  }): Promise<{ item: Item } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.memberships.findOne({ _id: item });
     if (doc === null) {
-      return { error: "Item has no category to unassign." };
+      return { error: ForumErrorCode.ITEM_NOT_CATEGORIZED };
     }
     await this.memberships.deleteOne({ _id: item });
     return { item };
@@ -137,10 +140,12 @@ export default class CategorizingConcept {
     category,
   }: {
     category: Category;
-  }): Promise<{ category: Category } | { error: string }> {
+  }): Promise<
+    { category: Category } | { error: ForumErrorCode; detail?: string }
+  > {
     const categoryDoc = await this.categories.findOne({ _id: category });
     if (categoryDoc === null) {
-      return { error: "Category does not exist." };
+      return { error: ForumErrorCode.CATEGORY_NOT_FOUND };
     }
     await this.memberships.deleteMany({ category });
     await this.categories.deleteOne({ _id: category });

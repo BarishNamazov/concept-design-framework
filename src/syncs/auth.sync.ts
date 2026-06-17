@@ -22,6 +22,7 @@ import {
   type QueryRow,
 } from "@concepts/Requesting/api.ts";
 import { actions, type Frames, type Sync } from "@engine";
+import { ForumErrorCode } from "../sdk/error-codes.ts";
 import {
   ADMIN_CAPABILITY,
   FORUM_CONTEXT,
@@ -338,6 +339,6 @@ export const InvalidSession: Sync = ({ request, session, active }) => ({
   },
   then: actions([
     Requesting.respond,
-    { request, error: "Invalid or expired session." },
+    { request, error: ForumErrorCode.INVALID_SESSION },
   ]),
 });

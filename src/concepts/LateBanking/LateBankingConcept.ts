@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 type Learner = ID;
 type Item = ID;
@@ -76,7 +77,7 @@ export default class LateBankingConcept {
     defaultDays?: number;
     unitHours?: number;
     maxDaysPerItem?: number;
-  }): Promise<{ policy: true } | { error: string }> {
+  }): Promise<{ policy: true } | { error: ForumErrorCode; detail?: string }> {
     const existing = await this.policy.findOne({ _id: "singleton" });
     if (existing !== null) {
       const $set: Record<string, number> = {};
@@ -113,9 +114,9 @@ export default class LateBankingConcept {
     learner: Learner;
     days: number;
     reason: string;
-  }): Promise<{ grant: Grant } | { error: string }> {
+  }): Promise<{ grant: Grant } | { error: ForumErrorCode; detail?: string }> {
     if (days <= 0) {
-      return { error: "Grant days must be positive." };
+      return { error: ForumErrorCode.LATE_DAYS_MUST_BE_POSITIVE };
     }
     const _id = freshID() as Grant;
     const grantedAt: Date = new Date();
@@ -141,15 +142,16 @@ export default class LateBankingConcept {
     learner: Learner;
     item: Item;
     days: number;
-  }): Promise<{ use: Use } | { error: string }> {
+  }): Promise<{ use: Use } | { error: ForumErrorCode; detail?: string }> {
     if (days <= 0) {
-      return { error: "Applied days must be positive." };
+      return { error: ForumErrorCode.LATE_DAYS_MUST_BE_POSITIVE };
     }
 
     const policyDoc = await this.getPolicy();
     if (days > policyDoc.maxDaysPerItem) {
       return {
-        error: `Applied days (${days}) exceed the maximum allowed per item (${policyDoc.maxDaysPerItem}).`,
+        error: ForumErrorCode.LATE_DAYS_EXCEED_MAX,
+        detail: `Applied days (${days}) exceed the maximum allowed per item (${policyDoc.maxDaysPerItem}).`,
       };
     }
 
@@ -160,14 +162,15 @@ export default class LateBankingConcept {
     });
     if (existing !== null) {
       return {
-        error: "This learner already has an active late-day use for this item.",
+        error: ForumErrorCode.LATE_USE_ALREADY_EXISTS,
       };
     }
 
     const [{ remaining }] = await this._getBalance({ learner });
     if (days > remaining) {
       return {
-        error: `Insufficient balance. Requested ${days} day(s) but only ${remaining} remaining.`,
+        error: ForumErrorCode.INSUFFICIENT_BALANCE,
+        detail: `Insufficient balance. Requested ${days} day(s) but only ${remaining} remaining.`,
       };
     }
 
@@ -202,7 +205,7 @@ export default class LateBankingConcept {
     learner: Learner;
     item: Item;
     days: number;
-  }): Promise<{ use: Use } | { error: string }> {
+  }): Promise<{ use: Use } | { error: ForumErrorCode; detail?: string }> {
     const existing = await this.uses.findOne({
       learner,
       item,
@@ -210,18 +213,19 @@ export default class LateBankingConcept {
     });
     if (existing === null) {
       return {
-        error: "No active late-day use exists for this learner and item.",
+        error: ForumErrorCode.LATE_USE_NOT_FOUND,
       };
     }
 
     if (days < 0) {
-      return { error: "Days must be non-negative." };
+      return { error: ForumErrorCode.LATE_DAYS_NEGATIVE };
     }
 
     const policyDoc = await this.getPolicy();
     if (days > policyDoc.maxDaysPerItem) {
       return {
-        error: `Days (${days}) exceed the maximum allowed per item (${policyDoc.maxDaysPerItem}).`,
+        error: ForumErrorCode.LATE_DAYS_EXCEED_MAX,
+        detail: `Days (${days}) exceed the maximum allowed per item (${policyDoc.maxDaysPerItem}).`,
       };
     }
 
@@ -229,7 +233,8 @@ export default class LateBankingConcept {
     const delta = days - existing.days;
     if (delta > remaining) {
       return {
-        error: `Insufficient balance. Increasing by ${delta} day(s) requires ${existing.days + delta} total, but only ${remaining + existing.days} available.`,
+        error: ForumErrorCode.INSUFFICIENT_BALANCE,
+        detail: `Insufficient balance. Increasing by ${delta} day(s) requires ${existing.days + delta} total, but only ${remaining + existing.days} available.`,
       };
     }
 
@@ -251,7 +256,7 @@ export default class LateBankingConcept {
   }: {
     learner: Learner;
     item: Item;
-  }): Promise<{ use: Use } | { error: string }> {
+  }): Promise<{ use: Use } | { error: ForumErrorCode; detail?: string }> {
     const existing = await this.uses.findOne({
       learner,
       item,
@@ -259,7 +264,7 @@ export default class LateBankingConcept {
     });
     if (existing === null) {
       return {
-        error: "No active late-day use exists for this learner and item.",
+        error: ForumErrorCode.LATE_USE_NOT_FOUND,
       };
     }
     await this.uses.updateOne(

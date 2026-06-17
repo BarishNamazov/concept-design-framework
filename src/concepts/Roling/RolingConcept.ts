@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type User = ID;
@@ -70,10 +71,10 @@ export default class RolingConcept {
   }: {
     name: string;
     capabilities: string[];
-  }): Promise<{ role: Role } | { error: string }> {
+  }): Promise<{ role: Role } | { error: ForumErrorCode; detail?: string }> {
     const existing = await this.roles.findOne({ name });
     if (existing !== null) {
-      return { error: `Role "${name}" already exists.` };
+      return { error: ForumErrorCode.ROLE_ALREADY_EXISTS, detail: name };
     }
     const role = freshID() as Role;
     await this.roles.insertOne({ _id: role, name, capabilities });
@@ -97,14 +98,14 @@ export default class RolingConcept {
     user: User;
     context: Context;
     role: Role;
-  }): Promise<{ grant: Grant } | { error: string }> {
+  }): Promise<{ grant: Grant } | { error: ForumErrorCode; detail?: string }> {
     const roleDoc = await this.roles.findOne({ _id: role });
     if (roleDoc === null) {
-      return { error: "Role does not exist." };
+      return { error: ForumErrorCode.ROLE_NOT_FOUND };
     }
     const existing = await this.grants.findOne({ user, context, role });
     if (existing !== null) {
-      return { error: "Grant already exists for this user, context and role." };
+      return { error: ForumErrorCode.GRANT_ALREADY_EXISTS };
     }
     const grant = freshID() as Grant;
     await this.grants.insertOne({ _id: grant, user, context, role });
@@ -126,10 +127,10 @@ export default class RolingConcept {
     user: User;
     context: Context;
     role: Role;
-  }): Promise<{ grant: Grant } | { error: string }> {
+  }): Promise<{ grant: Grant } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.grants.findOne({ user, context, role });
     if (doc === null) {
-      return { error: "No matching grant to revoke." };
+      return { error: ForumErrorCode.GRANT_NOT_FOUND };
     }
     await this.grants.deleteOne({ _id: doc._id });
     return { grant: doc._id };

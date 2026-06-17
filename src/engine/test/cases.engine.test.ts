@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 import {
   actions,
   type Frames,
@@ -114,7 +115,10 @@ describe("engine: edge cases", () => {
       Throwing: new ThrowingConcept(),
     });
     const result = await Throwing.explode({});
-    expect(result).toEqual({ error: "kaboom" });
+    expect(result).toEqual({
+      error: ForumErrorCode.INTERNAL_ERROR,
+      detail: "kaboom",
+    });
     expect(Throwing.hit).toBe(true);
   });
 

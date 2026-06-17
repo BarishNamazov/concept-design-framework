@@ -30,6 +30,8 @@
  * `{ error }` shape. Callers discriminate with `"error" in result`.
  */
 
+import { ForumErrorCode } from "./error-codes.ts";
+
 /** The error envelope every endpoint may return instead of its success payload. */
 export type ApiError = { error: string };
 
@@ -151,7 +153,10 @@ async function request(
         ? await headersOption()
         : (headersOption ?? {});
   } catch (e) {
-    return { error: `Failed to resolve headers: ${describe(e)}` };
+    return {
+      error: ForumErrorCode.HEADER_RESOLUTION_FAILED,
+      detail: describe(e),
+    };
   }
 
   let response: Response;
@@ -162,7 +167,10 @@ async function request(
       body: JSON.stringify(body ?? {}),
     });
   } catch (e) {
-    return { error: `Network request to ${path} failed: ${describe(e)}` };
+    return {
+      error: ForumErrorCode.NETWORK_ERROR,
+      detail: `Network request to ${path} failed: ${describe(e)}`,
+    };
   }
 
   const text = await response.text().catch(() => "");
@@ -171,7 +179,8 @@ async function request(
     data = text === "" ? {} : JSON.parse(text);
   } catch {
     return {
-      error: `Invalid JSON response from ${path} (status ${response.status}).`,
+      error: ForumErrorCode.BAD_JSON,
+      detail: `Invalid JSON response from ${path} (status ${response.status}).`,
     };
   }
 
@@ -183,7 +192,8 @@ async function request(
     (typeof data !== "object" || data === null || !("error" in data))
   ) {
     return {
-      error: `Request to ${path} failed with status ${response.status}.`,
+      error: ForumErrorCode.BAD_STATUS,
+      detail: `Request to ${path} failed with status ${response.status}.`,
     };
   }
   return data;

@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type User = ID;
@@ -52,10 +53,12 @@ export default class BookmarkingConcept {
   }: {
     user: User;
     item: Item;
-  }): Promise<{ bookmark: Bookmark } | { error: string }> {
+  }): Promise<
+    { bookmark: Bookmark } | { error: ForumErrorCode; detail?: string }
+  > {
     const existing = await this.bookmarks.findOne({ user, item });
     if (existing !== null) {
-      return { error: "Item is already bookmarked by this user." };
+      return { error: ForumErrorCode.BOOKMARK_ALREADY_EXISTS };
     }
     const bookmark = freshID() as Bookmark;
     const savedAt: Date = new Date();
@@ -77,10 +80,12 @@ export default class BookmarkingConcept {
   }: {
     user: User;
     item: Item;
-  }): Promise<{ bookmark: Bookmark } | { error: string }> {
+  }): Promise<
+    { bookmark: Bookmark } | { error: ForumErrorCode; detail?: string }
+  > {
     const doc = await this.bookmarks.findOne({ user, item });
     if (doc === null) {
-      return { error: "No matching bookmark to remove." };
+      return { error: ForumErrorCode.BOOKMARK_NOT_FOUND };
     }
     await this.bookmarks.deleteOne({ _id: doc._id });
     return { bookmark: doc._id };

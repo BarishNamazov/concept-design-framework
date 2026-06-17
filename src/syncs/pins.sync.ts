@@ -20,6 +20,7 @@ import {
   type QueryRow,
 } from "@concepts/Requesting/api.ts";
 import type { Frame, Frames } from "@engine";
+import { ForumErrorCode } from "../sdk/error-codes.ts";
 import { FORUM_CONTEXT } from "./authorization.ts";
 
 type PinOutput = ActionOk<typeof Pinning, "pin">;
@@ -131,7 +132,7 @@ const pin = defineEndpoint(
             scopeAllowed,
             forumAllowed,
           }),
-        then: Actions(Fail("Not authorized to pin in this scope.")),
+        then: Actions(Fail(ForumErrorCode.FORBIDDEN)),
       }),
     ),
   }),
@@ -178,7 +179,7 @@ const unpin = defineEndpoint(
             scopeAllowed,
             forumAllowed,
           }),
-        then: Actions(Fail("Not authorized to pin in this scope.")),
+        then: Actions(Fail(ForumErrorCode.FORBIDDEN)),
       }),
     ),
   }),
@@ -233,7 +234,7 @@ const setPriority = defineEndpoint(
             scopeAllowed,
             forumAllowed,
           }),
-        then: Actions(Fail("Not authorized to pin in this scope.")),
+        then: Actions(Fail(ForumErrorCode.FORBIDDEN)),
       }),
     ),
   }),

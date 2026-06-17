@@ -1,6 +1,7 @@
 import { collectionName } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type Target = ID;
@@ -46,10 +47,10 @@ export default class LockingConcept {
     target,
   }: {
     target: Target;
-  }): Promise<{ target: Target } | { error: string }> {
+  }): Promise<{ target: Target } | { error: ForumErrorCode; detail?: string }> {
     const existing = await this.locked.findOne({ _id: target });
     if (existing !== null) {
-      return { error: "Target is already locked." };
+      return { error: ForumErrorCode.TARGET_ALREADY_LOCKED };
     }
     const lockedAt: Date = new Date();
     await this.locked.insertOne({ _id: target, lockedAt });
@@ -67,10 +68,10 @@ export default class LockingConcept {
     target,
   }: {
     target: Target;
-  }): Promise<{ target: Target } | { error: string }> {
+  }): Promise<{ target: Target } | { error: ForumErrorCode; detail?: string }> {
     const existing = await this.locked.findOne({ _id: target });
     if (existing === null) {
-      return { error: "Target is not locked." };
+      return { error: ForumErrorCode.TARGET_NOT_LOCKED };
     }
     await this.locked.deleteOne({ _id: target });
     return { target };

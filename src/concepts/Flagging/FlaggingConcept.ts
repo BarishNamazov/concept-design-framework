@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type User = ID;
@@ -60,14 +61,14 @@ export default class FlaggingConcept {
     reporter: User;
     target: Target;
     reason: string;
-  }): Promise<{ flag: Flag } | { error: string }> {
+  }): Promise<{ flag: Flag } | { error: ForumErrorCode; detail?: string }> {
     const existing = await this.flags.findOne({
       reporter,
       target,
       status: "open",
     });
     if (existing !== null) {
-      return { error: "Reporter already has an open flag on this target." };
+      return { error: ForumErrorCode.FLAG_ALREADY_EXISTS };
     }
     const flag = freshID() as Flag;
     const createdAt: Date = new Date();
@@ -97,13 +98,16 @@ export default class FlaggingConcept {
   }: {
     target: Target;
     outcome: string;
-  }): Promise<{ target: Target } | { error: string }> {
+  }): Promise<{ target: Target } | { error: ForumErrorCode; detail?: string }> {
     if (outcome !== "upheld" && outcome !== "dismissed") {
-      return { error: 'Outcome must be "upheld" or "dismissed".' };
+      return {
+        error: ForumErrorCode.VALIDATION_FAILED,
+        detail: 'Outcome must be "upheld" or "dismissed".',
+      };
     }
     const open = await this.flags.findOne({ target, status: "open" });
     if (open === null) {
-      return { error: "No open flag exists on this target." };
+      return { error: ForumErrorCode.FLAG_NOT_FOUND };
     }
     await this.flags.updateMany(
       { target, status: "open" },

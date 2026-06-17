@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { setupApp, type TestApp } from "@utils/app_testing.ts";
+import { ForumErrorCode } from "../sdk/error-codes.ts";
 
 let app: TestApp;
 
@@ -87,9 +88,7 @@ describe("resolution synchronizations", () => {
       question,
       answer,
     });
-    expect(res.error).toBe(
-      "Not authorized to accept an answer for this question.",
-    );
+    expect(res.error).toBe(ForumErrorCode.FORBIDDEN);
 
     const resolved = await app.send("/resolutions/isResolved", { question });
     expect(resolved.resolved).toBe(false);
@@ -105,9 +104,7 @@ describe("resolution synchronizations", () => {
       session: bobSession,
       question,
     });
-    expect(res.error).toBe(
-      "Not authorized to clear an answer for this question.",
-    );
+    expect(res.error).toBe(ForumErrorCode.FORBIDDEN);
 
     const resolved = await app.send("/resolutions/isResolved", { question });
     expect(resolved.resolved).toBe(true);
@@ -141,7 +138,7 @@ describe("resolution synchronizations", () => {
       question,
       answer,
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
   });
 
   test("clear rejects an invalid session", async () => {
@@ -150,7 +147,7 @@ describe("resolution synchronizations", () => {
       session: "nope",
       question,
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
   });
 
   test("get returns an empty array for an unresolved question", async () => {

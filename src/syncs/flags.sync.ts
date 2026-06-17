@@ -17,6 +17,7 @@ import {
   defineEndpoint,
   type QueryRow,
 } from "@concepts/Requesting/api.ts";
+import { ForumErrorCode } from "../sdk/error-codes.ts";
 
 type FlagRaiseOutput = ActionOk<typeof Flagging, "flag">;
 type FlagResolveOutput = ActionOk<typeof Flagging, "resolve">;
@@ -103,7 +104,7 @@ const resolve = defineEndpoint(
         );
         return frames.filter(($) => $[allowed] === false);
       },
-      then: Actions(Fail("Not authorized to resolve flags.")),
+      then: Actions(Fail(ForumErrorCode.FORBIDDEN)),
     })),
   }),
 );

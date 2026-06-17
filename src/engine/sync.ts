@@ -27,6 +27,7 @@
  * single flow so independent invocations never cross-match.
  */
 
+import { ForumErrorCode } from "../sdk/error-codes.ts";
 import { ActionConcept, type ActionRecord } from "./actions.ts";
 import { Frames } from "./frames.ts";
 import type {
@@ -473,7 +474,8 @@ export class SyncConcept {
             output = (await action(input)) as Record<string, unknown>;
           } catch (err) {
             output = {
-              error: err instanceof Error ? err.message : String(err),
+              error: ForumErrorCode.INTERNAL_ERROR,
+              detail: err instanceof Error ? err.message : String(err),
             };
           }
           Action.invoked({ id, output });

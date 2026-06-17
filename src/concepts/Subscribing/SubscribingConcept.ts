@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type User = ID;
@@ -55,10 +56,12 @@ export default class SubscribingConcept {
   }: {
     user: User;
     target: Target;
-  }): Promise<{ subscription: Subscription } | { error: string }> {
+  }): Promise<
+    { subscription: Subscription } | { error: ForumErrorCode; detail?: string }
+  > {
     const existing = await this.subscriptions.findOne({ user, target });
     if (existing !== null) {
-      return { error: "User is already subscribed to this target." };
+      return { error: ForumErrorCode.ALREADY_SUBSCRIBED };
     }
     const subscription = freshID() as Subscription;
     await this.subscriptions.insertOne({
@@ -84,10 +87,12 @@ export default class SubscribingConcept {
   }: {
     user: User;
     target: Target;
-  }): Promise<{ subscription: Subscription } | { error: string }> {
+  }): Promise<
+    { subscription: Subscription } | { error: ForumErrorCode; detail?: string }
+  > {
     const doc = await this.subscriptions.findOne({ user, target });
     if (doc === null) {
-      return { error: "User is not subscribed to this target." };
+      return { error: ForumErrorCode.NOT_SUBSCRIBED };
     }
     await this.subscriptions.deleteOne({ _id: doc._id });
     return { subscription: doc._id };

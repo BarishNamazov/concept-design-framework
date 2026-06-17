@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type Item = ID;
@@ -74,10 +75,13 @@ export default class ConversingConcept {
     item,
   }: {
     item: Item;
-  }): Promise<{ conversation: Conversation; node: Node } | { error: string }> {
+  }): Promise<
+    | { conversation: Conversation; node: Node }
+    | { error: ForumErrorCode; detail?: string }
+  > {
     const existing = await this.nodes.findOne({ item });
     if (existing !== null) {
-      return { error: "Item is already placed in a conversation." };
+      return { error: ForumErrorCode.ITEM_ALREADY_IN_CONVERSATION };
     }
     const now = new Date();
     const conversation = freshID() as Conversation;
@@ -115,14 +119,14 @@ export default class ConversingConcept {
   }: {
     item: Item;
     parent: Node;
-  }): Promise<{ node: Node } | { error: string }> {
+  }): Promise<{ node: Node } | { error: ForumErrorCode; detail?: string }> {
     const parentDoc = await this.nodes.findOne({ _id: parent });
     if (parentDoc === null) {
-      return { error: "Parent node does not exist." };
+      return { error: ForumErrorCode.PARENT_NODE_NOT_FOUND };
     }
     const existing = await this.nodes.findOne({ item });
     if (existing !== null) {
-      return { error: "Item is already placed in a conversation." };
+      return { error: ForumErrorCode.ITEM_ALREADY_IN_CONVERSATION };
     }
     const node = freshID() as Node;
     const now = new Date();
@@ -155,14 +159,14 @@ export default class ConversingConcept {
     node,
   }: {
     node: Node;
-  }): Promise<{ node: Node } | { error: string }> {
+  }): Promise<{ node: Node } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.nodes.findOne({ _id: node });
     if (doc === null) {
-      return { error: "Node does not exist." };
+      return { error: ForumErrorCode.NODE_NOT_FOUND };
     }
     const child = await this.nodes.findOne({ parent: node });
     if (child !== null) {
-      return { error: "Cannot remove a node that has children." };
+      return { error: ForumErrorCode.NODE_HAS_CHILDREN };
     }
     await this.nodes.deleteOne({ _id: node });
     const remaining = await this.nodes.findOne({

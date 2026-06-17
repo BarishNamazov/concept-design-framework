@@ -1,3 +1,4 @@
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 import RequestingConcept from "./RequestingConcept.ts";
 
 /**
@@ -94,10 +95,7 @@ export function startRequestingServer(
     try {
       const body = await readJsonBody(req, undefined);
       if (typeof body !== "object" || body === null) {
-        return json(
-          { error: "Invalid request body. Must be a JSON object." },
-          400,
-        );
+        return json({ error: ForumErrorCode.INVALID_BODY }, 400);
       }
 
       // Extract the specific action path from the request URL.
@@ -122,19 +120,19 @@ export function startRequestingServer(
       // 3. Send the response back to the client.
       if ("error" in result) {
         console.error(`[Requesting] Error processing request:`, result.error);
-        if (result.error.includes("timed out")) {
-          return json({ error: "Request timed out." }, 504); // Gateway Timeout
+        if (result.error === ForumErrorCode.REQUEST_TIMEOUT) {
+          return json({ error: ForumErrorCode.REQUEST_TIMEOUT }, 504);
         }
-        return json({ error: "An internal server error occurred." }, 500);
+        return json({ error: ForumErrorCode.INTERNAL_ERROR }, 500);
       }
 
       return json(result.response);
     } catch (e) {
       if (e instanceof Error) {
         console.error(`[Requesting] Error processing request:`, e.message);
-        return json({ error: "An internal server error occurred." }, 500);
+        return json({ error: ForumErrorCode.INTERNAL_ERROR }, 500);
       } else {
-        return json({ error: "unknown error occurred." }, 418);
+        return json({ error: ForumErrorCode.INTERNAL_ERROR }, 418);
       }
     }
   }
@@ -158,7 +156,7 @@ export function startRequestingServer(
         return handleRequesting(req, pathname);
       }
 
-      return json({ error: "Not found." }, 404);
+      return json({ error: ForumErrorCode.NOT_FOUND }, 404);
     },
   });
 }

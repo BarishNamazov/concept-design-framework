@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { setupApp, type TestApp } from "@utils/app_testing.ts";
+import { ForumErrorCode } from "../sdk/error-codes.ts";
 
 let app: TestApp;
 
@@ -80,7 +81,7 @@ describe("lock synchronizations", () => {
       session: "nope",
       target: "t1",
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
   });
 
   test("unlock with an invalid session errors", async () => {
@@ -88,7 +89,7 @@ describe("lock synchronizations", () => {
       session: "nope",
       target: "t1",
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
   });
 });
 
@@ -120,7 +121,7 @@ describe("lock authorization", () => {
       session: member.session,
       target: "t1",
     });
-    expect(res.error).toBe("Not authorized to lock targets.");
+    expect(res.error).toBe(ForumErrorCode.FORBIDDEN);
     expect(res.target).toBeUndefined();
 
     const isLocked = await app.send("/locks/isLocked", { target: "t1" });
@@ -164,7 +165,7 @@ describe("lock authorization", () => {
       session: member.session,
       target: "t1",
     });
-    expect(res.error).toBe("Not authorized to lock targets.");
+    expect(res.error).toBe(ForumErrorCode.FORBIDDEN);
 
     const isLocked = await app.send("/locks/isLocked", { target: "t1" });
     expect(isLocked.locked).toBe(true);

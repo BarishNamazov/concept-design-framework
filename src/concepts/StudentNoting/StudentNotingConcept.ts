@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type Author = ID;
@@ -78,9 +79,9 @@ export default class StudentNotingConcept {
     visibility: "STAFF_ONLY" | "LEARNER_VISIBLE";
     tags?: string[];
     followUpAt?: Date;
-  }): Promise<{ note: Note } | { error: string }> {
+  }): Promise<{ note: Note } | { error: ForumErrorCode; detail?: string }> {
     if (visibility !== "STAFF_ONLY" && visibility !== "LEARNER_VISIBLE") {
-      return { error: 'Visibility must be "STAFF_ONLY" or "LEARNER_VISIBLE".' };
+      return { error: ForumErrorCode.INVALID_VISIBILITY };
     }
     const note = freshID() as Note;
     const createdAt: Date = new Date();
@@ -119,20 +120,20 @@ export default class StudentNotingConcept {
     visibility?: "STAFF_ONLY" | "LEARNER_VISIBLE";
     tags?: string[];
     followUpAt?: Date;
-  }): Promise<{ note: Note } | { error: string }> {
+  }): Promise<{ note: Note } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.notes.findOne({ _id: note });
     if (doc === null) {
-      return { error: "Note does not exist." };
+      return { error: ForumErrorCode.NOTE_NOT_FOUND };
     }
     if (doc.status !== "OPEN") {
-      return { error: "Only OPEN notes can be revised." };
+      return { error: ForumErrorCode.NOTE_NOT_OPEN };
     }
     if (
       visibility !== undefined &&
       visibility !== "STAFF_ONLY" &&
       visibility !== "LEARNER_VISIBLE"
     ) {
-      return { error: 'Visibility must be "STAFF_ONLY" or "LEARNER_VISIBLE".' };
+      return { error: ForumErrorCode.INVALID_VISIBILITY };
     }
     const $set: Record<string, unknown> = { updatedAt: new Date() };
     if (body !== undefined) $set.body = body;
@@ -156,13 +157,13 @@ export default class StudentNotingConcept {
     note,
   }: {
     note: Note;
-  }): Promise<{ note: Note } | { error: string }> {
+  }): Promise<{ note: Note } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.notes.findOne({ _id: note });
     if (doc === null) {
-      return { error: "Note does not exist." };
+      return { error: ForumErrorCode.NOTE_NOT_FOUND };
     }
     if (doc.status !== "OPEN") {
-      return { error: "Only OPEN notes can be resolved." };
+      return { error: ForumErrorCode.NOTE_NOT_OPEN };
     }
     await this.notes.updateOne(
       { _id: note },
@@ -182,13 +183,13 @@ export default class StudentNotingConcept {
     note,
   }: {
     note: Note;
-  }): Promise<{ note: Note } | { error: string }> {
+  }): Promise<{ note: Note } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.notes.findOne({ _id: note });
     if (doc === null) {
-      return { error: "Note does not exist." };
+      return { error: ForumErrorCode.NOTE_NOT_FOUND };
     }
     if (doc.status !== "RESOLVED") {
-      return { error: "Only RESOLVED notes can be archived." };
+      return { error: ForumErrorCode.NOTE_NOT_RESOLVED };
     }
     await this.notes.updateOne(
       { _id: note },
@@ -208,13 +209,13 @@ export default class StudentNotingConcept {
     note,
   }: {
     note: Note;
-  }): Promise<{ note: Note } | { error: string }> {
+  }): Promise<{ note: Note } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.notes.findOne({ _id: note });
     if (doc === null) {
-      return { error: "Note does not exist." };
+      return { error: ForumErrorCode.NOTE_NOT_FOUND };
     }
     if (doc.status !== "RESOLVED" && doc.status !== "ARCHIVED") {
-      return { error: "Only RESOLVED or ARCHIVED notes can be restored." };
+      return { error: ForumErrorCode.NOTE_NOT_RESTORABLE };
     }
     await this.notes.updateOne(
       { _id: note },
@@ -237,19 +238,19 @@ export default class StudentNotingConcept {
   }: {
     note: Note;
     learner: Learner;
-  }): Promise<{ note: Note } | { error: string }> {
+  }): Promise<{ note: Note } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.notes.findOne({ _id: note });
     if (doc === null) {
-      return { error: "Note does not exist." };
+      return { error: ForumErrorCode.NOTE_NOT_FOUND };
     }
     if (doc.visibility !== "LEARNER_VISIBLE") {
       return {
-        error: "Only LEARNER_VISIBLE notes can be acknowledged.",
+        error: ForumErrorCode.NOTE_NOT_LEARNER_VISIBLE,
       };
     }
     if (doc.learner !== learner) {
       return {
-        error: "Only the note's learner can acknowledge it.",
+        error: ForumErrorCode.NOTE_NOT_OWNER,
       };
     }
     await this.notes.updateOne(

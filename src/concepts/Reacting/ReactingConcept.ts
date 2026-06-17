@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type User = ID;
@@ -58,11 +59,13 @@ export default class ReactingConcept {
     user: User;
     target: Target;
     kind: string;
-  }): Promise<{ reaction: Reaction } | { error: string }> {
+  }): Promise<
+    { reaction: Reaction } | { error: ForumErrorCode; detail?: string }
+  > {
     const existing = await this.reactions.findOne({ user, target, kind });
     if (existing !== null) {
       return {
-        error: "Reaction already exists for this user, target and kind.",
+        error: ForumErrorCode.REACTION_ALREADY_EXISTS,
       };
     }
     const reaction = freshID() as Reaction;
@@ -92,10 +95,12 @@ export default class ReactingConcept {
     user: User;
     target: Target;
     kind: string;
-  }): Promise<{ reaction: Reaction } | { error: string }> {
+  }): Promise<
+    { reaction: Reaction } | { error: ForumErrorCode; detail?: string }
+  > {
     const doc = await this.reactions.findOne({ user, target, kind });
     if (doc === null) {
-      return { error: "No matching reaction to remove." };
+      return { error: ForumErrorCode.REACTION_NOT_FOUND };
     }
     await this.reactions.deleteOne({ _id: doc._id });
     return { reaction: doc._id };

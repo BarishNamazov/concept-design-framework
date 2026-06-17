@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { setupApp, type TestApp } from "@utils/app_testing.ts";
+import { ForumErrorCode } from "../sdk/error-codes.ts";
 
 let app: TestApp;
 
@@ -149,7 +150,7 @@ describe("role synchronizations", () => {
       name: "ta",
       capabilities: ["pin"],
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
   });
 
   test("grant with invalid session errors", async () => {
@@ -159,7 +160,7 @@ describe("role synchronizations", () => {
       context: "course",
       role: "r1",
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
   });
 
   test("revoke with invalid session errors", async () => {
@@ -169,7 +170,7 @@ describe("role synchronizations", () => {
       context: "course",
       role: "r1",
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
   });
 });
 
@@ -276,7 +277,7 @@ describe("role administration authorization", () => {
       name: "superuser",
       capabilities: ["administer", "moderate"],
     });
-    expect(defined.error).toBe("Not authorized to manage roles.");
+    expect(defined.error).toBe(ForumErrorCode.FORBIDDEN);
     expect(defined.role).toBeUndefined();
 
     const granted = await app.send("/roles/grant", {
@@ -285,7 +286,7 @@ describe("role administration authorization", () => {
       context: "forum",
       role: "administrator",
     });
-    expect(granted.error).toBe("Not authorized to manage roles.");
+    expect(granted.error).toBe(ForumErrorCode.FORBIDDEN);
     expect(granted.grant).toBeUndefined();
 
     // The escalation did not take effect.
@@ -335,7 +336,7 @@ describe("role administration authorization", () => {
       context: "forum",
       role: "administrator",
     });
-    expect(res.error).toBe("Not authorized to manage roles.");
+    expect(res.error).toBe(ForumErrorCode.FORBIDDEN);
 
     // The administrator's own grant survived the attempt.
     const can = await app.send("/roles/can", {

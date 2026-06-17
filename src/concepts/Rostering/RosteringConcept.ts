@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 type User = ID;
 type Section = ID;
@@ -74,10 +75,12 @@ export default class RosteringConcept {
     title: string;
     term: string;
     timezone: string;
-  }): Promise<{ class: ClassDoc } | { error: string }> {
+  }): Promise<
+    { class: ClassDoc } | { error: ForumErrorCode; detail?: string }
+  > {
     const existing = await this.class_.findOne({});
     if (existing !== null) {
-      return { error: "A class is already configured." };
+      return { error: ForumErrorCode.CLASS_ALREADY_CONFIGURED };
     }
     const doc: ClassDoc = {
       _id: freshID() as string,
@@ -98,10 +101,12 @@ export default class RosteringConcept {
    *
    * **effects** sets the Class status to ARCHIVED; returns the updated `class`
    */
-  async archiveClass(): Promise<{ class: ClassDoc } | { error: string }> {
+  async archiveClass(): Promise<
+    { class: ClassDoc } | { error: ForumErrorCode; detail?: string }
+  > {
     const doc = await this.class_.findOne({});
     if (doc === null) {
-      return { error: "No class configured to archive." };
+      return { error: ForumErrorCode.NO_CLASS_CONFIGURED };
     }
     await this.class_.updateOne(
       { _id: doc._id },
@@ -127,7 +132,9 @@ export default class RosteringConcept {
     name: string;
     location?: string;
     meetingPattern?: string;
-  }): Promise<{ section: SectionDoc } | { error: string }> {
+  }): Promise<
+    { section: SectionDoc } | { error: ForumErrorCode; detail?: string }
+  > {
     const _id = freshID() as Section;
     const doc: SectionDoc = {
       _id,
@@ -158,10 +165,12 @@ export default class RosteringConcept {
     name: string;
     location?: string;
     meetingPattern?: string;
-  }): Promise<{ section: SectionDoc } | { error: string }> {
+  }): Promise<
+    { section: SectionDoc } | { error: ForumErrorCode; detail?: string }
+  > {
     const doc = await this.sections.findOne({ _id: section });
     if (doc === null) {
-      return { error: "Section does not exist." };
+      return { error: ForumErrorCode.SECTION_NOT_FOUND };
     }
     const updated: SectionDoc = {
       ...doc,
@@ -188,10 +197,12 @@ export default class RosteringConcept {
     section,
   }: {
     section: Section;
-  }): Promise<{ section: SectionDoc } | { error: string }> {
+  }): Promise<
+    { section: SectionDoc } | { error: ForumErrorCode; detail?: string }
+  > {
     const doc = await this.sections.findOne({ _id: section });
     if (doc === null) {
-      return { error: "Section does not exist." };
+      return { error: ForumErrorCode.SECTION_NOT_FOUND };
     }
     await this.sections.updateOne(
       { _id: section },
@@ -220,11 +231,12 @@ export default class RosteringConcept {
     rosterName: string;
     kind: "STUDENT" | "STAFF" | "AUDITOR";
     section?: Section;
-  }): Promise<{ seat: SeatDoc } | { error: string }> {
+  }): Promise<{ seat: SeatDoc } | { error: ForumErrorCode; detail?: string }> {
     const existing = await this.seats.findOne({ externalKey });
     if (existing !== null) {
       return {
-        error: `A seat with externalKey "${externalKey}" already exists.`,
+        error: ForumErrorCode.SEAT_ALREADY_EXISTS,
+        detail: externalKey,
       };
     }
     const _id = freshID() as Seat;
@@ -256,13 +268,13 @@ export default class RosteringConcept {
   }: {
     seat: Seat;
     user: User;
-  }): Promise<{ seat: SeatDoc } | { error: string }> {
+  }): Promise<{ seat: SeatDoc } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.seats.findOne({ _id: seat });
     if (doc === null) {
-      return { error: "Seat does not exist." };
+      return { error: ForumErrorCode.SEAT_NOT_FOUND };
     }
     if (doc.status !== "PENDING") {
-      return { error: "Seat is not in PENDING status." };
+      return { error: ForumErrorCode.SEAT_NOT_PENDING };
     }
     const activeForUser = await this.seats.findOne({
       user,
@@ -271,7 +283,7 @@ export default class RosteringConcept {
     });
     if (activeForUser !== null) {
       return {
-        error: "User already has an ACTIVE seat and cannot claim another.",
+        error: ForumErrorCode.SEAT_ALREADY_ACTIVE,
       };
     }
     await this.seats.updateOne(
@@ -296,7 +308,7 @@ export default class RosteringConcept {
   }: {
     seat: Seat;
     user: User;
-  }): Promise<{ seat: SeatDoc } | { error: string }> {
+  }): Promise<{ seat: SeatDoc } | { error: ForumErrorCode; detail?: string }> {
     return this.claimSeat({ seat, user });
   }
 
@@ -311,13 +323,13 @@ export default class RosteringConcept {
     seat,
   }: {
     seat: Seat;
-  }): Promise<{ seat: SeatDoc } | { error: string }> {
+  }): Promise<{ seat: SeatDoc } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.seats.findOne({ _id: seat });
     if (doc === null) {
-      return { error: "Seat does not exist." };
+      return { error: ForumErrorCode.SEAT_NOT_FOUND };
     }
     if (doc.status !== "ACTIVE") {
-      return { error: "Seat is not in ACTIVE status." };
+      return { error: ForumErrorCode.SEAT_NOT_ACTIVE };
     }
     await this.seats.updateOne({ _id: seat }, { $set: { status: "DROPPED" } });
     return { seat: { ...doc, status: "DROPPED" } };
@@ -334,13 +346,13 @@ export default class RosteringConcept {
     seat,
   }: {
     seat: Seat;
-  }): Promise<{ seat: SeatDoc } | { error: string }> {
+  }): Promise<{ seat: SeatDoc } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.seats.findOne({ _id: seat });
     if (doc === null) {
-      return { error: "Seat does not exist." };
+      return { error: ForumErrorCode.SEAT_NOT_FOUND };
     }
     if (doc.status !== "DROPPED") {
-      return { error: "Seat is not in DROPPED status." };
+      return { error: ForumErrorCode.SEAT_NOT_DROPPED };
     }
     await this.seats.updateOne({ _id: seat }, { $set: { status: "ACTIVE" } });
     return { seat: { ...doc, status: "ACTIVE" } };
@@ -359,10 +371,10 @@ export default class RosteringConcept {
   }: {
     seat: Seat;
     section: Section;
-  }): Promise<{ seat: SeatDoc } | { error: string }> {
+  }): Promise<{ seat: SeatDoc } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.seats.findOne({ _id: seat });
     if (doc === null) {
-      return { error: "Seat does not exist." };
+      return { error: ForumErrorCode.SEAT_NOT_FOUND };
     }
     await this.seats.updateOne({ _id: seat }, { $set: { section } });
     return { seat: { ...doc, section } };
@@ -381,10 +393,10 @@ export default class RosteringConcept {
   }: {
     seat: Seat;
     kind: "STUDENT" | "STAFF" | "AUDITOR";
-  }): Promise<{ seat: SeatDoc } | { error: string }> {
+  }): Promise<{ seat: SeatDoc } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.seats.findOne({ _id: seat });
     if (doc === null) {
-      return { error: "Seat does not exist." };
+      return { error: ForumErrorCode.SEAT_NOT_FOUND };
     }
     await this.seats.updateOne({ _id: seat }, { $set: { kind } });
     return { seat: { ...doc, kind } };

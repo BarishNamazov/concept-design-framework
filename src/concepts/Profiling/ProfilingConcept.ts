@@ -1,6 +1,7 @@
 import { collectionName } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type User = ID;
@@ -57,10 +58,10 @@ export default class ProfilingConcept {
   }: {
     user: User;
     displayName: string;
-  }): Promise<{ user: User } | { error: string }> {
+  }): Promise<{ user: User } | { error: ForumErrorCode; detail?: string }> {
     const existing = await this.profiles.findOne({ _id: user });
     if (existing !== null) {
-      return { error: "A profile already exists for this user." };
+      return { error: ForumErrorCode.PROFILE_NOT_FOUND };
     }
     await this.profiles.insertOne({
       _id: user,
@@ -84,13 +85,13 @@ export default class ProfilingConcept {
   }: {
     user: User;
     displayName: string;
-  }): Promise<{ user: User } | { error: string }> {
+  }): Promise<{ user: User } | { error: ForumErrorCode; detail?: string }> {
     const { matchedCount } = await this.profiles.updateOne(
       { _id: user },
       { $set: { displayName } },
     );
     if (matchedCount === 0) {
-      return { error: "No profile exists for this user." };
+      return { error: ForumErrorCode.PROFILE_NOT_FOUND };
     }
     return { user };
   }
@@ -108,13 +109,13 @@ export default class ProfilingConcept {
   }: {
     user: User;
     bio: string;
-  }): Promise<{ user: User } | { error: string }> {
+  }): Promise<{ user: User } | { error: ForumErrorCode; detail?: string }> {
     const { matchedCount } = await this.profiles.updateOne(
       { _id: user },
       { $set: { bio } },
     );
     if (matchedCount === 0) {
-      return { error: "No profile exists for this user." };
+      return { error: ForumErrorCode.PROFILE_NOT_FOUND };
     }
     return { user };
   }
@@ -132,13 +133,13 @@ export default class ProfilingConcept {
   }: {
     user: User;
     avatar: string;
-  }): Promise<{ user: User } | { error: string }> {
+  }): Promise<{ user: User } | { error: ForumErrorCode; detail?: string }> {
     const { matchedCount } = await this.profiles.updateOne(
       { _id: user },
       { $set: { avatar } },
     );
     if (matchedCount === 0) {
-      return { error: "No profile exists for this user." };
+      return { error: ForumErrorCode.PROFILE_NOT_FOUND };
     }
     return { user };
   }
@@ -161,10 +162,10 @@ export default class ProfilingConcept {
     user,
   }: {
     user: User;
-  }): Promise<{ user: User } | { error: string }> {
+  }): Promise<{ user: User } | { error: ForumErrorCode; detail?: string }> {
     const { deletedCount } = await this.profiles.deleteOne({ _id: user });
     if (deletedCount === 0) {
-      return { error: "No profile exists for this user." };
+      return { error: ForumErrorCode.PROFILE_NOT_FOUND };
     }
     return { user };
   }

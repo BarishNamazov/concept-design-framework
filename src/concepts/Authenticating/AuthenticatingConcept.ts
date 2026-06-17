@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type User = ID;
@@ -48,10 +49,10 @@ export default class AuthenticatingConcept {
   }: {
     username: string;
     password: string;
-  }): Promise<{ user: User } | { error: string }> {
+  }): Promise<{ user: User } | { error: ForumErrorCode; detail?: string }> {
     const existing = await this.users.findOne({ username });
     if (existing !== null) {
-      return { error: `Username "${username}" is already taken.` };
+      return { error: ForumErrorCode.USERNAME_TAKEN, detail: username };
     }
     const user = freshID() as User;
     await this.users.insertOne({ _id: user, username, password });
@@ -72,10 +73,10 @@ export default class AuthenticatingConcept {
   }: {
     username: string;
     password: string;
-  }): Promise<{ user: User } | { error: string }> {
+  }): Promise<{ user: User } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.users.findOne({ username });
     if (doc === null || doc.password !== password) {
-      return { error: "Invalid username or password." };
+      return { error: ForumErrorCode.INVALID_CREDENTIALS };
     }
     return { user: doc._id };
   }
@@ -95,10 +96,13 @@ export default class AuthenticatingConcept {
     user: User;
     oldPassword: string;
     newPassword: string;
-  }): Promise<{ user: User } | { error: string }> {
+  }): Promise<{ user: User } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.users.findOne({ _id: user });
-    if (doc === null || doc.password !== oldPassword) {
-      return { error: "User not found or incorrect password." };
+    if (doc === null) {
+      return { error: ForumErrorCode.NOT_FOUND };
+    }
+    if (doc.password !== oldPassword) {
+      return { error: ForumErrorCode.INVALID_CREDENTIALS };
     }
     await this.users.updateOne(
       { _id: user },
@@ -123,14 +127,14 @@ export default class AuthenticatingConcept {
   }: {
     user: User;
     username: string;
-  }): Promise<{ user: User } | { error: string }> {
+  }): Promise<{ user: User } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.users.findOne({ _id: user });
     if (doc === null) {
-      return { error: "User not found." };
+      return { error: ForumErrorCode.NOT_FOUND };
     }
     const clash = await this.users.findOne({ username });
     if (clash !== null && clash._id !== user) {
-      return { error: `Username "${username}" is already taken.` };
+      return { error: ForumErrorCode.USERNAME_TAKEN, detail: username };
     }
     await this.users.updateOne({ _id: user }, { $set: { username } });
     return { user };
@@ -148,10 +152,10 @@ export default class AuthenticatingConcept {
     user,
   }: {
     user: User;
-  }): Promise<{ user: User } | { error: string }> {
+  }): Promise<{ user: User } | { error: ForumErrorCode; detail?: string }> {
     const { deletedCount } = await this.users.deleteOne({ _id: user });
     if (deletedCount === 0) {
-      return { error: "User not found." };
+      return { error: ForumErrorCode.NOT_FOUND };
     }
     return { user };
   }

@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type Author = ID;
@@ -83,13 +84,13 @@ export default class PostingConcept {
   }: {
     post: Post;
     content: string;
-  }): Promise<{ post: Post } | { error: string }> {
+  }): Promise<{ post: Post } | { error: ForumErrorCode; detail?: string }> {
     const { matchedCount } = await this.posts.updateOne(
       { _id: post },
       { $set: { content, editedAt: new Date() } },
     );
     if (matchedCount === 0) {
-      return { error: "Post not found." };
+      return { error: ForumErrorCode.POST_NOT_FOUND };
     }
     return { post };
   }
@@ -112,10 +113,10 @@ export default class PostingConcept {
     post,
   }: {
     post: Post;
-  }): Promise<{ post: Post } | { error: string }> {
+  }): Promise<{ post: Post } | { error: ForumErrorCode; detail?: string }> {
     const { deletedCount } = await this.posts.deleteOne({ _id: post });
     if (deletedCount === 0) {
-      return { error: "Post not found." };
+      return { error: ForumErrorCode.POST_NOT_FOUND };
     }
     return { post };
   }

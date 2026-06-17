@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type Target = ID;
@@ -58,10 +59,10 @@ export default class TaggingConcept {
     name,
   }: {
     name: string;
-  }): Promise<{ tag: Tag } | { error: string }> {
+  }): Promise<{ tag: Tag } | { error: ForumErrorCode; detail?: string }> {
     const existing = await this.tags.findOne({ name });
     if (existing !== null) {
-      return { error: `Tag "${name}" already exists.` };
+      return { error: ForumErrorCode.TAG_ALREADY_EXISTS, detail: name };
     }
     const tag = freshID() as Tag;
     await this.tags.insertOne({ _id: tag, name });
@@ -82,14 +83,14 @@ export default class TaggingConcept {
   }: {
     target: Target;
     tag: Tag;
-  }): Promise<{ target: Target } | { error: string }> {
+  }): Promise<{ target: Target } | { error: ForumErrorCode; detail?: string }> {
     const tagDoc = await this.tags.findOne({ _id: tag });
     if (tagDoc === null) {
-      return { error: "Tag does not exist." };
+      return { error: ForumErrorCode.TAG_NOT_FOUND };
     }
     const targetDoc = await this.targets.findOne({ _id: target });
     if (targetDoc?.tags.includes(tag)) {
-      return { error: "Tag is already applied to this target." };
+      return { error: ForumErrorCode.TAG_ALREADY_APPLIED };
     }
     await this.targets.updateOne(
       { _id: target },
@@ -113,10 +114,10 @@ export default class TaggingConcept {
   }: {
     target: Target;
     tag: Tag;
-  }): Promise<{ target: Target } | { error: string }> {
+  }): Promise<{ target: Target } | { error: ForumErrorCode; detail?: string }> {
     const targetDoc = await this.targets.findOne({ _id: target });
     if (targetDoc === null || !targetDoc.tags.includes(tag)) {
-      return { error: "Tag is not applied to this target." };
+      return { error: ForumErrorCode.TAG_NOT_APPLIED };
     }
     const remaining = targetDoc.tags.filter((t) => t !== tag);
     if (remaining.length === 0) {
@@ -142,10 +143,10 @@ export default class TaggingConcept {
     tag,
   }: {
     tag: Tag;
-  }): Promise<{ tag: Tag } | { error: string }> {
+  }): Promise<{ tag: Tag } | { error: ForumErrorCode; detail?: string }> {
     const tagDoc = await this.tags.findOne({ _id: tag });
     if (tagDoc === null) {
-      return { error: "Tag does not exist." };
+      return { error: ForumErrorCode.TAG_NOT_FOUND };
     }
     await this.targets.updateMany({ tags: tag }, { $pull: { tags: tag } });
     await this.targets.deleteMany({ tags: { $size: 0 } });

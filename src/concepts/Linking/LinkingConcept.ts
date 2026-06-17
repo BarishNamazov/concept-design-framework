@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type Item = ID;
@@ -51,10 +52,10 @@ export default class LinkingConcept {
   }: {
     source: Item;
     target: Item;
-  }): Promise<{ link: Link } | { error: string }> {
+  }): Promise<{ link: Link } | { error: ForumErrorCode; detail?: string }> {
     const existing = await this.links.findOne({ source, target });
     if (existing !== null) {
-      return { error: "Link already exists for this source and target." };
+      return { error: ForumErrorCode.LINK_ALREADY_EXISTS };
     }
     const link = freshID() as Link;
     await this.links.insertOne({
@@ -79,10 +80,10 @@ export default class LinkingConcept {
   }: {
     source: Item;
     target: Item;
-  }): Promise<{ link: Link } | { error: string }> {
+  }): Promise<{ link: Link } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.links.findOne({ source, target });
     if (doc === null) {
-      return { error: "No Link exists for this source and target." };
+      return { error: ForumErrorCode.LINK_NOT_FOUND };
     }
     await this.links.deleteOne({ _id: doc._id });
     return { link: doc._id };

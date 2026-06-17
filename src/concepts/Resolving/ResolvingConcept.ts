@@ -1,6 +1,7 @@
 import { collectionName } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type Question = ID;
@@ -80,10 +81,12 @@ export default class ResolvingConcept {
     question,
   }: {
     question: Question;
-  }): Promise<{ question: Question } | { error: string }> {
+  }): Promise<
+    { question: Question } | { error: ForumErrorCode; detail?: string }
+  > {
     const doc = await this.resolutions.findOne({ _id: question });
     if (doc === null) {
-      return { error: "No resolution exists for this question." };
+      return { error: ForumErrorCode.RESOLUTION_NOT_FOUND };
     }
     await this.resolutions.deleteOne({ _id: question });
     return { question };

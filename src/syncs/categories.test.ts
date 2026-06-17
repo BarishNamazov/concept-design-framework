@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { setupApp, type TestApp } from "@utils/app_testing.ts";
+import { ForumErrorCode } from "../sdk/error-codes.ts";
 
 let app: TestApp;
 
@@ -188,7 +189,7 @@ describe("category synchronizations", () => {
       name: "General",
       description: "General discussion",
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
     expect(res.category).toBeUndefined();
   });
 
@@ -198,7 +199,7 @@ describe("category synchronizations", () => {
       item: "p1",
       category: "anything",
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
     expect(res.item).toBeUndefined();
   });
 
@@ -207,7 +208,7 @@ describe("category synchronizations", () => {
       session: "nope",
       item: "p1",
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
     expect(res.item).toBeUndefined();
   });
 
@@ -216,7 +217,7 @@ describe("category synchronizations", () => {
       session: "nope",
       category: "anything",
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
     expect(res.category).toBeUndefined();
   });
 });
@@ -250,7 +251,7 @@ describe("category authorization", () => {
       name: "General",
       description: "General discussion",
     });
-    expect(create.error).toBe("Not authorized to manage categories.");
+    expect(create.error).toBe(ForumErrorCode.FORBIDDEN);
     expect(create.category).toBeUndefined();
 
     // An admin can still create, and a member cannot delete it.
@@ -263,7 +264,7 @@ describe("category authorization", () => {
       session: member.session,
       category: created.category,
     });
-    expect(del.error).toBe("Not authorized to manage categories.");
+    expect(del.error).toBe(ForumErrorCode.FORBIDDEN);
 
     const list = await app.send("/categories/list", {});
     expect(list.categories).toHaveLength(1);
@@ -283,13 +284,13 @@ describe("category authorization", () => {
       item: "p1",
       category,
     });
-    expect(assign.error).toBe("Not authorized to assign categories.");
+    expect(assign.error).toBe(ForumErrorCode.FORBIDDEN);
 
     const unassign = await app.send("/categories/unassign", {
       session: member.session,
       item: "p1",
     });
-    expect(unassign.error).toBe("Not authorized to assign categories.");
+    expect(unassign.error).toBe(ForumErrorCode.FORBIDDEN);
 
     const items = await app.send("/categories/items", { category });
     expect(items.items).toEqual([]);

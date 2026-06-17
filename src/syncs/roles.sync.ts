@@ -14,6 +14,7 @@ import {
   defineEndpoint,
   type QueryRow,
 } from "@concepts/Requesting/api.ts";
+import { ForumErrorCode } from "../sdk/error-codes.ts";
 import {
   ADMIN_CAPABILITY,
   authorizeCapable,
@@ -68,7 +69,7 @@ const define = defineEndpoint(
           present,
           capability: ADMIN_CAPABILITY,
         }),
-      then: Actions(Fail("Not authorized to manage roles.")),
+      then: Actions(Fail(ForumErrorCode.FORBIDDEN)),
     })),
   }),
 );
@@ -134,7 +135,7 @@ const grant = defineEndpoint(
           present,
           capability: ADMIN_CAPABILITY,
         }),
-      then: Actions(Fail("Not authorized to manage roles.")),
+      then: Actions(Fail(ForumErrorCode.FORBIDDEN)),
     })),
   }),
 );
@@ -179,7 +180,7 @@ const revoke = defineEndpoint(
           present,
           capability: ADMIN_CAPABILITY,
         }),
-      then: Actions(Fail("Not authorized to manage roles.")),
+      then: Actions(Fail(ForumErrorCode.FORBIDDEN)),
     })),
   }),
 );

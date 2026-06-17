@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { setupApp, type TestApp } from "@utils/app_testing.ts";
+import { ForumErrorCode } from "../sdk/error-codes.ts";
 
 let app: TestApp;
 
@@ -120,7 +121,7 @@ describe("bookmark synchronizations", () => {
       session: "nope",
       item: "i1",
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
   });
 
   test("unsave with invalid session errors", async () => {
@@ -128,12 +129,12 @@ describe("bookmark synchronizations", () => {
       session: "nope",
       item: "i1",
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
   });
 
   test("list with invalid session errors", async () => {
     const res = await app.send("/bookmarks/list", { session: "nope" });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
   });
 
   test("isSaved with invalid session errors", async () => {
@@ -141,6 +142,6 @@ describe("bookmark synchronizations", () => {
       session: "nope",
       item: "i1",
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
   });
 });

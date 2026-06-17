@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type User = ID;
@@ -90,13 +91,15 @@ export default class NotifyingConcept {
   }: {
     notification: Notification;
     recipient: User;
-  }): Promise<{ notification: Notification } | { error: string }> {
+  }): Promise<
+    { notification: Notification } | { error: ForumErrorCode; detail?: string }
+  > {
     const doc = await this.notifications.findOne({
       _id: notification,
       recipient,
     });
     if (doc === null) {
-      return { error: "Notification does not exist." };
+      return { error: ForumErrorCode.NOTIFICATION_NOT_FOUND };
     }
     await this.notifications.updateOne(
       { _id: notification, recipient },
@@ -139,13 +142,15 @@ export default class NotifyingConcept {
   }: {
     notification: Notification;
     recipient: User;
-  }): Promise<{ notification: Notification } | { error: string }> {
+  }): Promise<
+    { notification: Notification } | { error: ForumErrorCode; detail?: string }
+  > {
     const doc = await this.notifications.findOne({
       _id: notification,
       recipient,
     });
     if (doc === null) {
-      return { error: "Notification does not exist." };
+      return { error: ForumErrorCode.NOTIFICATION_NOT_FOUND };
     }
     await this.notifications.deleteOne({ _id: notification, recipient });
     return { notification };

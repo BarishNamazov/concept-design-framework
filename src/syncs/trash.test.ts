@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { setupApp, type TestApp } from "@utils/app_testing.ts";
+import { ForumErrorCode } from "../sdk/error-codes.ts";
 
 let app: TestApp;
 
@@ -102,7 +103,7 @@ describe("trash synchronizations", () => {
       session: "nope",
       item: "x1",
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
   });
 
   test("restore with an invalid session errors", async () => {
@@ -110,7 +111,7 @@ describe("trash synchronizations", () => {
       session: "nope",
       item: "x1",
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
   });
 
   test("purge with an invalid session errors", async () => {
@@ -118,7 +119,7 @@ describe("trash synchronizations", () => {
       session: "nope",
       item: "x1",
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
   });
 });
 
@@ -150,7 +151,7 @@ describe("trash authorization", () => {
       session: member.session,
       item: "x1",
     });
-    expect(res.error).toBe("Not authorized to trash items.");
+    expect(res.error).toBe(ForumErrorCode.FORBIDDEN);
 
     const isTrashed = await app.send("/trash/isTrashed", { item: "x1" });
     expect(isTrashed.trashed).toBe(false);
@@ -165,13 +166,13 @@ describe("trash authorization", () => {
       session: member.session,
       item: "x1",
     });
-    expect(restore.error).toBe("Not authorized to restore items.");
+    expect(restore.error).toBe(ForumErrorCode.FORBIDDEN);
 
     const purge = await app.send("/trash/purge", {
       session: member.session,
       item: "x1",
     });
-    expect(purge.error).toBe("Not authorized to purge items.");
+    expect(purge.error).toBe(ForumErrorCode.FORBIDDEN);
 
     // The item is still trashed; neither attempt took effect.
     const isTrashed = await app.send("/trash/isTrashed", { item: "x1" });
@@ -244,7 +245,7 @@ describe("trashed posts are hidden from reads", () => {
     });
 
     const gone = await app.send("/posts/get", { post: reply.post });
-    expect(gone.error).toBe("Post not found.");
+    expect(gone.error).toBe(ForumErrorCode.NOT_FOUND);
 
     const thread = await app.send("/threads/get", {
       conversation: root.conversation,

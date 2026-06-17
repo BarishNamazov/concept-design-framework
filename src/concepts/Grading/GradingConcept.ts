@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 type Grader = ID;
 type Learner = ID;
@@ -133,9 +134,11 @@ export default class GradingConcept {
     item: Item;
     label: string;
     maxPoints?: number;
-  }): Promise<{ gradeItem: Item } | { error: string }> {
+  }): Promise<
+    { gradeItem: Item } | { error: ForumErrorCode; detail?: string }
+  > {
     if (maxPoints < 0) {
-      return { error: "maxPoints must be non-negative." };
+      return { error: ForumErrorCode.SCORE_OUT_OF_RANGE };
     }
     const existing = await this.gradeItems.findOne({ item, status: "ACTIVE" });
     if (existing !== null) {
@@ -168,10 +171,12 @@ export default class GradingConcept {
     item,
   }: {
     item: Item;
-  }): Promise<{ gradeItem: Item } | { error: string }> {
+  }): Promise<
+    { gradeItem: Item } | { error: ForumErrorCode; detail?: string }
+  > {
     const existing = await this.gradeItems.findOne({ item, status: "ACTIVE" });
     if (existing === null) {
-      return { error: "No active grade item found for this item." };
+      return { error: ForumErrorCode.GRADE_ITEM_NOT_FOUND };
     }
     await this.gradeItems.updateOne(
       { _id: existing._id },
@@ -199,10 +204,12 @@ export default class GradingConcept {
     name: string;
     maxPoints: number;
     position: number;
-  }): Promise<{ criterion: Criterion } | { error: string }> {
+  }): Promise<
+    { criterion: Criterion } | { error: ForumErrorCode; detail?: string }
+  > {
     const gradeItem = await this.gradeItems.findOne({ item, status: "ACTIVE" });
     if (gradeItem === null) {
-      return { error: "No active grade item found for this item." };
+      return { error: ForumErrorCode.GRADE_ITEM_NOT_FOUND };
     }
     const criterion = freshID() as Criterion;
     await this.criteria.insertOne({
@@ -234,10 +241,12 @@ export default class GradingConcept {
     name: string;
     maxPoints: number;
     position: number;
-  }): Promise<{ criterion: Criterion } | { error: string }> {
+  }): Promise<
+    { criterion: Criterion } | { error: ForumErrorCode; detail?: string }
+  > {
     const existing = await this.criteria.findOne({ _id: criterion });
     if (existing === null) {
-      return { error: "Criterion not found." };
+      return { error: ForumErrorCode.CRITERION_NOT_FOUND };
     }
     await this.criteria.updateOne(
       { _id: criterion },
@@ -258,10 +267,12 @@ export default class GradingConcept {
     criterion,
   }: {
     criterion: Criterion;
-  }): Promise<{ criterion: Criterion } | { error: string }> {
+  }): Promise<
+    { criterion: Criterion } | { error: ForumErrorCode; detail?: string }
+  > {
     const existing = await this.criteria.findOne({ _id: criterion });
     if (existing === null) {
-      return { error: "Criterion not found." };
+      return { error: ForumErrorCode.CRITERION_NOT_FOUND };
     }
     await this.criteria.deleteOne({ _id: criterion });
     return { criterion };
@@ -292,23 +303,28 @@ export default class GradingConcept {
     grader: Grader;
     score?: number;
     feedback?: string;
-  }): Promise<{ grade: GradeRecord } | { error: string }> {
+  }): Promise<
+    { grade: GradeRecord } | { error: ForumErrorCode; detail?: string }
+  > {
     const gradeItem = await this.gradeItems.findOne({ item, status: "ACTIVE" });
     if (gradeItem === null) {
-      return { error: "No active grade item found for this item." };
+      return { error: ForumErrorCode.GRADE_ITEM_NOT_FOUND };
     }
     if (score < 0 || score > gradeItem.maxPoints) {
-      return { error: `Score must be between 0 and ${gradeItem.maxPoints}.` };
+      return {
+        error: ForumErrorCode.SCORE_OUT_OF_RANGE,
+        detail: `Score must be between 0 and ${gradeItem.maxPoints}.`,
+      };
     }
     const existing = await this.gradeRecords.findOne({ learner, item });
     if (existing !== null) {
       if (existing.status === "RELEASED") {
         return {
-          error: "Grade has already been released and cannot be modified.",
+          error: ForumErrorCode.GRADE_ALREADY_RELEASED,
         };
       }
       if (existing.status === "EXCUSED") {
-        return { error: "Learner has been excused from this item." };
+        return { error: ForumErrorCode.LEARNER_EXCUSED };
       }
       await this.gradeRecords.updateOne(
         { _id: existing._id },
@@ -357,17 +373,23 @@ export default class GradingConcept {
     grader: Grader;
     points: number;
     feedback?: string;
-  }): Promise<{ criterionScore: CriterionScore } | { error: string }> {
+  }): Promise<
+    | { criterionScore: CriterionScore }
+    | { error: ForumErrorCode; detail?: string }
+  > {
     const record = await this.gradeRecords.findOne({ learner, item });
     if (record === null) {
-      return { error: "No grade record found for this learner and item." };
+      return { error: ForumErrorCode.GRADE_NOT_FOUND };
     }
     const crit = await this.criteria.findOne({ _id: criterion });
     if (crit === null) {
-      return { error: "Criterion not found." };
+      return { error: ForumErrorCode.CRITERION_NOT_FOUND };
     }
     if (points < 0 || points > crit.maxPoints) {
-      return { error: `Points must be between 0 and ${crit.maxPoints}.` };
+      return {
+        error: ForumErrorCode.SCORE_OUT_OF_RANGE,
+        detail: `Points must be between 0 and ${crit.maxPoints}.`,
+      };
     }
     const existing = await this.criterionScores.findOne({
       record: record._id,
@@ -405,14 +427,16 @@ export default class GradingConcept {
   }: {
     learner: Learner;
     item: Item;
-  }): Promise<{ grade: GradeRecord } | { error: string }> {
+  }): Promise<
+    { grade: GradeRecord } | { error: ForumErrorCode; detail?: string }
+  > {
     const record = await this.gradeRecords.findOne({
       learner,
       item,
       status: "DRAFT",
     });
     if (record === null) {
-      return { error: "No draft grade found for this learner and item." };
+      return { error: ForumErrorCode.GRADE_DRAFT_NOT_FOUND };
     }
     await this.gradeRecords.updateOne(
       { _id: record._id },
@@ -441,14 +465,16 @@ export default class GradingConcept {
   }: {
     learner: Learner;
     item: Item;
-  }): Promise<{ grade: GradeRecord } | { error: string }> {
+  }): Promise<
+    { grade: GradeRecord } | { error: ForumErrorCode; detail?: string }
+  > {
     const record = await this.gradeRecords.findOne({
       learner,
       item,
       status: "RELEASED",
     });
     if (record === null) {
-      return { error: "No released grade found for this learner and item." };
+      return { error: ForumErrorCode.GRADE_RELEASED_NOT_FOUND };
     }
     await this.gradeRecords.updateOne(
       { _id: record._id },
@@ -479,10 +505,12 @@ export default class GradingConcept {
     item: Item;
     grader: Grader;
     feedback?: string;
-  }): Promise<{ grade: GradeRecord } | { error: string }> {
+  }): Promise<
+    { grade: GradeRecord } | { error: ForumErrorCode; detail?: string }
+  > {
     const record = await this.gradeRecords.findOne({ learner, item });
     if (record === null) {
-      return { error: "No grade record found for this learner and item." };
+      return { error: ForumErrorCode.GRADE_NOT_FOUND };
     }
     await this.gradeRecords.updateOne(
       { _id: record._id },

@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { setupTestDb } from "@utils/testing.ts";
 import type { ID } from "@utils/types.ts";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 /**
  * These tests cover the `RequestingConcept` class (the request/respond/await
@@ -55,7 +56,8 @@ describe("RequestingConcept lifecycle", () => {
       await Requesting._awaitResponse({ request: "does-not-exist" as ID }),
     ).toEqual([
       {
-        error: expect.stringContaining("not pending or does not exist"),
+        error: ForumErrorCode.NOT_FOUND,
+        detail: expect.any(String) as string,
       },
     ]);
   });
@@ -73,7 +75,8 @@ describe("RequestingConcept lifecycle", () => {
     const { request } = await Requesting.request({ path: "/never" });
     expect(await Requesting._awaitResponse({ request })).toEqual([
       {
-        error: expect.stringContaining("timed out"),
+        error: ForumErrorCode.REQUEST_TIMEOUT,
+        detail: expect.any(String) as string,
       },
     ]);
 
@@ -135,7 +138,7 @@ describe("startRequestingServer (Bun.serve HTTP round-trip)", () => {
       });
       expect(badRes.status).toBe(400);
       expect(await badRes.json()).toEqual({
-        error: "Invalid request body. Must be a JSON object.",
+        error: ForumErrorCode.INVALID_BODY,
       });
 
       // 3. CORS preflight is answered with 204 + headers.

@@ -14,6 +14,7 @@ import {
   defineEndpoint,
   type QueryRow,
 } from "@concepts/Requesting/api.ts";
+import { ForumErrorCode } from "../sdk/error-codes.ts";
 import {
   authorizeCapable,
   MODERATE_CAPABILITY,
@@ -64,7 +65,7 @@ const trash = defineEndpoint(
           present,
           capability: MODERATE_CAPABILITY,
         }),
-      then: Actions(Fail("Not authorized to trash items.")),
+      then: Actions(Fail(ForumErrorCode.FORBIDDEN)),
     })),
   }),
 );
@@ -107,7 +108,7 @@ const restore = defineEndpoint(
           present,
           capability: MODERATE_CAPABILITY,
         }),
-      then: Actions(Fail("Not authorized to restore items.")),
+      then: Actions(Fail(ForumErrorCode.FORBIDDEN)),
     })),
   }),
 );
@@ -150,7 +151,7 @@ const purge = defineEndpoint(
           present,
           capability: MODERATE_CAPABILITY,
         }),
-      then: Actions(Fail("Not authorized to purge items.")),
+      then: Actions(Fail(ForumErrorCode.FORBIDDEN)),
     })),
   }),
 );

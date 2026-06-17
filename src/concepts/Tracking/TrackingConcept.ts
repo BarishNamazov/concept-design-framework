@@ -1,6 +1,7 @@
 import { collectionName } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type User = ID;
@@ -64,10 +65,10 @@ export default class TrackingConcept {
   }: {
     item: Item;
     scope: Scope;
-  }): Promise<{ item: Item } | { error: string }> {
+  }): Promise<{ item: Item } | { error: ForumErrorCode; detail?: string }> {
     const existing = await this.items.findOne({ _id: item });
     if (existing !== null) {
-      return { error: "Item is already registered." };
+      return { error: ForumErrorCode.ITEM_ALREADY_REGISTERED };
     }
     await this.items.insertOne({ _id: item, scope, createdAt: new Date() });
     return { item };
@@ -85,10 +86,10 @@ export default class TrackingConcept {
     item,
   }: {
     item: Item;
-  }): Promise<{ item: Item } | { error: string }> {
+  }): Promise<{ item: Item } | { error: ForumErrorCode; detail?: string }> {
     const { deletedCount } = await this.items.deleteOne({ _id: item });
     if (deletedCount === 0) {
-      return { error: "Item is not registered." };
+      return { error: ForumErrorCode.ITEM_NOT_REGISTERED };
     }
     await this.seenMarks.deleteMany({ item });
     return { item };
@@ -109,14 +110,14 @@ export default class TrackingConcept {
   }: {
     user: User;
     item: Item;
-  }): Promise<{ item: Item } | { error: string }> {
+  }): Promise<{ item: Item } | { error: ForumErrorCode; detail?: string }> {
     const registered = await this.items.findOne({ _id: item });
     if (registered === null) {
-      return { error: "Item is not registered." };
+      return { error: ForumErrorCode.ITEM_NOT_REGISTERED };
     }
     const mark = await this.seenMarks.findOne({ user, item });
     if (mark !== null) {
-      return { error: "Item is already marked seen for this user." };
+      return { error: ForumErrorCode.ITEM_ALREADY_SEEN };
     }
     await this.seenMarks.insertOne({ user, item, seenAt: new Date() });
     return { item };
@@ -135,10 +136,10 @@ export default class TrackingConcept {
   }: {
     user: User;
     item: Item;
-  }): Promise<{ item: Item } | { error: string }> {
+  }): Promise<{ item: Item } | { error: ForumErrorCode; detail?: string }> {
     const { deletedCount } = await this.seenMarks.deleteOne({ user, item });
     if (deletedCount === 0) {
-      return { error: "No SeenMark exists for this user and item." };
+      return { error: ForumErrorCode.SEEN_MARK_NOT_FOUND };
     }
     return { item };
   }

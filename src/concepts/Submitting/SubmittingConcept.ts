@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type Submitter = ID;
@@ -67,10 +68,12 @@ export default class SubmittingConcept {
     submitter: Submitter;
     artifacts?: Artifact[];
     artifact?: Artifact;
-  }): Promise<{ submission: Submission } | { error: string }> {
+  }): Promise<
+    { submission: Submission } | { error: ForumErrorCode; detail?: string }
+  > {
     const resolved = artifact !== undefined ? [artifact] : (artifacts ?? []);
     if (resolved.length === 0) {
-      return { error: "At least one artifact is required to submit." };
+      return { error: ForumErrorCode.SUBMISSION_REQUIRES_ARTIFACT };
     }
     const latest = await this.submissions
       .find({ assignment, submitter })
@@ -103,13 +106,15 @@ export default class SubmittingConcept {
     submission,
   }: {
     submission: Submission;
-  }): Promise<{ submission: Submission } | { error: string }> {
+  }): Promise<
+    { submission: Submission } | { error: ForumErrorCode; detail?: string }
+  > {
     const doc = await this.submissions.findOne({ _id: submission });
     if (doc === null) {
-      return { error: "Submission not found." };
+      return { error: ForumErrorCode.SUBMISSION_NOT_FOUND };
     }
     if (doc.status !== "SUBMITTED") {
-      return { error: "Only SUBMITTED submissions can be withdrawn." };
+      return { error: ForumErrorCode.SUBMISSION_NOT_SUBMITTED };
     }
     await this.submissions.updateOne(
       { _id: submission },
@@ -130,13 +135,15 @@ export default class SubmittingConcept {
     submission,
   }: {
     submission: Submission;
-  }): Promise<{ submission: Submission } | { error: string }> {
+  }): Promise<
+    { submission: Submission } | { error: ForumErrorCode; detail?: string }
+  > {
     const doc = await this.submissions.findOne({ _id: submission });
     if (doc === null) {
-      return { error: "Submission not found." };
+      return { error: ForumErrorCode.SUBMISSION_NOT_FOUND };
     }
     if (doc.status !== "WITHDRAWN") {
-      return { error: "Only WITHDRAWN submissions can be restored." };
+      return { error: ForumErrorCode.SUBMISSION_NOT_WITHDRAWN };
     }
     await this.submissions.updateOne(
       { _id: submission },

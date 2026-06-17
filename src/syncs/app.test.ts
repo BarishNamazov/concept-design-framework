@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { setupApp, type TestApp } from "@utils/app_testing.ts";
+import { ForumErrorCode } from "../sdk/error-codes.ts";
 
 let app: TestApp;
 
@@ -149,7 +150,7 @@ describe("auth synchronizations", () => {
       oldPassword: "old",
       newPassword: "new",
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
     expect(res.user).toBeUndefined();
   });
 });
@@ -426,7 +427,7 @@ describe("post edit / delete synchronizations", () => {
       post,
       content: "y",
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
   });
 
   test("author can delete a post and cascades clean up", async () => {
@@ -475,7 +476,7 @@ describe("post edit / delete synchronizations", () => {
       session,
       post: root.post,
     });
-    expect(blocked.error).toBe("Cannot delete a post that has replies.");
+    expect(blocked.error).toBe(ForumErrorCode.VALIDATION_FAILED);
     const stillThere = await app.send("/posts/get", { post: root.post });
     expect(stillThere.post.content).toBe("root with a reply");
 
@@ -634,7 +635,7 @@ describe("reaction synchronizations", () => {
       target: "t",
       kind: "like",
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
   });
 });
 
@@ -674,7 +675,7 @@ describe("tag synchronizations", () => {
 
   test("create tag with invalid session errors", async () => {
     const res = await app.send("/tags/create", { session: "nope", name: "x" });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
   });
 });
 
@@ -743,7 +744,7 @@ describe("unread synchronizations", () => {
       session: "nope",
       scope: "s",
     });
-    expect(res.error).toBe("Invalid or expired session.");
+    expect(res.error).toBe(ForumErrorCode.INVALID_SESSION);
   });
 
   test("markSeen on an unregistered item errors", async () => {

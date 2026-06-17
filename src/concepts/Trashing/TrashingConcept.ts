@@ -1,6 +1,7 @@
 import { collectionName } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type Item = ID;
@@ -50,10 +51,10 @@ export default class TrashingConcept {
   }: {
     item: Item;
     by: Item;
-  }): Promise<{ item: Item } | { error: string }> {
+  }): Promise<{ item: Item } | { error: ForumErrorCode; detail?: string }> {
     const existing = await this.items.findOne({ _id: item });
     if (existing !== null) {
-      return { error: "Item is already trashed." };
+      return { error: ForumErrorCode.ITEM_ALREADY_TRASHED };
     }
     const trashedAt: Date = new Date();
     await this.items.insertOne({ _id: item, trashedBy: by, trashedAt });
@@ -72,10 +73,10 @@ export default class TrashingConcept {
     item,
   }: {
     item: Item;
-  }): Promise<{ item: Item } | { error: string }> {
+  }): Promise<{ item: Item } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.items.findOne({ _id: item });
     if (doc === null) {
-      return { error: "Item is not trashed." };
+      return { error: ForumErrorCode.ITEM_NOT_TRASHED };
     }
     await this.items.deleteOne({ _id: item });
     return { item };
@@ -93,10 +94,10 @@ export default class TrashingConcept {
     item,
   }: {
     item: Item;
-  }): Promise<{ item: Item } | { error: string }> {
+  }): Promise<{ item: Item } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.items.findOne({ _id: item });
     if (doc === null) {
-      return { error: "Item is not trashed." };
+      return { error: ForumErrorCode.ITEM_NOT_TRASHED };
     }
     await this.items.deleteOne({ _id: item });
     return { item };

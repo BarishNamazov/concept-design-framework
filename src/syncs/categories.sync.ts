@@ -16,6 +16,7 @@ import {
   defineEndpoint,
   type QueryRow,
 } from "@concepts/Requesting/api.ts";
+import { ForumErrorCode } from "../sdk/error-codes.ts";
 import {
   ADMIN_CAPABILITY,
   authorizeCapable,
@@ -78,7 +79,7 @@ const create = defineEndpoint(
             present,
             capability: ADMIN_CAPABILITY,
           }),
-        then: Actions(Fail("Not authorized to manage categories.")),
+        then: Actions(Fail(ForumErrorCode.FORBIDDEN)),
       }),
     ),
   }),
@@ -125,7 +126,7 @@ const remove = defineEndpoint(
             present,
             capability: ADMIN_CAPABILITY,
           }),
-        then: Actions(Fail("Not authorized to manage categories.")),
+        then: Actions(Fail(ForumErrorCode.FORBIDDEN)),
       }),
     ),
   }),
@@ -172,7 +173,7 @@ const assign = defineEndpoint(
             present,
             capability: MODERATE_CAPABILITY,
           }),
-        then: Actions(Fail("Not authorized to assign categories.")),
+        then: Actions(Fail(ForumErrorCode.FORBIDDEN)),
       }),
     ),
   }),
@@ -219,7 +220,7 @@ const unassign = defineEndpoint(
             present,
             capability: MODERATE_CAPABILITY,
           }),
-        then: Actions(Fail("Not authorized to assign categories.")),
+        then: Actions(Fail(ForumErrorCode.FORBIDDEN)),
       }),
     ),
   }),

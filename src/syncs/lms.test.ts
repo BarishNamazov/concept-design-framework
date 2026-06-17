@@ -1457,10 +1457,8 @@ describe("calendar", () => {
   test("calendar /me returns events when assignments exist", async () => {
     const admin = await setupAdmin();
     await configureClass(admin);
-    const { student, assignment: _assignment } = await setupStudentAndAssignment(
-      admin,
-      "S001",
-    );
+    const { student, assignment: _assignment } =
+      await setupStudentAndAssignment(admin, "S001");
 
     const cal = await app.send("/calendar/me", {
       session: student.session,

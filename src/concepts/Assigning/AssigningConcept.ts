@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type Author = ID;
@@ -126,16 +127,18 @@ export default class AssigningConcept {
     acceptsSubmissions: boolean;
     audience: "EVERYONE" | "TARGETS";
     targets?: ID[];
-  }): Promise<{ assignment: Assignment } | { error: string }> {
+  }): Promise<
+    { assignment: Assignment } | { error: ForumErrorCode; detail?: string }
+  > {
     const resolvedTargets = targets ?? [];
     if (audience === "EVERYONE" && resolvedTargets.length > 0) {
       return {
-        error: "Audience EVERYONE must not have targets.",
+        error: ForumErrorCode.ASSIGNMENT_EVERYONE_NO_TARGETS,
       };
     }
     if (audience === "TARGETS" && resolvedTargets.length === 0) {
       return {
-        error: "Audience TARGETS must have at least one target.",
+        error: ForumErrorCode.ASSIGNMENT_TARGETS_REQUIRED,
       };
     }
     const assignment = freshID() as Assignment;
@@ -189,23 +192,25 @@ export default class AssigningConcept {
     acceptsSubmissions: boolean;
     audience: "EVERYONE" | "TARGETS";
     targets?: ID[];
-  }): Promise<{ assignment: Assignment } | { error: string }> {
+  }): Promise<
+    { assignment: Assignment } | { error: ForumErrorCode; detail?: string }
+  > {
     const doc = await this.assignments.findOne({ _id: assignment });
     if (doc === null) {
-      return { error: "Assignment not found." };
+      return { error: ForumErrorCode.ASSIGNMENT_NOT_FOUND };
     }
     if (doc.status !== "DRAFT" && doc.status !== "PUBLISHED") {
-      return { error: "Only DRAFT or PUBLISHED assignments can be revised." };
+      return { error: ForumErrorCode.ASSIGNMENT_NOT_REVISABLE };
     }
     const resolvedTargets = targets ?? [];
     if (audience === "EVERYONE" && resolvedTargets.length > 0) {
       return {
-        error: "Audience EVERYONE must not have targets.",
+        error: ForumErrorCode.ASSIGNMENT_EVERYONE_NO_TARGETS,
       };
     }
     if (audience === "TARGETS" && resolvedTargets.length === 0) {
       return {
-        error: "Audience TARGETS must have at least one target.",
+        error: ForumErrorCode.ASSIGNMENT_TARGETS_REQUIRED,
       };
     }
     const now = new Date();
@@ -241,13 +246,15 @@ export default class AssigningConcept {
     assignment,
   }: {
     assignment: Assignment;
-  }): Promise<{ assignment: Assignment } | { error: string }> {
+  }): Promise<
+    { assignment: Assignment } | { error: ForumErrorCode; detail?: string }
+  > {
     const doc = await this.assignments.findOne({ _id: assignment });
     if (doc === null) {
-      return { error: "Assignment not found." };
+      return { error: ForumErrorCode.ASSIGNMENT_NOT_FOUND };
     }
     if (doc.status !== "DRAFT") {
-      return { error: "Only DRAFT assignments can be published." };
+      return { error: ForumErrorCode.ASSIGNMENT_NOT_DRAFT };
     }
     const now = new Date();
     await this.assignments.updateOne(
@@ -269,10 +276,12 @@ export default class AssigningConcept {
     assignment,
   }: {
     assignment: Assignment;
-  }): Promise<{ assignment: Assignment } | { error: string }> {
+  }): Promise<
+    { assignment: Assignment } | { error: ForumErrorCode; detail?: string }
+  > {
     const doc = await this.assignments.findOne({ _id: assignment });
     if (doc === null) {
-      return { error: "Assignment not found." };
+      return { error: ForumErrorCode.ASSIGNMENT_NOT_FOUND };
     }
     const now = new Date();
     await this.assignments.updateOne(
@@ -297,13 +306,15 @@ export default class AssigningConcept {
   }: {
     assignment: Assignment;
     assignee: Assignee;
-  }): Promise<{ release: Release } | { error: string }> {
+  }): Promise<
+    { release: Release } | { error: ForumErrorCode; detail?: string }
+  > {
     const doc = await this.assignments.findOne({ _id: assignment });
     if (doc === null) {
-      return { error: "Assignment not found." };
+      return { error: ForumErrorCode.ASSIGNMENT_NOT_FOUND };
     }
     if (doc.status !== "PUBLISHED") {
-      return { error: "Only PUBLISHED assignments can be assigned." };
+      return { error: ForumErrorCode.ASSIGNMENT_NOT_PUBLISHED };
     }
     const existing = await this.releases.findOne({
       assignment,
@@ -312,7 +323,7 @@ export default class AssigningConcept {
     });
     if (existing !== null) {
       return {
-        error: "A release already exists for this assignment and assignee.",
+        error: ForumErrorCode.RELEASE_ALREADY_EXISTS,
       };
     }
     const release = freshID() as Release;
@@ -341,14 +352,16 @@ export default class AssigningConcept {
   }: {
     assignment: Assignment;
     assignee: Assignee;
-  }): Promise<{ release: Release } | { error: string }> {
+  }): Promise<
+    { release: Release } | { error: ForumErrorCode; detail?: string }
+  > {
     const existing = await this.releases.findOne({
       assignment,
       assignee,
       status: "ASSIGNED",
     });
     if (existing === null) {
-      return { error: "No active release to withdraw." };
+      return { error: ForumErrorCode.RELEASE_NOT_ACTIVE };
     }
     await this.releases.updateOne(
       { _id: existing._id },
@@ -374,14 +387,16 @@ export default class AssigningConcept {
     assignment: Assignment;
     assignee: Assignee;
     dueAt: Date;
-  }): Promise<{ release: Release } | { error: string }> {
+  }): Promise<
+    { release: Release } | { error: ForumErrorCode; detail?: string }
+  > {
     const existing = await this.releases.findOne({
       assignment,
       assignee,
       status: "ASSIGNED",
     });
     if (existing === null) {
-      return { error: "No active release found." };
+      return { error: ForumErrorCode.RELEASE_NOT_FOUND };
     }
     await this.releases.updateOne(
       { _id: existing._id },
@@ -405,14 +420,16 @@ export default class AssigningConcept {
   }: {
     assignment: Assignment;
     assignee: Assignee;
-  }): Promise<{ release: Release } | { error: string }> {
+  }): Promise<
+    { release: Release } | { error: ForumErrorCode; detail?: string }
+  > {
     const existing = await this.releases.findOne({
       assignment,
       assignee,
       status: "ASSIGNED",
     });
     if (existing === null) {
-      return { error: "No active release found." };
+      return { error: ForumErrorCode.RELEASE_NOT_FOUND };
     }
     await this.releases.updateOne(
       { _id: existing._id },

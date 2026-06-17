@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { setupTestDb } from "@utils/testing.ts";
 import type { ID } from "@utils/types.ts";
+import type { ForumErrorCode } from "../../sdk/error-codes.ts";
 import ConversingConcept from "./ConversingConcept.ts";
 
 const mongo = await setupTestDb();
@@ -14,7 +15,7 @@ beforeEach(async () => {
 });
 
 /** Narrow a result union to its success branch, failing the test otherwise. */
-function ok<T>(result: T | { error: string }): T {
+function ok<T>(result: T | { error: ForumErrorCode; detail?: string }): T {
   if (result && typeof result === "object" && "error" in result) {
     throw new Error(`Expected success but got error: ${result.error}`);
   }

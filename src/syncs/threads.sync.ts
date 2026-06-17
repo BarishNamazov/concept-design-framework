@@ -30,6 +30,7 @@ import {
   type Prettify,
   type QueryRow,
 } from "@concepts/Requesting/api.ts";
+import { ForumErrorCode } from "../sdk/error-codes.ts";
 
 // --- Derived view shapes assembled by the read endpoints below ---
 
@@ -229,7 +230,7 @@ const threadReply = defineEndpoint(
           );
           return frames.filter(($) => $[locked] === true);
         },
-        then: Actions(Fail("This thread is locked.")),
+        then: Actions(Fail(ForumErrorCode.FORBIDDEN)),
       }),
     ),
   }),
@@ -383,7 +384,7 @@ const postGet = defineEndpoint(
         );
         return frames.filter(($) => $[trashed] === true);
       },
-      then: Actions(Fail("Post not found.")),
+      then: Actions(Fail(ForumErrorCode.NOT_FOUND)),
     })),
 
     PostGetNotFound: Sync(({ post, exists }) => ({
@@ -392,7 +393,7 @@ const postGet = defineEndpoint(
         frames = await frames.query(Posting._exists, { post }, { exists });
         return frames.filter(($) => $[exists] === false);
       },
-      then: Actions(Fail("Post not found.")),
+      then: Actions(Fail(ForumErrorCode.NOT_FOUND)),
     })),
   }),
 );
@@ -439,7 +440,7 @@ const postEdit = defineEndpoint(
         frames = await frames.query(Posting._getAuthor, { post }, { author });
         return frames.filter(($) => $[author] !== $[user]);
       },
-      then: Actions(Fail("Not authorized to edit this post.")),
+      then: Actions(Fail(ForumErrorCode.FORBIDDEN)),
     })),
   }),
 );
@@ -505,7 +506,7 @@ const postDelete = defineEndpoint(
           frames = frames.aggregate(authored, [reply], replies);
           return frames.filter(($) => ($[replies] as unknown[]).length > 0);
         },
-        then: Actions(Fail("Cannot delete a post that has replies.")),
+        then: Actions(Fail(ForumErrorCode.VALIDATION_FAILED)),
       }),
     ),
 
@@ -558,7 +559,7 @@ const postDelete = defineEndpoint(
         frames = await frames.query(Posting._getAuthor, { post }, { author });
         return frames.filter(($) => $[author] !== $[user]);
       },
-      then: Actions(Fail("Not authorized to delete this post.")),
+      then: Actions(Fail(ForumErrorCode.FORBIDDEN)),
     })),
   }),
 );

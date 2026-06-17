@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type Item = ID;
@@ -56,10 +57,10 @@ export default class PinningConcept {
     item: Item;
     scope: Scope;
     priority: number;
-  }): Promise<{ pin: Pin } | { error: string }> {
+  }): Promise<{ pin: Pin } | { error: ForumErrorCode; detail?: string }> {
     const existing = await this.pins.findOne({ item, scope });
     if (existing !== null) {
-      return { error: "Item is already pinned in this scope." };
+      return { error: ForumErrorCode.ITEM_ALREADY_PINNED };
     }
     const pin = freshID() as Pin;
     const pinnedAt: Date = new Date();
@@ -87,10 +88,10 @@ export default class PinningConcept {
   }: {
     item: Item;
     scope: Scope;
-  }): Promise<{ pin: Pin } | { error: string }> {
+  }): Promise<{ pin: Pin } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.pins.findOne({ item, scope });
     if (doc === null) {
-      return { error: "Item is not pinned in this scope." };
+      return { error: ForumErrorCode.ITEM_NOT_PINNED };
     }
     await this.pins.deleteOne({ _id: doc._id });
     return { pin: doc._id };
@@ -112,10 +113,10 @@ export default class PinningConcept {
     item: Item;
     scope: Scope;
     priority: number;
-  }): Promise<{ pin: Pin } | { error: string }> {
+  }): Promise<{ pin: Pin } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.pins.findOne({ item, scope });
     if (doc === null) {
-      return { error: "Item is not pinned in this scope." };
+      return { error: ForumErrorCode.ITEM_NOT_PINNED };
     }
     await this.pins.updateOne({ _id: doc._id }, { $set: { priority } });
     return { pin: doc._id };

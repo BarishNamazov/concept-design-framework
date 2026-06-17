@@ -11,3 +11,5 @@ export type {
   IndexedClient,
 } from "./client.ts";
 export { createClient } from "./client.ts";
+export type { ApiError as StructuredApiError } from "./error-codes.ts";
+export { ForumErrorCode, isApiError } from "./error-codes.ts";

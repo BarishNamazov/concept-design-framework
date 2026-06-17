@@ -1,6 +1,7 @@
 import { collectionName, freshID } from "@utils/database.ts";
 import type { ID } from "@utils/types.ts";
 import type { Collection, Db } from "mongodb";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type User = ID;
@@ -72,9 +73,11 @@ export default class SessioningConcept {
   }: {
     user: User;
     expiresAt: Date;
-  }): Promise<{ session: Session } | { error: string }> {
+  }): Promise<
+    { session: Session } | { error: ForumErrorCode; detail?: string }
+  > {
     if (!(expiresAt.getTime() > Date.now())) {
-      return { error: "expiresAt must be after the current time." };
+      return { error: ForumErrorCode.EXPIRES_AT_IN_PAST };
     }
     const session = freshID() as Session;
     await this.sessions.insertOne({
@@ -103,10 +106,12 @@ export default class SessioningConcept {
     session,
   }: {
     session: Session;
-  }): Promise<{ session: Session } | { error: string }> {
+  }): Promise<
+    { session: Session } | { error: ForumErrorCode; detail?: string }
+  > {
     const { deletedCount } = await this.sessions.deleteOne({ _id: session });
     if (deletedCount === 0) {
-      return { error: "Session not found." };
+      return { error: ForumErrorCode.SESSION_NOT_FOUND };
     }
     return { session };
   }
@@ -136,14 +141,16 @@ export default class SessioningConcept {
     session,
   }: {
     session: Session;
-  }): Promise<{ session: Session } | { error: string }> {
+  }): Promise<
+    { session: Session } | { error: ForumErrorCode; detail?: string }
+  > {
     const doc = await this.sessions.findOne({ _id: session });
     if (
       doc === null ||
       doc.expiresAt === undefined ||
       doc.expiresAt.getTime() > Date.now()
     ) {
-      return { error: "Session is not expired." };
+      return { error: ForumErrorCode.SESSION_NOT_FOUND };
     }
     await this.sessions.deleteOne({ _id: session });
     return { session };

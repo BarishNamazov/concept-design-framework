@@ -13,6 +13,7 @@ import {
   defineEndpoint,
   type QueryRow,
 } from "@concepts/Requesting/api.ts";
+import { ForumErrorCode } from "../sdk/error-codes.ts";
 
 type ResolutionAcceptOutput = ActionOk<typeof Resolving, "accept">;
 type ResolutionGetOutput = {
@@ -66,9 +67,7 @@ const accept = defineEndpoint(
         );
         return frames.filter(($) => $[author] !== $[user]);
       },
-      then: Actions(
-        Fail("Not authorized to accept an answer for this question."),
-      ),
+      then: Actions(Fail(ForumErrorCode.FORBIDDEN)),
     })),
   }),
 );
@@ -113,9 +112,7 @@ const clear = defineEndpoint(
         );
         return frames.filter(($) => $[author] !== $[user]);
       },
-      then: Actions(
-        Fail("Not authorized to clear an answer for this question."),
-      ),
+      then: Actions(Fail(ForumErrorCode.FORBIDDEN)),
     })),
   }),
 );

@@ -3,6 +3,7 @@ import type { ID } from "@utils/types.ts";
 import { marked } from "marked";
 import type { Collection, Db } from "mongodb";
 import sanitizeHtml from "sanitize-html";
+import { ForumErrorCode } from "../../sdk/error-codes.ts";
 
 // Generic types of this concept.
 type Target = ID;
@@ -102,10 +103,10 @@ export default class FormattingConcept {
     target,
   }: {
     target: Target;
-  }): Promise<{ target: Target } | { error: string }> {
+  }): Promise<{ target: Target } | { error: ForumErrorCode; detail?: string }> {
     const { deletedCount } = await this.targets.deleteOne({ _id: target });
     if (deletedCount === 0) {
-      return { error: "Target does not exist." };
+      return { error: ForumErrorCode.FORMAT_TARGET_NOT_FOUND };
     }
     return { target };
   }

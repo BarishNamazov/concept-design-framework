@@ -1,4 +1,6 @@
 /* Minimal mock concepts used for testing */
+
+import type { ForumErrorCode } from "../../sdk/error-codes.ts";
 import type { Empty } from "../types.ts";
 
 export class CounterConcept {
@@ -91,7 +93,7 @@ export class RecorderConcept {
 /** Concept whose action always throws — used to test engine error resilience. */
 export class ThrowingConcept {
   public hit = false;
-  explode(_: Empty): { error: string } {
+  explode(_: Empty): { error: ForumErrorCode; detail?: string } {
     this.hit = true;
     throw new Error("kaboom");
   }
