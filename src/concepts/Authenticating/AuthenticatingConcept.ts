@@ -127,14 +127,17 @@ export default class AuthenticatingConcept {
       if (doc.password !== password) {
         return { error: ForumErrorCode.INVALID_CREDENTIALS };
       }
-      const hashed = await Bun.password.hash(password, {
+      Bun.password.hash(password, {
         algorithm: "bcrypt",
         cost: BCRYPT_ROUNDS,
-      });
-      await this.users.updateOne(
-        { _id: doc._id },
-        { $set: { password: hashed } },
-      );
+      })
+        .then((hashed) =>
+          this.users.updateOne(
+            { _id: doc._id },
+            { $set: { password: hashed } },
+          ),
+        )
+        .catch(() => {});
     }
 
     return { user: doc._id };

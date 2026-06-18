@@ -8,6 +8,7 @@ const migration: Migration = {
     const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || "12", 10);
     const collections = await db.listCollections().toArray();
     const userCollections = collections.filter((c) =>
+      c.name === "Authenticating.users" ||
       c.name.endsWith(".Authenticating.users"),
     );
 
