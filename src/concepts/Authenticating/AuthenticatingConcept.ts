@@ -115,9 +115,28 @@ export default class AuthenticatingConcept {
     password: string;
   }): Promise<{ user: User } | { error: ForumErrorCode; detail?: string }> {
     const doc = await this.users.findOne({ username });
-    if (doc === null || !(await Bun.password.verify(password, doc.password))) {
+    if (doc === null) {
       return { error: ForumErrorCode.INVALID_CREDENTIALS };
     }
+
+    if (doc.password.startsWith("$2")) {
+      if (!(await Bun.password.verify(password, doc.password))) {
+        return { error: ForumErrorCode.INVALID_CREDENTIALS };
+      }
+    } else {
+      if (doc.password !== password) {
+        return { error: ForumErrorCode.INVALID_CREDENTIALS };
+      }
+      const hashed = await Bun.password.hash(password, {
+        algorithm: "bcrypt",
+        cost: BCRYPT_ROUNDS,
+      });
+      await this.users.updateOne(
+        { _id: doc._id },
+        { $set: { password: hashed } },
+      );
+    }
+
     return { user: doc._id };
   }
 
@@ -143,7 +162,13 @@ export default class AuthenticatingConcept {
     if (doc === null) {
       return { error: ForumErrorCode.NOT_FOUND };
     }
-    if (!(await Bun.password.verify(oldPassword, doc.password))) {
+    let validOld = false;
+    if (doc.password.startsWith("$2")) {
+      validOld = await Bun.password.verify(oldPassword, doc.password);
+    } else {
+      validOld = doc.password === oldPassword;
+    }
+    if (!validOld) {
       return { error: ForumErrorCode.INVALID_CREDENTIALS };
     }
     if (newPassword.length < 8 || newPassword.length > 128) {

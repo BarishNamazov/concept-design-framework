@@ -13,7 +13,8 @@
     "lint": "biome lint .",
     "check": "biome check .",
     "check:write": "biome check --write .",
-    "check:all": "bun run typecheck && bun run lint && bun run test"
+    "check:all": "bun run typecheck && bun run lint && bun run test",
+    "migrate": "bun run scripts/migrate.ts"
   },
   "dependencies": {
     "marked": "^18.0.4",

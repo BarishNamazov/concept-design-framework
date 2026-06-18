@@ -59,6 +59,8 @@ ENV NODE_ENV=production
 COPY --chown=bun:bun --from=backend-deps /app/node_modules ./node_modules
 COPY --chown=bun:bun package.json bun.lock bunfig.toml tsconfig.json ./
 COPY --chown=bun:bun src ./src
+COPY --chown=bun:bun scripts ./scripts
+COPY --chown=bun:bun migrations ./migrations
 
 COPY --chown=bun:bun --from=frontend-prod-deps /app/frontend/node_modules ./frontend/node_modules
 COPY --chown=bun:bun --from=frontend-builder /app/frontend/.next ./frontend/.next
@@ -66,7 +68,8 @@ COPY --chown=bun:bun frontend/package.json frontend/next.config.ts ./frontend/
 COPY --chown=bun:bun frontend/public ./frontend/public
 
 COPY --chown=bun:bun deployment/run-fullstack.sh ./deployment/run-fullstack.sh
-RUN chmod +x ./deployment/run-fullstack.sh
+COPY --chown=bun:bun deployment/start-backend.sh ./deployment/start-backend.sh
+RUN chmod +x ./deployment/run-fullstack.sh ./deployment/start-backend.sh
 
 EXPOSE 3000 8000
 

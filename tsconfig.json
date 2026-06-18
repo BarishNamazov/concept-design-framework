@@ -22,5 +22,5 @@
       "@syncs": ["./src/syncs/app.ts"]
     }
   },
-  "include": ["src"]
+  "include": ["src", "scripts", "migrations"]
 }

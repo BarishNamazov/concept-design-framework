@@ -5,7 +5,7 @@ BACKEND_PORT="${BACKEND_PORT:-8000}"
 FRONTEND_HOSTNAME="${FRONTEND_HOSTNAME:-0.0.0.0}"
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 
-PORT="$BACKEND_PORT" bun run start &
+PORT="$BACKEND_PORT" ./deployment/start-backend.sh &
 backend_pid="$!"
 
 (
