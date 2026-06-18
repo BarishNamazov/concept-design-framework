@@ -28,6 +28,7 @@ import {
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { loadGradebook } from "@/lib/lms";
 
 export default function GradebookPage() {
   const { session } = useAuth();
@@ -49,11 +50,7 @@ export default function GradebookPage() {
       rosterName: string;
       email: string;
     }[];
-  }>(session ? () => api.grades.gradebook({ session }) : null, [session]);
-
-  const { data: rosterData } = useQuery<{
-    dashboard: { user: string; seat: string; kind: string }[];
-  }>(session ? () => api.lms["staff-dashboard"]({ session }) : null, [session]);
+  }>(session ? () => loadGradebook(session) : null, [session]);
 
   const { data: gradesByStudent, refetch: refetchGrades } = useQuery<
     Record<
@@ -68,7 +65,7 @@ export default function GradebookPage() {
       }[]
     >
   >(
-    gradebookData && gradebookData.learners.length > 0
+    session && gradebookData && gradebookData.learners.length > 0
       ? async () => {
           const map: Record<
             string,
@@ -83,10 +80,19 @@ export default function GradebookPage() {
           > = {};
           await Promise.all(
             gradebookData.learners.map(async (l) => {
-              const r = await api.grades["for-student"]({
-                session: session!,
+              const r = (await api.grades["for-student"]({
+                session,
                 learner: l.user,
-              });
+              })) as unknown as {
+                grades: {
+                  item: string;
+                  grade: string;
+                  score: number;
+                  maxPoints: number;
+                  status: string;
+                  label: string;
+                }[];
+              };
               if (!("error" in r)) map[l.user] = r.grades;
             }),
           );
@@ -100,9 +106,9 @@ export default function GradebookPage() {
   const grades = gradesByStudent ?? {};
 
   const allItems = new Set<string>();
-  Object.values(grades).forEach((glist) => {
-    glist.forEach((g) => allItems.add(g.item));
-  });
+  for (const glist of Object.values(grades)) {
+    for (const g of glist) allItems.add(g.item);
+  }
   const items = [...allItems];
 
   if (loading)

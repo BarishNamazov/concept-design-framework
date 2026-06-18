@@ -79,8 +79,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- auth hydration must run once on mount
     hydrate().finally(() => setLoading(false));
-  }, [hydrate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const login = useCallback(
     async (username: string, password: string) => {

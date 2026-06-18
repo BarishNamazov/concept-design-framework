@@ -16,6 +16,11 @@ import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { fullTime, relativeTime } from "@/lib/format";
+import {
+  loadGradesForItem,
+  loadLateDaysForAssignment,
+  loadSubmissionsForAssignment,
+} from "@/lib/lms";
 
 export default function StaffAssignmentDetailPage({
   params,
@@ -47,12 +52,29 @@ export default function StaffAssignmentDetailPage({
     };
   }>(
     session
-      ? () => api.assignments["staff-summary"]({ session, assignment })
+      ? async () =>
+          api.assignments["staff-summary"]({
+            session,
+            assignment,
+          }) as unknown as {
+            summary: {
+              assignment: string;
+              author: string;
+              title: string;
+              instructions: string;
+              kind: string;
+              availableAt: string;
+              dueAt: string;
+              closeAt?: string;
+              acceptsSubmissions: boolean;
+              status: string;
+            };
+          }
       : null,
     [session, assignment],
   );
 
-  const { data: subsData, refetch: refetchSubs } = useQuery<{
+  const { data: subsData } = useQuery<{
     submissions: {
       submitter: string;
       submission: string;
@@ -60,30 +82,24 @@ export default function StaffAssignmentDetailPage({
       number: number;
       status: string;
     }[];
-  }>(
-    session
-      ? () => api.submissions["for-assignment"]({ session, assignment })
-      : null,
-    [session, assignment],
-  );
+  }>(session ? () => loadSubmissionsForAssignment(session, assignment) : null, [
+    session,
+    assignment,
+  ]);
 
   const { data: gradesData, refetch: refetchGrades } = useQuery<{
     grades: { learner: string; grade: string; score: number; status: string }[];
-  }>(
-    session
-      ? () => api.grades["for-item"]({ session, item: assignment })
-      : null,
-    [session, assignment],
-  );
+  }>(session ? () => loadGradesForItem(session, assignment) : null, [
+    session,
+    assignment,
+  ]);
 
-  const { data: lateData, refetch: refetchLate } = useQuery<{
+  const { data: lateData } = useQuery<{
     users: { learner: string; days: number }[];
-  }>(
-    session
-      ? () => api["late-days"]["for-assignment"]({ session, assignment })
-      : null,
-    [session, assignment],
-  );
+  }>(session ? () => loadLateDaysForAssignment(session, assignment) : null, [
+    session,
+    assignment,
+  ]);
 
   const detail = asgnData?.summary;
   const submissions = subsData?.submissions ?? [];

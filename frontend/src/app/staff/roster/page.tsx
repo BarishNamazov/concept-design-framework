@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { loadRosterList, loadSections } from "@/lib/lms";
 
 function ClassConfig() {
   const { session } = useAuth();
@@ -112,7 +113,7 @@ function SectionManager() {
       meetingPattern?: string;
       status: string;
     }[];
-  }>(() => api.roster["sections/list"]({}), []);
+  }>(() => loadSections(), []);
 
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
@@ -224,7 +225,7 @@ export default function RosterPage() {
       rosterName: string;
       email: string;
     }[];
-  }>(session ? () => api.roster.list({ session }) : null, [session]);
+  }>(session ? () => loadRosterList(session) : null, [session]);
 
   const { data: sectionsData } = useQuery<{
     sections: {
@@ -234,7 +235,7 @@ export default function RosterPage() {
       meetingPattern?: string;
       status: string;
     }[];
-  }>(() => api.roster["sections/list"]({}), []);
+  }>(() => loadSections(), []);
 
   const members = rosterData?.members ?? [];
   const sections = sectionsData?.sections ?? [];

@@ -7,11 +7,11 @@ import { Link } from "@/components/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@/hooks/use-query";
-import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { loadStaffDashboard } from "@/lib/lms";
 
 export default function StaffDashboardPage() {
-  const { session, can } = useAuth();
+  const { session } = useAuth();
 
   const {
     data: dashData,
@@ -27,7 +27,7 @@ export default function StaffDashboardPage() {
       rosterName: string;
       email: string;
     }[];
-  }>(session ? () => api.lms["staff-dashboard"]({ session }) : null, [session]);
+  }>(session ? () => loadStaffDashboard(session) : null, [session]);
 
   if (loading)
     return (

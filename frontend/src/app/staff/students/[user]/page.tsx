@@ -9,9 +9,15 @@ import { StatusBadge } from "@/components/lms/status-badge";
 import { StudentNotes } from "@/components/lms/student-notes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@/hooks/use-query";
-import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { relativeTime } from "@/lib/format";
+import {
+  loadGradesForStudent,
+  loadLateDayBalance,
+  loadStaffNotes,
+  loadStudentDetail,
+  loadSubmissionsForStudent,
+} from "@/lib/lms";
 
 export default function StudentDetailPage({
   params,
@@ -37,10 +43,7 @@ export default function StudentDetailPage({
       section?: string;
       status: string;
     }[];
-  }>(session ? () => api.students.detail({ session, user }) : null, [
-    session,
-    user,
-  ]);
+  }>(session ? () => loadStudentDetail(session, user) : null, [session, user]);
 
   const { data: submissionsData } = useQuery<{
     submissions: {
@@ -50,7 +53,7 @@ export default function StudentDetailPage({
       number: number;
       status: string;
     }[];
-  }>(() => api.submissions["for-student"]({ submitter: user }), [user]);
+  }>(() => loadSubmissionsForStudent(user), [user]);
 
   const { data: gradesData } = useQuery<{
     grades: {
@@ -61,22 +64,20 @@ export default function StudentDetailPage({
       status: string;
       label: string;
     }[];
-  }>(
-    session
-      ? () => api.grades["for-student"]({ session, learner: user })
-      : null,
-    [session, user],
-  );
+  }>(session ? () => loadGradesForStudent(session, user) : null, [
+    session,
+    user,
+  ]);
 
   const { data: lateBalance } = useQuery<{
     balance: { granted: number; used: number; remaining: number };
-  }>(() => api["late-days"].balance({ learner: user }), [user]);
+  }>(() => loadLateDayBalance(user), [user]);
 
-  const { data: lateUses } = useQuery<{
+  useQuery<{
     uses: { item: string; days: number; status: string; appliedAt: string }[];
   }>(
     () =>
-      api["late-days"].balance({ learner: user }).then(() => {
+      loadLateDayBalance(user).then(() => {
         return {
           uses: [] as {
             item: string;
@@ -102,18 +103,13 @@ export default function StudentDetailPage({
       acknowledgedAt?: string;
       tags: string[];
     }[];
-  }>(
-    session
-      ? () => api.students["notes/list"]({ session, learner: user })
-      : null,
-    [session, user],
-  );
+  }>(session ? () => loadStaffNotes(session, user) : null, [session, user]);
 
   const detail = detailData?.detail ?? [];
   const seat = detail[0];
   const submissions = submissionsData?.submissions ?? [];
   const grades = gradesData?.grades ?? [];
-  const notes = notesData?.notes ?? [];
+  const notes = (notesData?.notes ?? []).map((n) => ({ ...n, learner: user }));
   const balance = lateBalance?.balance;
 
   if (loading)

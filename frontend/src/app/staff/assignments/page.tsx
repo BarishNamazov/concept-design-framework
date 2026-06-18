@@ -19,8 +19,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useQuery } from "@/hooks/use-query";
-import { api } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
 import { fullTime } from "@/lib/format";
 
 const KIND_LABELS: Record<string, string> = {
@@ -32,13 +30,8 @@ const KIND_LABELS: Record<string, string> = {
 };
 
 export default function StaffAssignmentsPage() {
-  const { session } = useAuth();
   const [showCreate, setShowCreate] = useState(false);
   const [filter, setFilter] = useState<string>("all");
-
-  const { data: rosterData } = useQuery<{
-    dashboard: { user: string; seat: string; kind: string }[];
-  }>(session ? () => api.lms["staff-dashboard"]({ session }) : null, [session]);
 
   const {
     data: asgnData,

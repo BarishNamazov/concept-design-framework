@@ -42,7 +42,7 @@ export function CalendarView({ events, className }: CalendarViewProps) {
         const isPast = date < new Date();
         return (
           <div
-            key={i}
+            key={`${event.date}-${event.label || i}`}
             className={cn(
               "flex items-start gap-3 px-3 py-3 transition-colors",
               isPast ? "text-muted-foreground" : "text-foreground",

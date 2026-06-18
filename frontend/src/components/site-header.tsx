@@ -35,8 +35,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { loadRosterMe } from "@/lib/lms";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -68,12 +68,8 @@ export function SiteHeader() {
   const [isStaff, setIsStaff] = useState(false);
 
   useEffect(() => {
-    if (!session) {
-      setHasRosterSeat(false);
-      setIsStaff(false);
-      return;
-    }
-    api.roster.me({ session }).then((r) => {
+    if (!session) return;
+    loadRosterMe(session).then((r) => {
       if ("error" in r) return;
       if (r.seat) {
         setHasRosterSeat(true);
@@ -82,6 +78,9 @@ export function SiteHeader() {
       }
     });
   }, [session]);
+
+  const effectiveHasRosterSeat = session ? hasRosterSeat : false;
+  const effectiveIsStaff = session ? isStaff : false;
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -111,7 +110,7 @@ export function SiteHeader() {
               {item.label}
             </Link>
           ))}
-          {hasRosterSeat && isStaff && (
+          {effectiveHasRosterSeat && effectiveIsStaff && (
             <Link
               href="/staff"
               className={cn(
@@ -122,7 +121,7 @@ export function SiteHeader() {
               Staff
             </Link>
           )}
-          {hasRosterSeat &&
+          {effectiveHasRosterSeat &&
             STUDENT_NAV.map((item) => (
               <Link
                 key={item.href}
@@ -202,7 +201,7 @@ export function SiteHeader() {
                     </Link>
                   </DropdownMenuItem>
                 ) : null}
-                {hasRosterSeat && isStaff ? (
+                {effectiveHasRosterSeat && effectiveIsStaff ? (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
@@ -216,7 +215,7 @@ export function SiteHeader() {
                       </DropdownMenuItem>
                     ))}
                   </>
-                ) : hasRosterSeat && !isStaff ? (
+                ) : effectiveHasRosterSeat && !effectiveIsStaff ? (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
@@ -273,14 +272,14 @@ export function SiteHeader() {
                 <item.icon className="size-4" /> {item.label}
               </Link>
             ))}
-            {hasRosterSeat && (
+            {effectiveHasRosterSeat && (
               <>
                 <div className="mt-2 mb-1 px-3">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     LMS
                   </p>
                 </div>
-                {isStaff && (
+                {effectiveIsStaff && (
                   <Link
                     href="/staff"
                     onClick={() => setMobileOpen(false)}

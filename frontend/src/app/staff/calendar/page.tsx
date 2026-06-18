@@ -16,6 +16,7 @@ import {
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { loadCalendarStaff, loadSections } from "@/lib/lms";
 
 function getWeekRange(offset: number) {
   const now = new Date();
@@ -40,8 +41,14 @@ export default function StaffCalendarPage() {
   const { start, end, label } = getWeekRange(weekOffset);
 
   const { data: sectionsData } = useQuery<{
-    sections: { section: string; name: string }[];
-  }>(() => api.roster["sections/list"]({}), []);
+    sections: {
+      section: string;
+      name: string;
+      location?: string;
+      meetingPattern?: string;
+      status: string;
+    }[];
+  }>(() => loadSections(), []);
 
   const {
     data: calendarData,
@@ -53,12 +60,12 @@ export default function StaffCalendarPage() {
   }>(
     session
       ? () =>
-          api.calendar.staff({
+          loadCalendarStaff(
             session,
             start,
             end,
-            section: sectionFilter !== "all" ? sectionFilter : undefined,
-          })
+            sectionFilter !== "all" ? sectionFilter : undefined,
+          )
       : null,
     [session, start, end, sectionFilter],
   );
@@ -71,7 +78,17 @@ export default function StaffCalendarPage() {
             calendarData.events.map(async (e) => {
               const key = e.assignment;
               if (!map[key]) {
-                const res = await api.assignments.get({ assignment: key });
+                const res = (await api.assignments.get({
+                  assignment: key,
+                })) as unknown as {
+                  assignment: {
+                    title: string;
+                    kind: string;
+                    dueAt: string;
+                    closeAt?: string;
+                    status: string;
+                  };
+                };
                 if (!("error" in res)) map[key] = res.assignment;
               }
             }),

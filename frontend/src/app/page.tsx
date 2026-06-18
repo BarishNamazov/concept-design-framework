@@ -24,6 +24,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import {
+  loadAssignments,
+  loadGradesForMe,
+  loadLateDayBalance,
+  loadRosterMe,
+  loadVisibleNotes,
+} from "@/lib/lms";
 import { loadFeed } from "@/lib/loaders";
 
 function CategoriesCard() {
@@ -92,21 +99,19 @@ function LmsDashboard() {
   const { session, me } = useAuth();
   const { data: rosterData, loading: rosterLoading } = useQuery<{
     seat: unknown;
-  }>(session ? () => api.roster.me({ session }) : null, [session]);
+  }>(session ? () => loadRosterMe(session) : null, [session]);
 
-  const { data: assignmentsData, loading: asgnLoading } = useQuery<{
+  const { data: assignmentsData } = useQuery<{
     assignments: {
       assignment: string;
       release?: string;
       dueOverride?: string;
       status: string;
     }[];
-  }>(
-    session && rosterData?.seat
-      ? () => api.assignments["for-me"]({ session })
-      : null,
-    [session, rosterData],
-  );
+  }>(session && rosterData?.seat ? () => loadAssignments(session) : null, [
+    session,
+    rosterData,
+  ]);
 
   const { data: gradesData } = useQuery<{
     grades: {
@@ -117,12 +122,10 @@ function LmsDashboard() {
       status: string;
       label: string;
     }[];
-  }>(
-    session && rosterData?.seat
-      ? () => api.grades["for-me"]({ session })
-      : null,
-    [session, rosterData],
-  );
+  }>(session && rosterData?.seat ? () => loadGradesForMe(session) : null, [
+    session,
+    rosterData,
+  ]);
 
   const { data: notesData } = useQuery<{
     notes: {
@@ -132,19 +135,15 @@ function LmsDashboard() {
       createdAt: string;
       acknowledgedAt?: string;
     }[];
-  }>(
-    session && rosterData?.seat
-      ? () => api.students["notes/visible"]({ session })
-      : null,
-    [session, rosterData],
-  );
+  }>(session && rosterData?.seat ? () => loadVisibleNotes(session) : null, [
+    session,
+    rosterData,
+  ]);
 
   const { data: lateBalance } = useQuery<{
     balance: { granted: number; used: number; remaining: number };
   }>(
-    me && rosterData?.seat
-      ? () => api["late-days"].balance({ learner: String(me.user) })
-      : null,
+    me && rosterData?.seat ? () => loadLateDayBalance(String(me.user)) : null,
     [me, rosterData],
   );
 
@@ -308,7 +307,7 @@ export default function HomePage() {
     useCallback(() => loadFeed(sort), [sort]),
     [sort],
   );
-  const { me, loading: authLoading } = useAuth();
+  const { me } = useAuth();
 
   const showLms = me !== null;
 

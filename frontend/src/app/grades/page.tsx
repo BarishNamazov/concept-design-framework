@@ -12,12 +12,13 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { loadGradesForMe, loadRosterMe } from "@/lib/lms";
 
 export default function GradesPage() {
   const { session } = useAuth();
 
   const { data: rosterData } = useQuery<{ seat: unknown }>(
-    session ? () => api.roster.me({ session }) : null,
+    session ? () => loadRosterMe(session) : null,
     [session],
   );
 
@@ -35,12 +36,10 @@ export default function GradesPage() {
       status: string;
       label: string;
     }[];
-  }>(
-    session && rosterData?.seat
-      ? () => api.grades["for-me"]({ session })
-      : null,
-    [session, rosterData],
-  );
+  }>(session && rosterData?.seat ? () => loadGradesForMe(session) : null, [
+    session,
+    rosterData,
+  ]);
 
   const { data: detailsData } = useQuery<Record<string, unknown>>(
     gradesData
@@ -51,7 +50,11 @@ export default function GradesPage() {
             grades.map(async (g) => {
               const item = g.item;
               if (!map[item]) {
-                const res = await api.assignments.get({ assignment: item });
+                const res = (await api.assignments.get({
+                  assignment: item,
+                })) as unknown as {
+                  assignment: { title: string; kind: string };
+                };
                 if (!("error" in res)) map[item] = res.assignment;
               }
             }),

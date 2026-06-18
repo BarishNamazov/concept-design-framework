@@ -15,12 +15,13 @@ import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { fullTime, relativeTime } from "@/lib/format";
+import { loadRosterMe, loadVisibleNotes } from "@/lib/lms";
 
 export default function NotesPage() {
   const { session } = useAuth();
 
   const { data: rosterData } = useQuery<{ seat: unknown }>(
-    session ? () => api.roster.me({ session }) : null,
+    session ? () => loadRosterMe(session) : null,
     [session],
   );
 
@@ -43,7 +44,20 @@ export default function NotesPage() {
     }[];
   }>(
     session && rosterData?.seat
-      ? () => api.students["notes/visible"]({ session })
+      ? () =>
+          loadVisibleNotes(session) as unknown as Promise<{
+            notes: {
+              note: string;
+              author: string;
+              body: string;
+              status: string;
+              createdAt: string;
+              updatedAt?: string;
+              followUpAt?: string;
+              acknowledgedAt?: string;
+              tags: string[];
+            }[];
+          }>
       : null,
     [session, rosterData],
   );

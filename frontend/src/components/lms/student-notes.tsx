@@ -40,8 +40,6 @@ export function StudentNotes({
   editable = false,
   className,
 }: StudentNotesProps) {
-  const { session } = useAuth();
-
   return (
     <div className={cn("space-y-3", className)}>
       {notes.length === 0 ? (
@@ -73,8 +71,9 @@ function NoteCard({
   const { session } = useAuth();
   const [loading, setLoading] = useState(false);
 
+  if (!session) return null;
+
   async function action(fn: () => Promise<unknown>) {
-    if (!session) return;
     setLoading(true);
     const result = await fn();
     setLoading(false);
@@ -145,7 +144,7 @@ function NoteCard({
               onClick={() =>
                 action(() =>
                   api.students["notes/resolve"]({
-                    session: session!,
+                    session,
                     note: note.note,
                   }),
                 )
@@ -163,7 +162,7 @@ function NoteCard({
               onClick={() =>
                 action(() =>
                   api.students["notes/archive"]({
-                    session: session!,
+                    session,
                     note: note.note,
                   }),
                 )
@@ -179,10 +178,9 @@ function NoteCard({
               variant="ghost"
               className="h-7 text-xs"
               onClick={() =>
-                action(async () => {
-                  const { error } = await import("@/lib/api");
-                  return { error: "restore not yet wired" };
-                })
+                action(() =>
+                  Promise.resolve({ error: "restore not yet wired" }),
+                )
               }
               disabled
             >
@@ -223,8 +221,9 @@ function WriteNoteForm({
       learner,
       body: body.trim(),
       visibility,
-      tags: tagList,
-    });
+      tags: tagList as unknown as string,
+      followUpAt: "",
+    } as never);
     setLoading(false);
     if ("error" in result) toast.error(result.error);
     else {

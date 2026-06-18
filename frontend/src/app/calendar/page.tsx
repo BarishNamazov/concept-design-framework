@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { loadCalendarMe, loadRosterMe } from "@/lib/lms";
 
 function getWeekRange(offset: number) {
   const now = new Date();
@@ -32,7 +33,7 @@ export default function CalendarPage() {
   const { start, end, label } = getWeekRange(weekOffset);
 
   const { data: rosterData } = useQuery<{ seat: unknown }>(
-    session ? () => api.roster.me({ session }) : null,
+    session ? () => loadRosterMe(session) : null,
     [session],
   );
 
@@ -45,7 +46,7 @@ export default function CalendarPage() {
     events: { assignment: string }[];
   }>(
     session && rosterData?.seat
-      ? () => api.calendar.me({ session, start, end })
+      ? () => loadCalendarMe(session, start, end)
       : null,
     [session, rosterData, start, end],
   );
@@ -58,7 +59,18 @@ export default function CalendarPage() {
             calendarData.events.map(async (e) => {
               const key = e.assignment;
               if (!map[key]) {
-                const res = await api.assignments.get({ assignment: key });
+                const res = (await api.assignments.get({
+                  assignment: key,
+                })) as unknown as {
+                  assignment: {
+                    title: string;
+                    kind: string;
+                    availableAt: string;
+                    dueAt: string;
+                    closeAt?: string;
+                    status: string;
+                  };
+                };
                 if (!("error" in res)) map[key] = res.assignment;
               }
             }),

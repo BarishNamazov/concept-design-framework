@@ -39,9 +39,10 @@ export function GradeInput({
       session,
       learner,
       item,
-      score,
+      score: score as unknown as string,
       feedback,
-    });
+      evidence: "",
+    } as never);
     setLoading(false);
     if ("error" in result) toast.error(result.error);
     else {

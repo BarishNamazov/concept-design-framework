@@ -39,16 +39,16 @@ export function MentionAutocomplete({
   const containerRef = useRef<HTMLDivElement>(null);
   const onSelectRef = useRef(onSelect);
   const onCloseRef = useRef(onClose);
-  onSelectRef.current = onSelect;
-  onCloseRef.current = onClose;
 
   useEffect(() => {
-    if (!query) {
-      setResults([]);
-      setLoading(false);
-      return;
-    }
+    onSelectRef.current = onSelect;
+    onCloseRef.current = onClose;
+  });
 
+  useEffect(() => {
+    if (!query) return;
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- debounced fetch, loading = true before async call
     setLoading(true);
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
@@ -121,24 +121,27 @@ export function MentionAutocomplete({
     return () => window.removeEventListener("mousedown", onClickOutside);
   }, []);
 
+  const effectiveResults = query ? results : [];
+  const effectiveLoading = query ? loading : false;
+
   return (
     <div ref={containerRef}>
       <div className="absolute left-0 right-3 top-0 -translate-y-full mb-1 z-50 rounded-md border bg-popover shadow-md">
-        {loading ? (
+        {effectiveLoading ? (
           <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground">
             <Spinner className="size-4" />
             Searching…
           </div>
         ) : error ? (
           <div className="px-3 py-3 text-sm text-destructive">{error}</div>
-        ) : results.length === 0 ? (
+        ) : effectiveResults.length === 0 ? (
           <div className="px-3 py-3 text-sm text-muted-foreground">
             No users found
           </div>
         ) : (
           <ScrollArea className="max-h-60">
             <div ref={listRef}>
-              {results.map((user, i) => (
+              {effectiveResults.map((user, i) => (
                 <button
                   key={user.user}
                   type="button"

@@ -17,6 +17,7 @@ import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { fullTime, relativeTime } from "@/lib/format";
+import { loadAssignments, loadGradesForMe, loadRosterMe } from "@/lib/lms";
 import { cn } from "@/lib/utils";
 
 const KIND_LABELS: Record<string, string> = {
@@ -35,7 +36,7 @@ export default function AssignmentsPage() {
   const [search, setSearch] = useState("");
 
   const { data: rosterData } = useQuery<{ seat: unknown }>(
-    session ? () => api.roster.me({ session }) : null,
+    session ? () => loadRosterMe(session) : null,
     [session],
   );
 
@@ -51,12 +52,10 @@ export default function AssignmentsPage() {
       dueOverride?: string;
       status: string;
     }[];
-  }>(
-    session && rosterData?.seat
-      ? () => api.assignments["for-me"]({ session })
-      : null,
-    [session, rosterData],
-  );
+  }>(session && rosterData?.seat ? () => loadAssignments(session) : null, [
+    session,
+    rosterData,
+  ]);
 
   const { data: gradesData } = useQuery<{
     grades: {
@@ -66,12 +65,10 @@ export default function AssignmentsPage() {
       status: string;
       label: string;
     }[];
-  }>(
-    session && rosterData?.seat
-      ? () => api.grades["for-me"]({ session })
-      : null,
-    [session, rosterData],
-  );
+  }>(session && rosterData?.seat ? () => loadGradesForMe(session) : null, [
+    session,
+    rosterData,
+  ]);
 
   const { data: submissionsData } = useQuery<{
     submissions: {
@@ -87,10 +84,18 @@ export default function AssignmentsPage() {
           if (!asgnData?.assignments) return { submissions: [] };
           const allSubs = await Promise.all(
             asgnData.assignments.map(async (a) => {
-              const res = await api.submissions.latest({
+              const res = (await api.submissions.latest({
                 assignment: a.assignment,
                 submitter: String(session),
-              });
+              })) as unknown as {
+                submission: {
+                  submission: string;
+                  artifacts: string[];
+                  submittedAt: string;
+                  number: number;
+                  status: string;
+                } | null;
+              };
               if ("error" in res) return null;
               return { ...res.submission, assignment: a.assignment };
             }),
@@ -115,9 +120,18 @@ export default function AssignmentsPage() {
           const map: Record<string, unknown> = {};
           await Promise.all(
             asgnData.assignments.map(async (a) => {
-              const res = await api.assignments.get({
+              const res = (await api.assignments.get({
                 assignment: a.assignment,
-              });
+              })) as unknown as {
+                assignment: {
+                  title: string;
+                  kind: string;
+                  dueAt: string;
+                  closeAt?: string;
+                  status: string;
+                  availableAt: string;
+                };
+              };
               if (!("error" in res)) map[a.assignment] = res.assignment;
             }),
           );
@@ -142,6 +156,7 @@ export default function AssignmentsPage() {
       title: string;
       kind: string;
       dueAt: string;
+      closeAt?: string;
       status: string;
       availableAt: string;
     }

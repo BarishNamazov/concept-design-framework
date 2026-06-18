@@ -45,14 +45,14 @@ export function AssignmentForm({
     existing?.instructions ?? "",
   );
   const [kind, setKind] = useState(existing?.kind ?? "HOMEWORK");
-  const [availableAt, setAvailableAt] = useState(
+  const [availableAt, setAvailableAt] = useState(() =>
     existing?.availableAt
       ? new Date(existing.availableAt as unknown as string)
           .toISOString()
           .slice(0, 16)
       : new Date().toISOString().slice(0, 16),
   );
-  const [dueAt, setDueAt] = useState(
+  const [dueAt, setDueAt] = useState(() =>
     existing?.dueAt
       ? new Date(existing.dueAt as unknown as string).toISOString().slice(0, 16)
       : new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 16),
@@ -74,7 +74,7 @@ export function AssignmentForm({
     if (!session) return;
     setLoading(true);
 
-    const payload = {
+    const rawPayload = {
       session,
       title: title.trim(),
       instructions: instructions.trim(),
@@ -84,18 +84,26 @@ export function AssignmentForm({
       closeAt: closeAt ? new Date(closeAt).toISOString() : undefined,
       acceptsSubmissions,
       audience,
-      targets: undefined as string[] | undefined,
     };
 
     const result = existing
       ? await api.assignments.revise({
-          ...payload,
+          session,
+          title: rawPayload.title,
+          instructions: rawPayload.instructions,
+          kind: rawPayload.kind,
+          availableAt: rawPayload.availableAt,
+          dueAt: rawPayload.dueAt,
+          closeAt: rawPayload.closeAt,
+          acceptsSubmissions: rawPayload.acceptsSubmissions,
+          audience: rawPayload.audience,
           assignment: existing.assignment,
-        })
-      : await api.assignments["create-draft"](payload);
+        } as never)
+      : await api.assignments["create-draft"](rawPayload as never);
 
     setLoading(false);
-    if ("error" in result) toast.error(result.error);
+    if ("error" in result)
+      toast.error((result as unknown as { error: string }).error);
     else {
       toast.success(existing ? "Assignment updated" : "Assignment created");
       onSaved();

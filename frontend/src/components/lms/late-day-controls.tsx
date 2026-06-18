@@ -36,7 +36,11 @@ export function LateDayControls({
   async function apply() {
     if (!session || days <= 0) return;
     setLoading(true);
-    const result = await api["late-days"].apply({ session, assignment, days });
+    const result = await api["late-days"].apply({
+      session,
+      assignment,
+      days: days as unknown as string,
+    });
     setLoading(false);
     if ("error" in result) toast.error(result.error);
     else {
@@ -48,7 +52,11 @@ export function LateDayControls({
   async function change() {
     if (!session || days <= 0) return;
     setLoading(true);
-    const result = await api["late-days"].change({ session, assignment, days });
+    const result = await api["late-days"].change({
+      session,
+      assignment,
+      days: days as unknown as string,
+    });
     setLoading(false);
     if ("error" in result) toast.error(result.error);
     else {

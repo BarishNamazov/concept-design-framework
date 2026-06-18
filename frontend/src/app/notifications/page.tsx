@@ -3,7 +3,7 @@
 import { Bell, Check, CheckCheck, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { KeyboardEvent, MouseEvent } from "react";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PageContainer, PageHeader } from "@/components/forum/page";
 import { RequireAuth } from "@/components/forum/require-auth";
@@ -94,7 +94,10 @@ function Notifications() {
     notifications: Notification[];
   }>(session ? () => api.notifications.list({ session }) : null, [session]);
 
-  const notifications = data?.notifications ?? [];
+  const notifications = useMemo(
+    () => data?.notifications ?? [],
+    [data?.notifications],
+  );
   const unread = notifications.filter((n) => !n.read).length;
 
   const [links, setLinks] = useState<Record<string, string | null>>({});

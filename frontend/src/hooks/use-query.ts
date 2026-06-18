@@ -31,13 +31,9 @@ export function useQuery<T>(
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: callers provide the dependency list that controls loader refreshes; nonce intentionally forces refetch.
   useEffect(() => {
-    if (!loader) {
-      setLoading(false);
-      setData(null);
-      setError(null);
-      return;
-    }
+    if (!loader) return;
     const id = ++reqId.current;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching hook, loading/error set before async call
     setLoading(true);
     setError(null);
     loader()
@@ -59,5 +55,14 @@ export function useQuery<T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, nonce]);
 
-  return { data, error, loading, refetch };
+  const effectiveLoading = loader ? loading : false;
+  const effectiveData = loader ? data : (null as T | null);
+  const effectiveError = loader ? error : null;
+
+  return {
+    data: effectiveData,
+    error: effectiveError,
+    loading: effectiveLoading,
+    refetch,
+  };
 }

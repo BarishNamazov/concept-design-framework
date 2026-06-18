@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { loadStaffDashboard } from "@/lib/lms";
 
 export default function LateDaysAdminPage() {
   const { session } = useAuth();
@@ -29,7 +30,7 @@ export default function LateDaysAdminPage() {
       kind: string;
       rosterName: string;
     }[];
-  }>(session ? () => api.lms["staff-dashboard"]({ session }) : null, [session]);
+  }>(session ? () => loadStaffDashboard(session) : null, [session]);
 
   const [grantDialog, setGrantDialog] = useState<{
     learner: string;
@@ -53,7 +54,15 @@ export default function LateDaysAdminPage() {
           );
           await Promise.all(
             students.map(async (s) => {
-              const r = await api["late-days"].balance({ learner: s.user });
+              const r = (await api["late-days"].balance({
+                learner: s.user,
+              })) as unknown as {
+                balance: {
+                  granted: number;
+                  used: number;
+                  remaining: number;
+                };
+              };
               if (!("error" in r)) map[s.user] = r.balance;
             }),
           );
@@ -69,7 +78,7 @@ export default function LateDaysAdminPage() {
     const result = await api["late-days"].grant({
       session,
       learner: grantDialog.learner,
-      days: grantDays,
+      days: grantDays as unknown as string,
       reason: grantReason,
     });
     setGrantLoading(false);

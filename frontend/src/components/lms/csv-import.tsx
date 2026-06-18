@@ -34,9 +34,11 @@ export function CsvImport({ onComplete }: CsvImportProps) {
   async function preview() {
     if (!csv.trim()) return;
     setLoading(true);
-    const result = await api.roster["import-preview"]({ csv: csv.trim() });
+    const result = (await api.roster["import-preview"]({
+      csv: csv.trim(),
+    })) as unknown as { rows: CsvRow[] };
     setLoading(false);
-    if ("error" in result) toast.error(result.error);
+    if ("error" in result) toast.error(result.error as unknown as string);
     else setRows(result.rows ?? []);
   }
 
@@ -44,7 +46,9 @@ export function CsvImport({ onComplete }: CsvImportProps) {
     if (!session || !rows || rows.length === 0) return;
     setImporting(true);
     const results = await Promise.all(
-      rows.map((row) => api.roster.import({ session, rows: [row] })),
+      rows.map((row) =>
+        api.roster.import({ session, rows: [row] as unknown as string }),
+      ),
     );
     setImporting(false);
     const errors = results.filter((r) => "error" in r);
@@ -104,11 +108,11 @@ export function CsvImport({ onComplete }: CsvImportProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((row, i) => (
-                  <TableRow key={i}>
-                    {Object.values(row).map((v, j) => (
-                      <TableCell key={j} className="text-xs font-mono">
-                        {v}
+                {rows.map((row) => (
+                  <TableRow key={Object.values(row).join("|")}>
+                    {Object.entries(row).map(([key, value]) => (
+                      <TableCell key={key} className="text-xs font-mono">
+                        {value}
                       </TableCell>
                     ))}
                   </TableRow>

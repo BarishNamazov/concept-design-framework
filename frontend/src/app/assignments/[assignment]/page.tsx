@@ -16,6 +16,13 @@ import { useQuery } from "@/hooks/use-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { fullTime, relativeTime } from "@/lib/format";
+import {
+  loadAssignmentDetail,
+  loadGradesForMe,
+  loadLateDayBalance,
+  loadSubmissionAttempts,
+  loadSubmissionLatest,
+} from "@/lib/lms";
 import { cn } from "@/lib/utils";
 
 const KIND_LABELS: Record<string, string> = {
@@ -52,7 +59,7 @@ export default function AssignmentDetailPage({
       acceptsSubmissions: boolean;
       status: string;
     };
-  }>(() => api.assignments.get({ assignment }), [assignment]);
+  }>(() => loadAssignmentDetail(assignment), [assignment]);
 
   const { data: subData, refetch: refetchSub } = useQuery<{
     submission: {
@@ -64,7 +71,7 @@ export default function AssignmentDetailPage({
     } | null;
   }>(
     me && asgnData && !("error" in asgnData)
-      ? () => api.submissions.latest({ assignment, submitter: String(me.user) })
+      ? () => loadSubmissionLatest(assignment, String(me.user))
       : null,
     [assignment, me, asgnData],
   );
@@ -79,28 +86,23 @@ export default function AssignmentDetailPage({
     }[];
   }>(
     me && asgnData && !("error" in asgnData)
-      ? () =>
-          api.submissions.attempts({ assignment, submitter: String(me.user) })
+      ? () => loadSubmissionAttempts(assignment, String(me.user))
       : null,
     [assignment, me, asgnData],
   );
 
   const { data: lateBalance, refetch: refetchLate } = useQuery<{
     balance: { granted: number; used: number; remaining: number };
-  }>(me ? () => api["late-days"].balance({ learner: String(me.user) }) : null, [
-    me,
-  ]);
+  }>(me ? () => loadLateDayBalance(String(me.user)) : null, [me]);
 
   const { data: lateUseData, refetch: refetchLateUse } = useQuery<{
     days: number;
   }>(
     me
-      ? () => {
-          const result = api["late-days"].balance({ learner: String(me.user) });
-          return result.then((r) => {
-            if ("error" in r) return { days: 0 };
-            return { days: 0 };
-          });
+      ? async () => {
+          const r = await loadLateDayBalance(String(me.user));
+          if ("error" in r) return { days: 0 };
+          return { days: 0 };
         }
       : null,
     [me, assignment],
@@ -116,10 +118,7 @@ export default function AssignmentDetailPage({
       label: string;
       feedback?: string;
     }[];
-  }>(me ? () => api.grades["for-me"]({ session: session! }) : null, [
-    me,
-    session,
-  ]);
+  }>(me && session ? () => loadGradesForMe(session) : null, [me, session]);
 
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -177,7 +176,6 @@ export default function AssignmentDetailPage({
     );
 
   const due = detail.dueAt as unknown as string;
-  const _effectiveDue = detail.dueAt as unknown as string;
   const now = new Date();
   const isOverdue = new Date(due) < now;
   const isPastClose = detail.closeAt

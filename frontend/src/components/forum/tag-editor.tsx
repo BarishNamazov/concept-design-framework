@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, Plus, Tag as TagIcon, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { Link } from "@/components/link";
 import { Badge } from "@/components/ui/badge";
@@ -48,10 +48,6 @@ export function TagEditor({
     }
     setAllTags(result.tags);
   }, []);
-
-  useEffect(() => {
-    if (open) fetchTags();
-  }, [open, fetchTags]);
 
   async function applyExisting(tag: Tag) {
     if (!session) return;
@@ -125,7 +121,13 @@ export function TagEditor({
       ))}
 
       {session ? (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover
+          open={open}
+          onOpenChange={(nextOpen) => {
+            setOpen(nextOpen);
+            if (nextOpen) fetchTags();
+          }}
+        >
           <PopoverTrigger asChild>
             <Button
               variant="outline"
