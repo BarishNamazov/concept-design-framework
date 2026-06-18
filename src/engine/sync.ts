@@ -316,12 +316,12 @@ export class SyncConcept {
    * inputs with their frame bindings (a missing binding is an error), then
    * attach the flow token and a fresh action id.
    */
-  matchThen(then: ActionPattern, frame: Frame): ActionArguments {
+    matchThen(then: ActionPattern, frame: Frame): ActionArguments {
     const input: ActionArguments = {};
     for (const [key, value] of Object.entries(then.input)) {
       if (typeof value === "symbol") {
         const bound = frame[value];
-        if (bound === undefined) {
+        if (bound === undefined && !Object.hasOwn(frame as object, value)) {
           throw new Error(
             `Missing binding: ${String(value)} in frame: ${String(frame)}`,
           );
