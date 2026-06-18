@@ -2,12 +2,13 @@ import type { Db } from "mongodb";
 import type { Migration } from "../src/db/migrate.ts";
 
 const migration: Migration = {
-  id: 1,
-  name: "hash_existing_passwords",
+  id: 2,
+  name: "hash_remaining_passwords",
   async up(db: Db) {
     const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || "12", 10);
     const collections = await db.listCollections().toArray();
     const userCollections = collections.filter((c) =>
+      c.name === "Authenticating.users" ||
       c.name.endsWith(".Authenticating.users"),
     );
 
