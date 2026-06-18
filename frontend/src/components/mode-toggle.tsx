@@ -11,6 +11,7 @@ export function ModeToggle() {
   const mounted = useSyncExternalStore(
     () => () => {},
     () => true,
+    () => false,
   );
 
   const isDark = resolvedTheme === "dark";
